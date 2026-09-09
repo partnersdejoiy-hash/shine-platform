@@ -1,0 +1,11 @@
+# SHINE frontend container build ignores — keep the docker build context small.
+node_modules
+dist
+isolate
+server
+.deploy
+.git
+.gitignore
+.env*
+*.log
+bun.lock

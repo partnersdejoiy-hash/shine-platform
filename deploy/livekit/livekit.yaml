@@ -1,0 +1,63 @@
+# LiveKit server configuration for SHINE (self-hosted, DEJOIY)
+port: 7880
+rtc:
+  tcp_port: 7881
+  port_range_start: 50000
+  port_range_end: 50100
+  use_external_ip: true
+  # Enable ICE-over-TCP (handy behind restrictive NATs)
+  tcp_connect_timeout: 1200
+
+logging:
+  level: info
+
+keys:
+  ${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}
+
+# Webhooks fired to the NestJS API (recording started, room finished, ...)
+webhook:
+  api_key: ${LIVEKIT_API_KEY}
+  api_secret: ${LIVEKIT_API_SECRET}
+  urls:
+    - http://api:3001/livekit/webhook
+
+room:
+  enabled_codecs:
+    - mime_type: video/VP8
+    - mime_type: video/VP9
+    - mime_type: video/AV1
+    - mime_type: audio/opus
+  empty_timeout: 300           # end room 5 min after everyone leaves
+  departure_timeout: 120
+  max_participants: 500
+
+# TURN servers handed to clients; static auth secret must match
+# the shared secret in deploy/coturn/turnserver.conf.
+turn:
+  enabled: true
+  domain: ${TURN_REALM}
+  cert_file: ""               # TLS certs are handled by NGINX; set paths here if
+  key_file: ""                # you terminate TURN TLS (coturn) separately
+  tls_port: 5349
+  udp_port: 3478
+
+egress:
+  # RoomComposite / TrackComposite egress writes recordings to MinIO (S3).
+  s3:
+    access_key: ${MINIO_ROOT_USER}
+    secret: ${MINIO_ROOT_PASSWORD}
+    region: us-east-1
+    endpoint: http://minio:9000
+    force_path_style: true
+  bucket: ${MINIO_BUCKET}-recordings
+  # Optional: send egress events back to the API
+  webhook_url: http://api:3001/livekit/egress
+  api_key: ${LIVEKIT_API_KEY}
+  api_secret: ${LIVEKIT_API_SECRET}
+
+ingress:
+  enabled: false
+
+redis:
+  address: redis:6379
+  password: ${REDIS_PASSWORD}

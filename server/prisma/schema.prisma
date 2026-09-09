@@ -1,0 +1,683 @@
+// =============================================================================
+// SHINE — enterprise schema (self-hosted, PostgreSQL, Powered by DEJOIY)
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum RoleName {
+  super_admin
+  admin
+  it
+  president
+  director
+  om
+  tl
+  employee
+}
+
+enum UserStatus {
+  active
+  suspended
+  invited
+}
+
+enum MeetingStatus {
+  scheduled
+  live
+  ended
+  cancelled
+}
+
+enum CalendarType {
+  personal
+  department
+  organization
+  holiday
+  leave
+  training
+  reminder
+}
+
+enum SharePermission {
+  view
+  edit
+  manage
+}
+
+enum AckStatus {
+  accepted
+  rejected
+}
+
+enum NotificationChannel {
+  inapp
+  email
+  push
+}
+
+enum NotificationKind {
+  mention
+  message
+  meeting
+  announcement
+  policy
+  security
+  approval
+  task
+  system
+}
+
+enum MessageKind {
+  text
+  file
+  system
+  poll
+}
+
+enum ConversationKind {
+  chat
+  channel
+}
+
+enum TaskStatus {
+  todo
+  in_progress
+  done
+}
+
+enum TaskPriority {
+  low
+  medium
+  high
+  urgent
+}
+
+enum InviteStatus {
+  pending
+  accepted
+  revoked
+}
+
+enum RecordingStatus {
+  started
+  completed
+  failed
+}
+
+// ---------------------------------------------------------------------------
+// Identity & organization
+// ---------------------------------------------------------------------------
+
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  domain      String?  @unique
+  logoUrl     String?
+  plan        String?  @default("enterprise")
+  // Per-org branding for the email template engine + UI
+  brand       Json?
+  settings    Json?
+  createdAt   DateTime @default(now())
+  departments Department[]
+  teams       Team[]
+  users       User[]
+  meetings    Meeting[]
+  policies    Policy[]
+  auditLogs   AuditLog[]
+  invites     Invite[]
+  holidays    Holiday[]
+  calendarEvents CalendarEvent[]
+  payments    Payment[]
+}
+
+model Department {
+  id        String       @id @default(cuid())
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name      String
+  parentId  String?
+  headId    String?
+  createdAt DateTime     @default(now())
+  users     User[]
+  teams     Team[]
+
+  @@unique([orgId, name])
+  @@index([orgId])
+}
+
+model Team {
+  id           String       @id @default(cuid())
+  orgId        String
+  org          Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  departmentId String?
+  department   Department?  @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  name         String
+  leadId       String?
+  createdAt    DateTime     @default(now())
+  members      User[]
+
+  @@unique([orgId, name])
+  @@index([orgId])
+}
+
+// ---------------------------------------------------------------------------
+// Roles & permissions (8-level SHINE hierarchy + permission matrix)
+// ---------------------------------------------------------------------------
+
+model Role {
+  id                 String   @id @default(cuid())
+  name               RoleName @unique
+  displayName        String
+  rank               Int      // 1 = super_admin … 8 = employee
+  isSystem           Boolean  @default(true)
+  description        String?
+  // Role security policies (device / network / capability restrictions)
+  allowedPlatforms   String[] @default(["desktop", "laptop", "tablet", "mobile"])
+  allowedOs          String[] @default(["windows", "linux", "macos", "android", "ios"])
+  allowPersonalDevices Boolean @default(true)
+  requireCompanyNetwork Boolean @default(false)
+  requireVpn         Boolean  @default(false)
+  allowedIpRanges    String[] @default([])
+  countryRestrictions String[] @default([])
+  allowExternalSharing Boolean @default(true)
+  allowOfflineAccess Boolean  @default(true)
+  allowExports      Boolean   @default(false)
+  allowUploads      Boolean   @default(true)
+  allowDownloads    Boolean   @default(true)
+  allowPrinting     Boolean   @default(false)
+  canCreateMeetings Boolean  @default(false)
+  canScheduleMeetings Boolean @default(false)
+  canCreateGroups   Boolean   @default(false)
+  canCreateChannels Boolean   @default(false)
+  canBroadcast      Boolean   @default(false)
+  canManageUsers    Boolean   @default(false)
+  canViewReports    Boolean   @default(false)
+  canViewAudit      Boolean   @default(false)
+  permissions       RolePermission[]
+  users             User[]
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  key         String           @unique
+  description String?
+  roles       RolePermission[]
+}
+
+model RolePermission {
+  roleId       String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+// ---------------------------------------------------------------------------
+// Users, sessions, devices
+// ---------------------------------------------------------------------------
+
+model User {
+  id             String     @id @default(cuid())
+  email          String     @unique
+  passwordHash   String?
+  name           String
+  employeeId     String?    @unique
+  phone          String?
+  avatarUrl      String?
+  coverUrl       String?
+  bio            String?
+  designation    String?
+  company        String?
+  location       String?
+  timezone       String?    @default("Asia/Kolkata")
+  skills         String[]
+  socialLinks    Json?
+  status         UserStatus @default(active)
+  mfaEnabled     Boolean    @default(false)
+  mfaSecret      String?
+  lastLoginAt    DateTime?
+  lastSeenAt     DateTime?
+  isAnonymous    Boolean    @default(false)
+
+  orgId          String?
+  org            Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  departmentId   String?
+  department     Department?   @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  teamId         String?
+  team           Team?         @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  roleId         String
+  role           Role          @relation(fields: [roleId], references: [id])
+  managerId      String?
+  manager        User?         @relation("Management", fields: [managerId], references: [id], onDelete: SetNull)
+  reports        User[]        @relation("Management")
+
+  devices        Device[]
+  sessions       Session[]
+  auditLogs      AuditLog[]
+  sentMessages   Message[]    @relation("Sender")
+  notifications  Notification[]
+  meetingsHosted Meeting[]    @relation("Host")
+  calendarEvents CalendarEvent[]
+  policyAcks     PolicyAcknowledgement[]
+  invitesCreated Invite[]     @relation("Inviter")
+  files          FileAsset[]
+  tasksAssigned  Task[]       @relation("Assignee")
+  tasksCreated   Task[]       @relation("Creator")
+  payments       Payment[]
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([orgId])
+  @@index([roleId])
+  @@index([departmentId])
+}
+
+model Device {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fingerprint  String   @unique // hash of device characteristics
+  name         String
+  platform     String?
+  os           String?
+  browser      String?
+  isTrusted    Boolean  @default(false)
+  isApproved   Boolean  @default(false)
+  isCurrent    Boolean  @default(false)
+  lastActiveAt DateTime @default(now())
+  createdAt    DateTime @default(now())
+  sessions     Session[]
+
+  @@index([userId])
+}
+
+model Session {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceId     String?
+  device       Device?   @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  ip           String?
+  userAgent    String?
+  remember     Boolean   @default(false)
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// Meetings (DJM-XXX-000 room codes) & recordings
+// ---------------------------------------------------------------------------
+
+model Meeting {
+  id                String               @id @default(cuid())
+  orgId             String?
+  org               Organization?        @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  title             String
+  description       String?
+  hostId            String
+  host              User                 @relation("Host", fields: [hostId], references: [id])
+  roomCode          String               @unique // DJM-XXX-123
+  password          String?
+  startTime         DateTime
+  endTime           DateTime?
+  status            MeetingStatus        @default(scheduled)
+  recordingEnabled  Boolean              @default(false)
+  inviteEmails      String[]             @default([])
+  recurringRule     String?              // RRULE for recurring meetings
+  templateId        String?              // saved meeting template
+  createdAt         DateTime             @default(now())
+  participants      MeetingParticipant[]
+  recordings        MeetingRecording[]
+
+  @@index([hostId])
+  @@index([orgId])
+  @@index([status, startTime])
+}
+
+model MeetingParticipant {
+  id          String        @id @default(cuid())
+  meetingId   String
+  meeting     Meeting       @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  userId      String?
+  name        String?
+  email       String?
+  role        String        @default("participant") // host | cohost | moderator | participant
+  joinedAt    DateTime      @default(now())
+  leftAt      DateTime?
+  isMuted     Boolean       @default(false)
+  isVideoOn   Boolean       @default(false)
+  hasRaisedHand Boolean     @default(false)
+
+  @@index([meetingId])
+}
+
+model MeetingRecording {
+  id          String          @id @default(cuid())
+  meetingId   String
+  meeting     Meeting         @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  egressId    String?
+  bucket      String?
+  objectKey   String?
+  url         String?
+  status      RecordingStatus @default(started)
+  startedAt   DateTime        @default(now())
+  endedAt     DateTime?
+
+  @@index([meetingId])
+}
+
+// ---------------------------------------------------------------------------
+// Calendar (personal / department / org / holiday / leave / training / reminder)
+// ---------------------------------------------------------------------------
+
+model CalendarEvent {
+  id          String       @id @default(cuid())
+  orgId       String?
+  org         Organization? @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  ownerId     String
+  owner       User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  calendarType CalendarType @default(personal)
+  title       String
+  description String?
+  location    String?
+  startAt     DateTime
+  endAt       DateTime
+  allDay      Boolean      @default(false)
+  color       String?
+  rrule       String?      // recurring events
+  externalId  String?      // ICS import id
+  taskId      String?      @unique
+  task        Task?        @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  createdAt   DateTime     @default(now())
+  shares      CalendarShare[]
+
+  @@index([ownerId])
+  @@index([orgId, startAt])
+}
+
+model CalendarShare {
+  id          String         @id @default(cuid())
+  eventId     String
+  event       CalendarEvent  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  targetUserId String?
+  targetRoleId String?
+  permission  SharePermission @default(view)
+  createdAt   DateTime       @default(now())
+
+  @@index([eventId])
+}
+
+model Holiday {
+  id     String       @id @default(cuid())
+  orgId  String
+  org    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name   String
+  date   DateTime
+  type   String? // national | optional | restricted
+
+  @@unique([orgId, date, name])
+  @@index([orgId])
+}
+
+// ---------------------------------------------------------------------------
+// Policies & acknowledgements (enterprise compliance)
+// ---------------------------------------------------------------------------
+
+model Policy {
+  id            String       @id @default(cuid())
+  orgId         String?
+  org           Organization? @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  slug          String
+  name          String
+  version       Int          @default(1)
+  content       String       // markdown/HTML document
+  required      Boolean      @default(false)
+  lastUpdatedAt DateTime     @default(now())
+  acknowledgements PolicyAcknowledgement[]
+
+  @@unique([orgId, slug])
+}
+
+model PolicyAcknowledgement {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  policyId       String
+  policy         Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  version        Int
+  status         AckStatus @default(accepted)
+  signatureHash  String   // SHA-256 of userId+version+timestamp
+  ip             String?
+  browser        String?
+  device         String?
+  os             String?
+  acceptedAt     DateTime @default(now())
+
+  @@unique([userId, policyId, version])
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// Chat
+// ---------------------------------------------------------------------------
+
+model Conversation {
+  id           String             @id @default(cuid())
+  orgId        String?
+  kind         ConversationKind   @default(chat)
+  name         String
+  isPrivate    Boolean            @default(false)
+  createdById  String?
+  lastMessageAt DateTime?
+  createdAt    DateTime           @default(now())
+  members      ConversationMember[]
+  messages     Message[]
+
+  @@index([orgId, kind])
+}
+
+model ConversationMember {
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId         String
+  role           String       @default("member")
+  lastReadAt     DateTime?
+  isMuted        Boolean      @default(false)
+  joinedAt       DateTime     @default(now())
+
+  @@id([conversationId, userId])
+  @@index([userId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation("Sender", fields: [senderId], references: [id])
+  body           String
+  kind           MessageKind  @default(text)
+  parentId       String?
+  edited         Boolean      @default(false)
+  deleted        Boolean      @default(false)
+  mentions       String[]     @default([])
+  attachments    Json?
+  poll           Json?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([conversationId, createdAt])
+  @@index([senderId])
+}
+
+// ---------------------------------------------------------------------------
+// Notifications, files, tasks, invites, audit
+// ---------------------------------------------------------------------------
+
+model Notification {
+  id        String             @id @default(cuid())
+  userId    String
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      NotificationKind
+  channel   NotificationChannel @default(inapp)
+  title     String
+  body      String?
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime           @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model FileAsset {
+  id        String   @id @default(cuid())
+  orgId     String?
+  ownerId   String
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  bucket    String
+  objectKey String
+  name      String
+  mimeType  String
+  size      Int
+  url       String?
+  createdAt DateTime @default(now())
+
+  @@index([ownerId])
+}
+
+model Task {
+  id          String       @id @default(cuid())
+  orgId       String
+  title       String
+  description String?
+  assigneeId  String?
+  assignee    User?        @relation("Assignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  dueDate     DateTime?
+  status      TaskStatus   @default(todo)
+  priority    TaskPriority @default(medium)
+  createdById String
+  createdBy   User         @relation("Creator", fields: [createdById], references: [id])
+  calendarEvent CalendarEvent?
+  createdAt   DateTime     @default(now())
+
+  @@index([orgId, createdAt])
+  @@index([assigneeId])
+}
+
+model Invite {
+  id         String       @id @default(cuid())
+  orgId      String
+  org        Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  email      String
+  roleId     String
+  token      String       @unique
+  status     InviteStatus @default(pending)
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  createdById String
+  createdBy  User         @relation("Inviter", fields: [createdById], references: [id])
+  createdAt  DateTime     @default(now())
+
+  @@index([orgId])
+  @@index([email])
+}
+
+model AuditLog {
+  id         String    @id @default(cuid())
+  orgId      String?
+  org        Organization? @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  actorId    String
+  actor      User      @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  action     String
+  targetType String?
+  targetId   String?
+  details    String?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime  @default(now())
+
+  @@index([orgId, createdAt])
+  @@index([actorId])
+}
+
+model EmailLog {
+  id        String    @id @default(cuid())
+  to        String
+  from      String
+  subject   String
+  template  String?
+  status    String
+  error     String?
+  createdAt DateTime  @default(now())
+
+  @@index([to, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Billing (Razorpay) — Powered by DEJOIY
+// ---------------------------------------------------------------------------
+
+enum PaymentStatus {
+  CREATED
+  PAID
+  FAILED
+  REFUNDED
+}
+
+// Platform-level licensing plans. `price` is in paise (INR); 0 = custom.
+model BillingPlan {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  name      String
+  price     Int // paise
+  currency  String    @default("INR")
+  period    String    @default("month") // month | custom
+  features  Json?
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  payments  Payment[]
+}
+
+// One Razorpay order + its lifecycle. orderId is the Razorpay order id.
+model Payment {
+  id        String        @id @default(cuid())
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orgId     String?
+  org       Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  planId    String?
+  plan      BillingPlan?  @relation(fields: [planId], references: [id], onDelete: SetNull)
+  planCode  String
+  planName  String
+  amount    Int // paise
+  currency  String        @default("INR")
+  orderId   String        @unique
+  paymentId String?
+  signature String?
+  method    String?
+  receipt   String?
+  status    PaymentStatus @default(CREATED)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([orgId])
+  @@index([status])
+}

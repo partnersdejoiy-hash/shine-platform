@@ -1,0 +1,701 @@
+# =============================================================================
+# SHINE — Self-hosted enterprise stack (Powered by DEJOIY)
+# Deploy:  cp deploy/.env.example .env   (or run deploy/scripts/setup.sh)
+#          docker compose up -d
+#
+# Profile-gated services (start on demand — nothing below auto-starts):
+#   --profile proxy       Traefik reverse proxy + Let's Encrypt (alt to nginx)
+#   --profile knowledge   Wiki.js knowledge base
+#   --profile office      OnlyOffice Docs (collaborative documents)
+#   --profile ops         Uptime Kuma + Node/Postgres/Redis exporters + GlitchTip
+#   --profile analytics   PostHog product analytics (self-hosted)
+#   --profile workflow    n8n workflow engine
+#   --profile media       Apache Tika + Gotenberg + ClamAV + FFmpeg/ImageMagick
+#   --profile security    CrowdSec intrusion detection
+#   --profile observability  OpenTelemetry collector
+#   --profile backup      Restic encrypted backups
+#   --profile future      RabbitMQ (future microservices) + Infisical + Flagsmith
+#
+# Example: docker compose --profile ops --profile knowledge up -d
+# =============================================================================
+
+name: shine
+
+x-common-api: &common-api
+  build: { context: ./server, dockerfile: Dockerfile }
+  restart: unless-stopped
+  environment: &api-env
+    NODE_ENV: production
+    PORT: "3001"
+    DATABASE_URL: postgresql://${POSTGRES_USER:-shine}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-shine}
+    REDIS_URL: redis://redis:6379
+    JWT_SECRET: ${JWT_SECRET}
+    SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-deepak.sharma@dejoiy.com}
+    SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD}
+    PUBLIC_SITE_URL: ${PUBLIC_SITE_URL}
+    SMTP_HOST: ${SMTP_HOST}
+    SMTP_PORT: ${SMTP_PORT:-587}
+    SMTP_USER: ${SMTP_USER}
+    SMTP_PASS: ${SMTP_PASS}
+    SMTP_FROM: ${SMTP_FROM:-welcome@dejoiy.com}
+    SMTP_SECURE: ${SMTP_SECURE:-false}
+    MINIO_ENDPOINT: minio
+    MINIO_PORT: "9000"
+    MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+    MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+    MINIO_BUCKET: ${MINIO_BUCKET:-shine}
+    MINIO_PUBLIC_URL: ${MINIO_PUBLIC_URL:-http://localhost:9000}
+    MEILI_HOST: http://meilisearch:7700
+    MEILI_MASTER_KEY: ${MEILI_MASTER_KEY}
+    LIVEKIT_URL: ${LIVEKIT_URL:-ws://livekit:7880}
+    LIVEKIT_API_KEY: ${LIVEKIT_API_KEY}
+    LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET}
+    LIVEKIT_EGRESS_URL: ${LIVEKIT_EGRESS_URL:-http://livekit-egress:7882}
+    NOVU_API_URL: ${NOVU_API_URL:-http://novu:3000}
+    NOVU_API_KEY: ${NOVU_API_KEY}
+    RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID}
+    RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET}
+    RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET}
+    GOTENBERG_URL: ${GOTENBERG_URL:-http://gotenberg:3000}
+    TIKA_URL: ${TIKA_URL:-http://tika:9998}
+    CLAMAV_HOST: ${CLAMAV_HOST:-clamav}
+    CLAMAV_PORT: ${CLAMAV_PORT:-3310}
+    OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4317}
+    POSTHOG_HOST: ${POSTHOG_HOST:-http://posthog:8000}
+  depends_on:
+    postgres: { condition: service_healthy }
+    redis: { condition: service_healthy }
+    minio: { condition: service_started }
+    meilisearch: { condition: service_healthy }
+  networks: [shine]
+
+services:
+  # ------------------------------------------------------------- API (NestJS)
+  api:
+    <<: *common-api
+    environment:
+      <<: *api-env
+    expose: ["3001"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    # database migrations run before the API starts
+    command: sh -c "npx prisma migrate deploy && npx prisma db seed && node dist/main.js"
+
+  # ------------------------------------------------------------- Frontend
+  # The Vite SPA (repo root) built by deploy/web/Dockerfile and served by
+  # nginx. Caddy on the host proxies app.shine.dejoiy.com / meet.dejoiy.com to
+  # 127.0.0.1:8090 — this container is that origin. Requires CONVEX_URL in
+  # your .env (the Convex deployment used for auth + every query/mutation).
+  web:
+    build:
+      context: .
+      dockerfile: deploy/web/Dockerfile
+      args:
+        VITE_CONVEX_URL: ${CONVEX_URL:?CONVEX_URL is required — add your Convex deployment URL to .env (see .env.example)}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8090:80"
+    expose: ["3000", "5173", "80"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    depends_on: [api]
+    networks: [shine]
+
+  # ------------------------------------------------------------- Database
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-shine}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-shine}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-shine}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks: [shine]
+
+  # ------------------------------------------------------------- Cache/queue
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:-shine-redis}"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-shine-redis}", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks: [shine]
+
+  # ------------------------------------------------------------- Object storage
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "${MINIO_EXPOSE_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_EXPOSE_PORT:-9001}:9001"
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [shine]
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on: [minio]
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD};
+      mc mb -p local/${MINIO_BUCKET:-shine};
+      mc mb -p local/${MINIO_BUCKET:-shine}-recordings;
+      mc anonymous set none local/${MINIO_BUCKET:-shine};
+      echo 'MinIO buckets ready';
+      "
+    networks: [shine]
+
+  # ------------------------------------------------------------- Search
+  meilisearch:
+    image: getmeili/meilisearch:v1.8
+    restart: unless-stopped
+    environment:
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY}
+      MEILI_ENV: production
+      MEILI_NO_ANALYTICS: "true"
+    volumes:
+      - meilidata:/meili_data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [shine]
+
+  # ------------------------------------------------------------- LiveKit (SFU)
+  livekit:
+    image: livekit/livekit-server:latest
+    restart: unless-stopped
+    command: --config /etc/livekit.yaml
+    ports:
+      - "${LIVEKIT_PORT:-7880}:7880"
+      - "7881:7881"
+      - "50000-50100:50000-50100/udp"
+    volumes:
+      - ./deploy/livekit/livekit.yaml:/etc/livekit.yaml:ro
+    depends_on: [coturn, minio]
+    networks: [shine]
+
+  livekit-egress:
+    image: livekit/egress:latest
+    restart: unless-stopped
+    environment:
+      EGRESS_CONFIG_FILE: /etc/egress.yaml
+    volumes:
+      - ./deploy/livekit/egress.yaml:/etc/egress.yaml:ro
+      - egressdata:/out
+    depends_on: [livekit, minio]
+    networks: [shine]
+
+  # ------------------------------------------------------------- TURN/STUN
+  coturn:
+    image: coturn/coturn:latest
+    restart: unless-stopped
+    command: -c /etc/turnserver.conf
+    network_mode: host
+    volumes:
+      - ./deploy/coturn/turnserver.conf:/etc/turnserver.conf:ro
+    ports: [] # host networking — see turnserver.conf for listening ports
+
+  # ------------------------------------------------------------- Notifications
+  novu:
+    image: novu/novu:latest
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      MONGODB_URL: mongodb://novu-mongo:27017/novu
+      REDIS_URL: redis://redis:6379
+      REDIS_TLS: "false"
+      API_ROOT_URL: ${PUBLIC_SITE_URL}/notifications
+      FRONT_BASE_URL: ${PUBLIC_SITE_URL}/notifications
+      DISABLE_USER_REGISTRATION: "true"
+      NOVU_SECRET: ${NOVU_SECRET}
+      # Email via the shared SMTP relay (Resend)
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      SMTP_FROM: ${NOVU_FROM:-notifications@dejoiy.com}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+    ports:
+      - "${NOVU_EXPOSE_PORT:-3005}:3000"
+    depends_on:
+      redis: { condition: service_healthy }
+      novu-mongo: { condition: service_started }
+    networks: [shine]
+
+  novu-mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - novumongo:/data/db
+    networks: [shine]
+
+  # ------------------------------------------------------------- Monitoring
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+    volumes:
+      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - promdata:/prometheus
+    expose: ["9090"]
+    networks: [shine]
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafanadata:/var/lib/grafana
+      - ./deploy/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "${GRAFANA_EXPOSE_PORT:-3001}:3000"
+    depends_on: [prometheus, loki]
+    networks: [shine]
+
+  loki:
+    image: grafana/loki:3.1.0
+    restart: unless-stopped
+    command: -config.file=/etc/loki/loki-config.yaml
+    volumes:
+      - ./deploy/loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
+      - lokidata:/loki
+    expose: ["3100"]
+    networks: [shine]
+
+  promtail:
+    image: grafana/promtail:3.1.0
+    restart: unless-stopped
+    command: -config.file=/etc/promtail/promtail.yaml
+    volumes:
+      - ./deploy/loki/promtail.yaml:/etc/promtail/promtail.yaml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on: [loki]
+    networks: [shine]
+
+  # ------------------------------------------------------------- Reverse proxy
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deploy/nginx/shine.conf:/etc/nginx/conf.d/shine.conf:ro
+      - ./deploy/nginx/certs:/etc/nginx/certs:ro
+      - ./deploy/nginx/html:/var/www/html:ro
+    depends_on:
+      api: { condition: service_healthy }
+    networks: [shine]
+
+  # ===========================================================================
+  #  SELF-HOSTED ENTERPRISE CATALOG — all profile-gated, nothing auto-starts
+  # ===========================================================================
+
+  # ------------------------------------------------ Reverse proxy (alt): Traefik
+  traefik:
+    image: traefik:v3.1
+    restart: unless-stopped
+    profiles: ["proxy"]
+    command:
+      - --api.insecure=false
+      - --api.dashboard=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.letsencrypt.acme.tlschallenge=true
+      - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-admin@dejoiy.com}
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+      - --log.level=INFO
+    ports:
+      - "80:80"
+      - "443:443"
+      - "${TRAEFIK_DASHBOARD_PORT:-8082}:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefikdata:/letsencrypt
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`${TRAEFIK_DASHBOARD_HOST:-traefik.shine.dejoiy.com}`)"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
+    networks: [shine]
+
+  # ------------------------------------------------ Knowledge base: Wiki.js
+  wikijs:
+    image: requarks/wiki:2.5
+    restart: unless-stopped
+    profiles: ["knowledge"]
+    environment:
+      DB_TYPE: postgres
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: wikijs
+      DB_USER: ${POSTGRES_USER:-shine}
+      DB_PASS: ${POSTGRES_PASSWORD}
+      WIKI_JWT_SECRET: ${WIKI_JWT_SECRET:-change-me}
+    ports:
+      - "${WIKIJS_EXPOSE_PORT:-3080}:3000"
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [shine]
+
+  # ------------------------------------------------ Collaborative docs: OnlyOffice
+  onlyoffice:
+    image: onlyoffice/documentserver:8.2
+    restart: unless-stopped
+    profiles: ["office"]
+    environment:
+      JWT_ENABLED: "true"
+      JWT_SECRET: ${ONLYOFFICE_JWT_SECRET:-change-me-onlyoffice}
+      JWT_HEADER: Authorization
+      JWT_INBODY: "true"
+    ports:
+      - "${ONLYOFFICE_EXPOSE_PORT:-3083}:80"
+    volumes:
+      - onlyofficedata:/var/www/onlyoffice/Data
+      - onlyofficecache:/var/lib/onlyoffice
+      - onlyofficelogs:/var/log/onlyoffice
+    networks: [shine]
+
+  # ------------------------------------------------ Uptime monitoring: Uptime Kuma
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    restart: unless-stopped
+    profiles: ["ops"]
+    ports:
+      - "${UPTIMEKUMA_EXPOSE_PORT:-3084}:3001"
+    volumes:
+      - uptimekumadata:/app/data
+    networks: [shine]
+
+  # ------------------------------------------------ Error tracking: GlitchTip
+  glitchtip:
+    image: glitchtip/glitchtip:latest
+    restart: unless-stopped
+    profiles: ["ops"]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-shine}:${POSTGRES_PASSWORD}@postgres:5432/glitchtip
+      SECRET_KEY: ${GLITCHTIP_SECRET_KEY:-change-me-glitchtip}
+      PORT: "8080"
+      EMAIL_ENABLED: "true"
+      EMAIL_HOST: ${SMTP_HOST}
+      EMAIL_PORT: ${SMTP_PORT:-587}
+      EMAIL_HOST_USER: ${SMTP_USER}
+      EMAIL_HOST_PASSWORD: ${SMTP_PASS}
+      EMAIL_USE_TLS: ${SMTP_SECURE:-false}
+      EMAIL_DEFAULT_FROM_EMAIL: glitchtip@dejoiy.com
+    ports:
+      - "${GLITCHTIP_EXPOSE_PORT:-3085}:8080"
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [shine]
+
+  # ------------------------------------------------ Product analytics: PostHog
+  posthog:
+    image: posthog/posthog:latest
+    restart: unless-stopped
+    profiles: ["analytics"]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-shine}:${POSTGRES_PASSWORD}@postgres:5432/posthog
+      REDIS_URL: redis://:${REDIS_PASSWORD:-shine-redis}@redis:6379
+      CLICKHOUSE_DATABASE: posthog
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhouse}
+      SECRET_KEY: ${POSTHOG_SECRET_KEY:-change-me-posthog}
+      SITE_URL: ${PUBLIC_SITE_URL}
+      POSTHOG_ENV: production
+      PORT: "8000"
+    ports:
+      - "${POSTHOG_EXPOSE_PORT:-3086}:8000"
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      clickhouse: { condition: service_healthy }
+    networks: [shine]
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8
+    restart: unless-stopped
+    profiles: ["analytics"]
+    environment:
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhouse}
+      CLICKHOUSE_DB: posthog
+    volumes:
+      - clickhousedata:/var/lib/clickhouse
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8123/ping || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks: [shine]
+
+  # ------------------------------------------------ Workflow engine: n8n
+  n8n:
+    image: n8nio/n8n:latest
+    restart: unless-stopped
+    profiles: ["workflow"]
+    environment:
+      N8N_HOST: ${N8N_HOST:-n8n.shine.dejoiy.com}
+      N8N_PROTOCOL: https
+      N8N_PORT: "5678"
+      GENERIC_TIMEZONE: ${TIMEZONE:-Asia/Kolkata}
+      WEBHOOK_URL: ${N8N_WEBHOOK_URL:-https://n8n.shine.dejoiy.com/}
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:-change-me-n8n}
+    ports:
+      - "${N8N_EXPOSE_PORT:-3087}:5678"
+    volumes:
+      - n8ndata:/home/node/.n8n
+    networks: [shine]
+
+  # ------------------------------------------------ Document parsing: Apache Tika
+  tika:
+    image: apache/tika:2.9.0.0
+    restart: unless-stopped
+    profiles: ["media"]
+    ports:
+      - "${TIKA_EXPOSE_PORT:-3088}:9998"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9998/tika"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    networks: [shine]
+
+  # ------------------------------------------------ PDF generation: Gotenberg
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    restart: unless-stopped
+    profiles: ["media"]
+    command:
+      - "gotenberg"
+      - "--chromium-disable-javascript=true"
+      - "--api-timeout=60s"
+    ports:
+      - "${GOTENBERG_EXPOSE_PORT:-3089}:3000"
+    networks: [shine]
+
+  # ------------------------------------------------ Virus scanning: ClamAV
+  clamav:
+    image: clamav/clamav:stable
+    restart: unless-stopped
+    profiles: ["media"]
+    volumes:
+      - clamavdata:/var/lib/clamav
+    ports:
+      - "${CLAMAV_EXPOSE_PORT:-3310}:3310"
+    healthcheck:
+      test: ["CMD-SHELL", "clamdcheck || exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    networks: [shine]
+
+  # ------------------------------------------------ Intrusion detection: CrowdSec
+  crowdsec:
+    image: crowdsecurity/crowdsec:latest
+    restart: unless-stopped
+    profiles: ["security"]
+    environment:
+      COLLECTIONS: crowdsecurity/linux crowdsecurity/http-cve crowdsecurity/traefik crowdsecurity/nginx
+      GID: "1000"
+      UID: "1000"
+    volumes:
+      - crowdsecdata:/var/lib/crowdsec/data
+      - crowdsecconfig:/etc/crowdsec
+      - /var/log:/var/log:ro
+    ports:
+      - "8080:8080"
+    networks: [shine]
+
+  # ------------------------------------------------ Observability: OpenTelemetry
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.106.1
+    restart: unless-stopped
+    profiles: ["observability"]
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./deploy/otel/config.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    depends_on:
+      - loki
+      - prometheus
+    networks: [shine]
+
+  # ------------------------------------------------ Metrics exporters
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    restart: unless-stopped
+    profiles: ["ops"]
+    command:
+      - --path.rootfs=/host
+    volumes:
+      - /:/host:ro,rslave
+    expose: ["9102"]
+    networks: [shine]
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    restart: unless-stopped
+    profiles: ["ops"]
+    environment:
+      DATA_SOURCE_NAME: postgresql://${POSTGRES_USER:-shine}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-shine}?sslmode=disable
+    expose: ["9187"]
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [shine]
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.65.0
+    restart: unless-stopped
+    profiles: ["ops"]
+    environment:
+      REDIS_ADDR: redis://redis:6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-shine-redis}
+    expose: ["9121"]
+    depends_on:
+      redis: { condition: service_healthy }
+    networks: [shine]
+
+  # ------------------------------------------------ Encrypted backups: Restic
+  restic:
+    image: restic/restic:0.17.1
+    restart: unless-stopped
+    profiles: ["backup"]
+    environment:
+      RESTIC_REPOSITORY: s3:${MINIO_PUBLIC_URL:-http://minio:9000}/shine-backups
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+      RESTIC_PASSWORD: ${RESTIC_PASSWORD:-change-me-restic}
+    entrypoint: ["/bin/sh"]
+    command:
+      - -c
+      - >
+        restic snapshots >/dev/null 2>&1 || restic init;
+        while true; do
+          restic backup /data --tag shine --quiet;
+          restic forget --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --prune --quiet;
+          sleep ${RESTIC_INTERVAL:-86400};
+        done
+    volumes:
+      - ./deploy/restic/backup:/data:ro
+      - resticdata:/restic-cache
+    networks: [shine]
+
+  # ------------------------------------------------ Future microservices: RabbitMQ
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    restart: unless-stopped
+    profiles: ["future"]
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-shine}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-change-me-rabbitmq}
+    ports:
+      - "${RABBITMQ_EXPOSE_PORT:-3090}:5672"
+      - "${RABBITMQ_MGMT_EXPOSE_PORT:-3091}:15672"
+    volumes:
+      - rabbitmqdata:/var/lib/rabbitmq
+    networks: [shine]
+
+  # ------------------------------------------------ Secrets: Infisical
+  infisical:
+    image: infisical/infisical:latest
+    restart: unless-stopped
+    profiles: ["future"]
+    environment:
+      ENCRYPTION_KEY: ${INFISICAL_ENCRYPTION_KEY:-change-me-infisical}
+      AUTH_SECRET: ${INFISICAL_AUTH_SECRET:-change-me-infisical-auth}
+      DB_URL: postgresql://${POSTGRES_USER:-shine}:${POSTGRES_PASSWORD}@postgres:5432/infisical
+      REDIS_URL: redis://:${REDIS_PASSWORD:-shine-redis}@redis:6379
+      SITE_URL: ${PUBLIC_SITE_URL}
+      NODE_ENV: production
+      PORT: "80"
+    ports:
+      - "${INFISICAL_EXPOSE_PORT:-3092}:80"
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    networks: [shine]
+
+  # ------------------------------------------------ Feature flags: Flagsmith
+  flagsmith:
+    image: flagsmith/flagsmith:latest
+    restart: unless-stopped
+    profiles: ["future"]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-shine}:${POSTGRES_PASSWORD}@postgres:5432/flagsmith
+      DJANGO_ALLOWED_HOSTS: "*"
+      ENABLE_ANALYTICS: "false"
+      PREVENT_SIGNUP: "false"
+      PORT: "8000"
+    ports:
+      - "${FLAGSMITH_EXPOSE_PORT:-3093}:8000"
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [shine]
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:
+  meilidata:
+  egressdata:
+  novumongo:
+  promdata:
+  grafanadata:
+  lokidata:
+  traefikdata:
+  onlyofficedata:
+  onlyofficecache:
+  onlyofficelogs:
+  uptimekumadata:
+  clickhousedata:
+  n8ndata:
+  clamavdata:
+  crowdsecdata:
+  crowdsecconfig:
+  resticdata:
+  rabbitmqdata:
+
+networks:
+  shine:
+    driver: bridge
