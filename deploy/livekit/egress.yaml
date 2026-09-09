@@ -1,0 +1,23 @@
+# LiveKit Egress worker configuration
+log_level: info
+
+redis:
+  address: redis:6379
+  password: ${REDIS_PASSWORD}
+
+s3:
+  access_key: ${MINIO_ROOT_USER}
+  secret: ${MINIO_ROOT_PASSWORD}
+  region: us-east-1
+  endpoint: http://minio:9000
+  force_path_style: true
+
+# Where finished recordings get stored
+bucket: ${MINIO_BUCKET}-recordings
+
+# Callbacks to the API
+webhook:
+  api_key: ${LIVEKIT_API_KEY}
+  api_secret: ${LIVEKIT_API_SECRET}
+  urls:
+    - http://api:3001/livekit/egress

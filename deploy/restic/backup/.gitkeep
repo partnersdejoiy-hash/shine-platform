@@ -1,0 +1,2 @@
+# Mount host paths you want backed up into ./deploy/restic/backup
+# (e.g. symlink volumes, or extend the restic service with extra volumes).

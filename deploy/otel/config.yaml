@@ -1,0 +1,43 @@
+# OpenTelemetry Collector — SHINE observability pipeline
+# Receives OTLP (traces/metrics/logs) from the API and forwards to Loki + Prometheus.
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 1s
+    send_batch_size: 1024
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+
+exporters:
+  logging:
+    verbosity: basic
+  otlphttp/loki:
+    endpoint: http://loki:3100/otlp
+  prometheusremotewrite:
+    endpoint: http://prometheus:9090/api/v1/write
+    # Prometheus receives metrics via remote_write from the collector.
+  debug:
+    verbosity: basic
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [logging]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [logging, prometheusremotewrite]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [logging, otlphttp/loki]
