@@ -140,10 +140,10 @@ export function ConversationList({
                 });
               }}
               className={cn(
-                "mb-1 flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition-all",
+                "mb-1.5 flex w-full items-center gap-3 rounded-2xl border-2 p-2.5 text-left transition-[background-color,box-shadow,transform] duration-150 active:scale-[0.99]",
                 active
-                  ? "bg-primary/12 shadow-[inset_0_0_0_1px_rgba(212,175,55,0.25)]"
-                  : "hover:bg-accent/60",
+                  ? "border-[var(--sticker-border)] bg-accent shadow-[3px_3px_0_var(--gold)]"
+                  : "border-transparent hover:bg-accent/60",
               )}
             >
               {isChannel ? (
@@ -185,7 +185,7 @@ export function ConversationList({
                     </span>
                   )}
                   {item.unread > 0 && (
-                    <span className="grid min-w-5 shrink-0 place-items-center rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">
+                    <span className="grid h-5 min-w-5 shrink-0 place-items-center rounded-full border-[1.5px] border-[var(--sticker-border)] bg-primary px-1.5 text-[11px] font-bold text-primary-foreground">
                       {item.unread}
                     </span>
                   )}
@@ -198,7 +198,7 @@ export function ConversationList({
 
       <div className="shrink-0 border-t border-border/70 p-2.5">
         <Button
-          className="h-10 w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
+          className="h-11 w-full gap-2"
           onClick={onNewChat}
         >
           <MessageSquarePlus className="size-4" /> New message

@@ -34,6 +34,31 @@ export interface AccentDef {
 
 export const ACCENTS: AccentDef[] = [
   {
+    id: "dejoiy",
+    label: "Dejoiy Pink",
+    swatch: "#ff4fa3",
+    dark: {
+      "--primary": "#ff5cab",
+      "--primary-foreground": "#121212",
+      "--ring": "#ff5cab",
+      "--gold": "#ff5cab",
+      "--gold-soft": "rgb(255 92 171 / 16%)",
+      "--chart-1": "#ff5cab",
+      "--sidebar-primary": "#ff5cab",
+      "--sidebar-primary-foreground": "#121212",
+    },
+    light: {
+      "--primary": "#ff4fa3",
+      "--primary-foreground": "#121212",
+      "--ring": "#ff4fa3",
+      "--gold": "#ff4fa3",
+      "--gold-soft": "rgb(255 79 163 / 16%)",
+      "--chart-1": "#ff4fa3",
+      "--sidebar-primary": "#ff4fa3",
+      "--sidebar-primary-foreground": "#121212",
+    },
+  },
+  {
     id: "gold",
     label: "Royal Gold",
     swatch: "linear-gradient(140deg,#f2d469,#d4af37 55%,#8f6e1a)",
@@ -285,11 +310,11 @@ export const ACCENTS: AccentDef[] = [
   },
 ];
 
-export const DEFAULT_ACCENT_ID = "gold";
+export const DEFAULT_ACCENT_ID = "dejoiy";
 
 export function getAccent(id?: string | null): AccentDef {
   if (!id) return ACCENTS.find((a) => a.id === DEFAULT_ACCENT_ID)!;
-  return ACCENTS.find((a) => a.id === id) ?? ACCENTS[0];
+  return ACCENTS.find((a) => a.id === id) ?? ACCENTS[0]; // unknown ids fall back to Dejoiy Pink
 }
 
 const VAR_KEYS = [

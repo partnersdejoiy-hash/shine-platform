@@ -139,8 +139,8 @@ export function MeetHome() {
     <div className="relative flex min-h-svh flex-col overflow-hidden bg-background">
       {/* ambient glow */}
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-40 left-1/2 h-[480px] w-[820px] -translate-x-1/2 rounded-full bg-[radial-gradient(ellipse,rgba(212,175,55,0.12),transparent_65%)] blur-3xl" />
-        <div className="absolute bottom-0 right-0 h-[360px] w-[560px] translate-x-1/3 rounded-full bg-[radial-gradient(ellipse,rgba(212,175,55,0.06),transparent_65%)] blur-3xl" />
+        <div className="absolute -top-40 left-1/2 h-[480px] w-[820px] -translate-x-1/2 rounded-full bg-[radial-gradient(ellipse,var(--gold-soft),transparent_65%)] blur-3xl" />
+        <div className="absolute bottom-0 right-0 h-[360px] w-[560px] translate-x-1/3 rounded-full bg-[radial-gradient(ellipse,var(--gold-soft),transparent_65%)] blur-3xl" />
       </div>
 
       {/* top bar */}

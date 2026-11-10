@@ -752,12 +752,12 @@ export function AppMeetings() {
                 type="checkbox"
                 checked={form.recordingEnabled}
                 onChange={(e) => setForm({ ...form, recordingEnabled: e.target.checked })}
-                className="size-4 accent-[#D4AF37]"
+                className="size-4 accent-[var(--gold)]"
               />
             </label>
             <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-border/80 bg-muted/40 px-4 py-3 transition-colors hover:bg-muted/70">
               <span className="flex items-center gap-3">
-                <span className="grid size-9 place-items-center rounded-lg bg-[#D4AF37]/10 text-[#D4AF37]">
+                <span className="grid size-9 place-items-center rounded-lg bg-primary/15 text-primary">
                   <Globe2 className="size-4" />
                 </span>
                 <span>
@@ -773,7 +773,7 @@ export function AppMeetings() {
                 type="checkbox"
                 checked={form.openToEveryone}
                 onChange={(e) => setForm({ ...form, openToEveryone: e.target.checked })}
-                className="size-4 accent-[#D4AF37]"
+                className="size-4 accent-[var(--gold)]"
               />
             </label>
           </div>

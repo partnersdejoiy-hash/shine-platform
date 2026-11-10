@@ -91,7 +91,7 @@ export function AppDashboard() {
                 day: "numeric",
               })}
             </div>
-            <h1 className="mt-1 text-2xl font-bold tracking-tight">
+            <h1 className="mt-1 text-3xl font-extrabold tracking-[-0.04em] sm:text-4xl">
               {greeting}, {user?.name?.split(" ")[0] ?? "there"} <span className="inline-block">👋</span>
             </h1>
             <p className="mt-0.5 text-sm text-muted-foreground">
@@ -100,13 +100,12 @@ export function AppDashboard() {
                 : "You're all caught up. Here's what's happening."}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {quick.map((q) => (
               <Button
                 key={q.label}
                 variant={q.primary ? "default" : "outline"}
-                className={q.primary ? "bg-primary text-primary-foreground hover:bg-primary/90" : ""}
-                onClick={() => navigate(q.to)}
+                                onClick={() => navigate(q.to)}
               >
                 <q.icon className="size-4" /> {q.label}
               </Button>

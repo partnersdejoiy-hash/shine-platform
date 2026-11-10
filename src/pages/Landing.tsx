@@ -98,7 +98,7 @@ function MockChat() {
   return (
     <div className="relative mx-auto w-full max-w-5xl">
       {/* glow */}
-      <div className="absolute -inset-x-10 -top-10 h-64 bg-[radial-gradient(ellipse_at_top,rgba(212,175,55,0.16),transparent_65%)] blur-2xl" />
+      <div className="absolute -inset-x-10 -top-10 h-64 bg-[radial-gradient(ellipse_at_top,var(--gold-soft),transparent_65%)] blur-2xl" />
       <div className="glass-strong hairline relative overflow-hidden rounded-3xl shadow-2xl">
         <div className="flex">
           {/* rail */}
@@ -135,7 +135,7 @@ function MockChat() {
                 <div className="flex items-center gap-2">
                   <div
                     className="grid size-7 shrink-0 place-items-center rounded-full text-[10px] font-bold text-white"
-                    style={{ background: `linear-gradient(135deg,#d4af37,${i % 2 ? "#5a4a12" : "#35353d"})` }}
+                    style={{ background: `linear-gradient(135deg,#ff4fa3,${i % 2 ? "#ffd23f" : "#4da3ff"})` }}
                   >
                     {c.n.split(" ").map((w) => w[0]).join("").slice(0, 2)}
                   </div>
@@ -154,7 +154,7 @@ function MockChat() {
           <div className="flex min-w-0 flex-1 flex-col">
             <div className="flex items-center justify-between border-b border-border/70 px-4 py-3">
               <div className="flex items-center gap-2.5">
-                <div className="grid size-8 place-items-center rounded-full bg-gradient-to-br from-[#f2d469] to-[#9a7b1e] text-xs font-bold text-black">
+                <div className="grid size-8 place-items-center rounded-full bg-primary border-2 border-[var(--sticker-border)] text-xs font-bold text-black">
                   AC
                 </div>
                 <div>
@@ -217,7 +217,7 @@ function MockChat() {
         className="glass-strong hairline absolute -right-4 top-16 hidden w-52 rounded-2xl p-3 shadow-2xl lg:block"
       >
         <div className="flex items-center gap-2">
-          <div className="relative grid size-9 place-items-center rounded-full bg-gradient-to-br from-[#f2d469] to-[#9a7b1e]">
+          <div className="relative grid size-9 place-items-center rounded-full bg-primary border-2 border-[var(--sticker-border)]">
             <span className="absolute inset-0 animate-ping rounded-full bg-primary/30" />
             <Video className="size-4 text-black" />
           </div>
@@ -266,8 +266,8 @@ export default function Landing() {
     <div className="relative min-h-screen overflow-x-hidden bg-background text-foreground">
       {/* ambient background */}
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-40 left-1/2 h-[540px] w-[900px] -translate-x-1/2 rounded-full bg-[radial-gradient(ellipse_at_center,rgba(212,175,55,0.09),transparent_65%)] blur-3xl" />
-        <div className="absolute right-[-200px] top-1/3 h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle,rgba(212,175,55,0.05),transparent_70%)] blur-3xl" />
+        <div className="absolute -top-40 left-1/2 h-[540px] w-[900px] -translate-x-1/2 rounded-full bg-[radial-gradient(ellipse_at_center,var(--gold-soft),transparent_65%)] blur-3xl" />
+        <div className="absolute right-[-200px] top-1/3 h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle,var(--gold-soft),transparent_70%)] blur-3xl" />
         <div
           className="absolute inset-0 opacity-[0.35] dark:opacity-[0.5]"
           style={{
@@ -313,7 +313,7 @@ export default function Landing() {
               </Button>
               <Button
                 onClick={() => navigate("/auth")}
-                className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_8px_24px_-8px_rgba(212,175,55,0.6)]"
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
               >
                 Get started <ArrowRight className="size-4" />
               </Button>
@@ -369,7 +369,7 @@ export default function Landing() {
           >
             <Button
               size="lg"
-              className="h-12 px-7 text-base bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_12px_40px_-10px_rgba(212,175,55,0.65)]"
+              className="h-12 px-7 text-base bg-primary text-primary-foreground hover:bg-primary/90"
               onClick={() => navigate("/auth")}
             >
               <Rocket className="size-4" /> Start for free
@@ -497,7 +497,7 @@ export default function Landing() {
                 </div>
                 <div className="grid grid-cols-2 gap-2 p-3">
                   {[
-                    { name: "Amara Chen", grad: "from-[#f2d469] to-[#9a7b1e]", self: false },
+                    { name: "Amara Chen", grad: "from-[#ff8fc4] to-[#ff4fa3]", self: false },
                     { name: "You", grad: "from-[#3a3a42] to-[#141418]", self: true },
                     { name: "Omar Haddad", grad: "from-[#55555f] to-[#1c1c22]", self: false },
                     { name: "Priya N.", grad: "from-[#6b5415] to-[#2a210a]", self: false },
@@ -593,7 +593,7 @@ export default function Landing() {
                               whileInView={{ width: `${v}%` }}
                               viewport={{ once: true }}
                               transition={{ duration: 1, delay: 0.3 + i * 0.1 }}
-                              className="h-full rounded-full bg-gradient-to-r from-[#9a7b1e] to-[#f2d469]"
+                              className="h-full rounded-full bg-primary"
                             />
                           </div>
                         </div>
@@ -702,7 +702,7 @@ export default function Landing() {
         <div className="mx-auto max-w-5xl px-4 sm:px-6">
           <Reveal>
             <div className="glass-strong hairline ring-glow relative overflow-hidden rounded-3xl px-8 py-16 text-center sm:px-16">
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(212,175,55,0.12),transparent_60%)]" />
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,var(--gold-soft),transparent_60%)]" />
               <div className="relative">
                 <h2 className="mx-auto max-w-2xl text-3xl font-bold tracking-tight sm:text-5xl">
                   Your team deserves <span className="gold-text">one platform.</span>
@@ -714,7 +714,7 @@ export default function Landing() {
                 <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
                   <Button
                     size="lg"
-                    className="h-12 px-8 text-base bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_12px_40px_-10px_rgba(212,175,55,0.65)]"
+                    className="h-12 px-8 text-base bg-primary text-primary-foreground hover:bg-primary/90"
                     onClick={() => navigate("/auth")}
                   >
                     <Rocket className="size-4" /> Get started free

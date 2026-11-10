@@ -398,8 +398,8 @@ export function MessageComposer({
 
       <div
         className={cn(
-          "relative flex items-end gap-1.5 rounded-2xl border bg-background/60 p-2 transition-colors",
-          dragging ? "border-primary/60 ring-2 ring-primary/20" : "border-border/80",
+          "relative flex flex-wrap items-end gap-1 rounded-[22px] border-2 bg-card p-1.5 shadow-[3px_3px_0_var(--sticker-shadow)] transition-colors sm:flex-nowrap sm:gap-1.5 sm:p-2",
+          dragging ? "border-primary ring-2 ring-primary/25" : "border-[var(--sticker-border)]",
         )}
         onDragEnter={(e) => {
           e.preventDefault();
@@ -647,14 +647,14 @@ export function MessageComposer({
               ? "Edit message…"
               : "Message… @mention"
           }
-          className="max-h-[72px] sm:max-h-32 min-h-10 flex-1 resize-none border-0 bg-transparent px-2 py-2 text-sm shadow-none focus-visible:ring-0"
+          className="order-first max-h-[96px] min-h-10 basis-full resize-none border-0 bg-transparent px-2.5 py-2 text-base shadow-none focus-visible:bg-transparent focus-visible:ring-0 sm:order-none sm:max-h-32 sm:flex-1 sm:basis-auto sm:text-sm"
           rows={1}
         />
 
         {text.trim() || editTarget ? (
           <Button
             size="icon"
-            className="size-9 shrink-0 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
+            className="ml-auto size-10 shrink-0 sm:ml-0"
             onClick={() => handleSendText()}
             disabled={sending || uploading !== null}
           >
@@ -663,7 +663,7 @@ export function MessageComposer({
         ) : recording ? (
           <Button
             size="icon"
-            className="size-9 shrink-0 rounded-xl bg-rose-500 text-white hover:bg-rose-500"
+            className="ml-auto size-10 shrink-0 bg-rose-500 text-white hover:bg-rose-500 sm:ml-0"
             onClick={stopRecording}
           >
             <Square className="size-4" />
@@ -671,7 +671,7 @@ export function MessageComposer({
         ) : (
           <Button
             size="icon"
-            className="size-9 shrink-0 rounded-xl text-muted-foreground"
+            className="ml-auto size-10 shrink-0 text-muted-foreground sm:ml-0"
             variant="ghost"
             onClick={startRecording}
             title="Record voice message"

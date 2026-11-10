@@ -424,7 +424,7 @@ export function AppSettings() {
           }
         },
         prefill: { email: user?.email, name: user?.name },
-        theme: { color: "#D4AF37" },
+        theme: { color: "#FF4FA3" },
       });
       rzp.on("payment.failed", () => {
         toast.error("Payment failed. You can try again anytime.");
@@ -700,7 +700,7 @@ export function AppSettings() {
                       icon: Moon,
                       title: "Midnight gold",
                       desc: "Black glassmorphism with gold accents — the DEJOIY signature.",
-                      preview: "bg-[#0B0B0B]",
+                      preview: "bg-[#141216]",
                     },
                     {
                       mode: "light",
@@ -714,7 +714,7 @@ export function AppSettings() {
                       icon: Monitor,
                       title: "System",
                       desc: "Follows your device dark/light preference.",
-                      preview: "bg-gradient-to-br from-[#0B0B0B] to-[#f7f6f2]",
+                      preview: "bg-gradient-to-br from-[#141216] to-[#fffbf7]",
                     },
                   ] as const
                 ).map((t) => (
@@ -733,7 +733,7 @@ export function AppSettings() {
                         className={cn(
                           "grid size-10 place-items-center rounded-xl border border-border",
                           t.preview,
-                          t.mode === "dark" ? "text-[#D4AF37]" : "text-[#0B0B0B]",
+                          t.mode === "dark" ? "text-primary" : "text-[#121212]",
                         )}
                       >
                         <t.icon className="size-5" />

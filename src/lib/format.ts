@@ -72,14 +72,8 @@ export function displayName(user: { name?: string | null; email?: string | null;
 
 /** Deterministic gradient for an avatar fallback. */
 export function avatarGradient(seed: string): string {
-  const palettes = [
-    "linear-gradient(135deg,#d4af37,#8a6d1d)",
-    "linear-gradient(135deg,#4a4a52,#232329)",
-    "linear-gradient(135deg,#b98f2f,#5d4a12)",
-    "linear-gradient(135deg,#3d3d45,#101014)",
-    "linear-gradient(135deg,#e0b84f,#6b5415)",
-    "linear-gradient(135deg,#55555f,#1c1c22)",
-  ];
+  // flat sticker colours, ink initials sit on all of them
+  const palettes = ["#ff8fc4", "#ffd23f", "#7cc6ff", "#6ee7a8", "#c3a6ff", "#ffad6b"].map((c) => `linear-gradient(${c},${c})`);
   let h = 0;
   for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
   return palettes[h % palettes.length];

@@ -263,8 +263,8 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
       {/* ambient background glows */}
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-32 left-1/4 h-[480px] w-[720px] rounded-full bg-[radial-gradient(ellipse,rgba(212,175,55,0.1),transparent_65%)] blur-3xl" />
-        <div className="absolute bottom-0 right-0 h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle,rgba(212,175,55,0.06),transparent_70%)] blur-3xl" />
+        <div className="absolute -top-32 left-1/4 h-[480px] w-[720px] rounded-full bg-[radial-gradient(ellipse,var(--gold-soft),transparent_65%)] blur-3xl" />
+        <div className="absolute bottom-0 right-0 h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle,var(--gold-soft),transparent_70%)] blur-3xl" />
       </div>
 
       <div className="relative mx-auto flex min-h-screen max-w-6xl flex-col lg:flex-row">
@@ -342,7 +342,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                     )}
                     <Button
                       type="submit"
-                      className="h-12 w-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_10px_30px_-10px_rgba(212,175,55,0.6)]"
+                      className="h-12 w-full bg-primary text-primary-foreground hover:bg-primary/90"
                       disabled={isLoading}
                     >
                       {isLoading ? (
@@ -668,7 +668,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                       )}
                       <Button
                         type="submit"
-                        className="h-12 w-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_10px_30px_-10px_rgba(212,175,55,0.6)]"
+                        className="h-12 w-full bg-primary text-primary-foreground hover:bg-primary/90"
                         disabled={isLoading}
                       >
                         {isLoading ? (

@@ -195,15 +195,15 @@ export function AppShell() {
                 <button
                   onClick={() => navigate(n.to)}
                   className={cn(
-                    "relative grid size-11 shrink-0 place-items-center rounded-xl transition-all duration-200",
+                    "relative grid size-11 shrink-0 place-items-center rounded-2xl border-2 transition-[transform,background-color,box-shadow,color] duration-150 active:translate-x-px active:translate-y-px",
                     n.match(location.pathname)
-                      ? "bg-primary/15 text-primary shadow-[inset_0_0_0_1px_rgba(212,175,55,0.25)]"
-                      : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                      ? "border-[var(--sticker-border)] bg-primary text-primary-foreground shadow-[3px_3px_0_var(--sticker-shadow)]"
+                      : "border-transparent text-muted-foreground hover:bg-accent hover:text-foreground",
                   )}
                 >
                   <n.icon className="size-5" />
                   {n.to === "/app/chats" && (unread ?? 0) > 0 && (
-                    <span className="absolute -right-0.5 -top-0.5 grid min-w-4 place-items-center rounded-full bg-primary px-1 text-[9px] font-bold text-primary-foreground">
+                    <span className="absolute -right-1.5 -top-1.5 grid h-[18px] min-w-[18px] place-items-center rounded-full border-2 border-sidebar bg-foreground px-1 text-[10px] font-bold text-background">
                       {unread}
                     </span>
                   )}
@@ -271,7 +271,7 @@ export function AppShell() {
       </nav>
 
       {/* MAIN — pb-14 on mobile for bottom nav, pb-0 on desktop */}
-      <div className="flex min-w-0 flex-1 flex-col pb-14 md:pb-0">
+      <div className="flex min-w-0 flex-1 flex-col pb-[calc(5.25rem+env(safe-area-inset-bottom))] md:pb-0">
         {/* TOPBAR */}
         <header className="glass flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border/70 px-4">
           <div className="flex items-center gap-3">
@@ -283,10 +283,10 @@ export function AppShell() {
             >
               <ShineLogo size={28} showWordmark={false} />
             </button>
-            <span className="text-sm font-semibold">{pageTitle}</span>
+            <span className="text-lg font-extrabold tracking-[-0.03em]">{pageTitle}</span>
             <Badge
               variant="outline"
-              className="hidden gap-1 rounded-md text-[10px] text-muted-foreground sm:inline-flex"
+              className="hidden gap-1.5 rounded-full border-[1.5px] px-2.5 py-1 text-[11px] font-semibold text-muted-foreground sm:inline-flex"
             >
               <span className="size-1.5 rounded-full bg-emerald-400" /> Realtime
             </Badge>
@@ -294,11 +294,11 @@ export function AppShell() {
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => setPaletteOpen(true)}
-              className="hidden h-9 w-64 items-center gap-2 rounded-lg border border-border/80 bg-background/50 px-3 text-sm text-muted-foreground transition-colors hover:border-primary/40 sm:flex"
+              className="hidden h-10 w-72 items-center gap-2 rounded-full border-[1.5px] border-border bg-card px-4 text-sm text-muted-foreground transition-colors hover:border-[var(--sticker-border)] sm:flex"
             >
               <Search className="size-4" />
               <span className="flex-1 text-left text-xs">Search everything…</span>
-              <kbd className="rounded border border-border bg-accent px-1.5 py-0.5 font-mono text-[10px]">⌘K</kbd>
+              <kbd className="rounded-md border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px]">⌘K</kbd>
             </button>
             <Button
               variant="ghost"
@@ -361,23 +361,23 @@ export function AppShell() {
       </div>
 
       {/* ===== MOBILE BOTTOM NAV (visible only on mobile/tablet) ===== */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 border-t border-border/70 bg-background/95 backdrop-blur-lg safe-area-pb">
-        <div className="flex items-center justify-around h-14 px-1">
+      <nav className="md:hidden fixed inset-x-2 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-50 rounded-[26px] border-2 border-[var(--sticker-border)] bg-card shadow-[4px_4px_0_var(--sticker-shadow)]">
+        <div className="flex h-16 items-center justify-around px-1.5">
           {mobileFilteredNav.map((n) => (
             <button
               key={n.to}
               onClick={() => navigate(n.to)}
               className={cn(
-                "relative flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg transition-colors min-w-[48px]",
+                "relative flex min-w-[52px] flex-col items-center gap-1 rounded-2xl px-2.5 py-1.5 transition-colors active:scale-95",
                 n.match(location.pathname)
-                  ? "text-primary"
+                  ? "bg-accent font-bold text-foreground [&_svg]:text-primary"
                   : "text-muted-foreground",
               )}
             >
               <n.icon className="size-5" />
-              <span className="text-[10px] font-medium leading-none">{n.label}</span>
+              <span className="text-[11px] leading-none">{n.label}</span>
               {n.to === "/app/chats" && (unread ?? 0) > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 grid min-w-4 place-items-center rounded-full bg-primary px-1 text-[9px] font-bold text-primary-foreground">
+                <span className="absolute -right-1.5 -top-1.5 grid h-[18px] min-w-[18px] place-items-center rounded-full border-2 border-sidebar bg-foreground px-1 text-[10px] font-bold text-background">
                   {unread}
                 </span>
               )}
@@ -388,14 +388,14 @@ export function AppShell() {
               <DropdownMenuTrigger asChild>
                 <button
                   className={cn(
-                    "flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg transition-colors min-w-[48px]",
+                    "flex min-w-[52px] flex-col items-center gap-1 rounded-2xl px-2.5 py-1.5 transition-colors active:scale-95",
                     mobileFilteredMore.some((n) => n.match(location.pathname))
-                      ? "text-primary"
+                      ? "bg-accent font-bold text-foreground [&_svg]:text-primary"
                       : "text-muted-foreground",
                   )}
                 >
                   <MoreHorizontal className="size-5" />
-                  <span className="text-[10px] font-medium leading-none">More</span>
+                  <span className="text-[11px] leading-none">More</span>
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" side="top" className="w-56 mb-2">

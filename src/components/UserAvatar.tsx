@@ -40,12 +40,12 @@ export function UserAvatar({ user, presence, size = "md", showStatus = false, cl
   const status = effectiveStatus(presence);
   return (
     <div className={cn("relative shrink-0", className)}>
-      <Avatar className={cn(SIZES[size], "ring-1 ring-border")}>
+      <Avatar className={cn(SIZES[size], "ring-[1.5px] ring-[var(--sticker-border)]")}>
         {user?.image ? (
           <AvatarImage src={user.image} alt={user?.name ?? ""} />
         ) : (
           <AvatarFallback
-            className="font-semibold text-white"
+            className="font-bold text-[#121212]"
             style={{ backgroundImage: avatarGradient(seed) }}
           >
             {initials(user?.name ?? user?.email)}

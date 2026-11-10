@@ -375,7 +375,7 @@ export function MessageBubble({
 
         <div
           className={cn(
-            "relative rounded-2xl px-3.5 py-2.5 text-[13.5px] leading-6 shadow-sm",
+            "relative rounded-[20px] px-3.5 py-2.5 text-[15px] leading-6 sm:text-[14px]",
             isOwn
               ? "bubble-out rounded-br-md text-foreground"
               : "bubble-in rounded-bl-md",

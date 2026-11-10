@@ -297,11 +297,11 @@ function TokenRow({ token, varName, value, usage }: { token: string; varName: st
 /* ============================== foundations =============================== */
 
 const BRAND_COLORS = [
-  { name: "SHINE Black", hex: "#0B0B0B", usage: "Base background · surfaces", text: "#D4AF37" },
-  { name: "Dark Grey", hex: "#2E2F34", usage: "Muted surfaces · raised panels", text: "#FFFFFF" },
-  { name: "DEJOIY Gold", hex: "#D4AF37", usage: "Primary action · brand accents", text: "#0B0B0B" },
-  { name: "White", hex: "#FFFFFF", usage: "Text on dark · light theme", text: "#0B0B0B" },
-  { name: "Grey", hex: "#8A8F98", usage: "Secondary text · captions", text: "#0B0B0B" },
+  { name: "Paper", hex: "#FFFBF7", usage: "Light canvas", text: "#121212" },
+  { name: "Ink", hex: "#121212", usage: "Text · sticker outlines · hard shadows", text: "#FF4FA3" },
+  { name: "Dejoiy Pink", hex: "#FF4FA3", usage: "Primary action · accent (user can change it)", text: "#121212" },
+  { name: "Soft Pink", hex: "#FFE3F1", usage: "Active rows · selected chips", text: "#121212" },
+  { name: "Night", hex: "#141216", usage: "Dark canvas", text: "#FF5CAB" },
 ];
 
 function Foundations() {
@@ -331,13 +331,13 @@ function Foundations() {
       <div>
         <SpecLabel>Semantic tokens (component guidance must reference these, never raw hex)</SpecLabel>
         <div className="glass hairline rounded-2xl p-4">
-          <TokenRow token="background" varName="--background" value="#0B0B0B" usage="App canvas" />
-          <TokenRow token="surface" varName="--card" value="oklch(0.168…)" usage="Cards, panels" />
-          <TokenRow token="primary" varName="--primary" value="#D4AF37" usage="Buttons, active, focus" />
-          <TokenRow token="on-primary" varName="--primary-foreground" value="#0B0B0B" usage="Text on gold" />
-          <TokenRow token="text" varName="--foreground" value="#FFFFFF" usage="Primary text" />
-          <TokenRow token="text-muted" varName="--muted-foreground" value="#8A8F98" usage="Secondary text" />
-          <TokenRow token="border" varName="--border" value="white 8%" usage="Hairlines, dividers" />
+          <TokenRow token="background" varName="--background" value="#FFFBF7 / #141216" usage="App canvas" />
+          <TokenRow token="surface" varName="--card" value="#FFFFFF / #1D1A20" usage="Cards, panels" />
+          <TokenRow token="primary" varName="--primary" value="#FF4FA3" usage="Buttons, active, focus" />
+          <TokenRow token="on-primary" varName="--primary-foreground" value="#121212" usage="Text on the accent" />
+          <TokenRow token="text" varName="--foreground" value="#121212 / #F4F1F5" usage="Primary text" />
+          <TokenRow token="text-muted" varName="--muted-foreground" value="#6B6570 / #A39CAB" usage="Secondary text" />
+          <TokenRow token="border" varName="--border" value="#EAE3E7 / #2F2A33" usage="Hairlines, dividers" />
           <TokenRow token="destructive" varName="--destructive" value="rose" usage="Errors, removal" />
           <TokenRow token="gold-soft" varName="--gold-soft" value="gold 13%" usage="Tints, glows" />
         </div>
@@ -735,7 +735,7 @@ function NavigationSpec() {
                   className={cn(
                     "grid size-11 place-items-center rounded-xl transition-all",
                     activeItem === i
-                      ? "bg-primary/15 text-primary shadow-[inset_0_0_0_1px_rgba(212,175,55,0.25)]"
+                      ? "bg-primary/15 text-primary shadow-[inset_0_0_0_1.5px_var(--gold)]"
                       : "text-muted-foreground hover:bg-accent hover:text-foreground",
                   )}
                 >
@@ -813,7 +813,7 @@ function ListSpec() {
                   className={cn(
                     "flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition-all",
                     selected === i
-                      ? "bg-primary/12 shadow-[inset_0_0_0_1px_rgba(212,175,55,0.25)]"
+                      ? "bg-primary/12 shadow-[inset_0_0_0_1.5px_var(--gold)]"
                       : "hover:bg-accent/60",
                   )}
                 >
@@ -910,7 +910,7 @@ function ComponentHeader({
 
 function AccessibilitySpec() {
   const rows = [
-    { rule: "Text contrast", check: "Body text ≥ 4.5:1 · large text ≥ 3:1 against every adjacent surface (gold #D4AF37 on black passes 9.3:1).", pass: "axe-core color-contrast reports zero violations.", fail: "Any muted text at 11px dropping below 4.5:1, or placeholder-only labels." },
+    { rule: "Text contrast", check: "Body text ≥ 4.5:1 · large text ≥ 3:1 against every adjacent surface (ink #121212 on pink #FF4FA3 passes 6.2:1, and so does pink on ink).", pass: "axe-core color-contrast reports zero violations.", fail: "Any muted text at 11px dropping below 4.5:1, or placeholder-only labels." },
     { rule: "Focus visibility", check: "Every interactive element shows a 3px gold ring at 50% opacity when keyboard-focused.", pass: "Tab through the full page; ring visible on every stop, never clipped.", fail: "outline:none without a visible replacement; ring hidden by overflow." },
     { rule: "Target size (WCAG 2.2)", check: "Pointer targets ≥ 24×24px minimum; touch targets ≥ 44×44px on coarse pointers.", pass: "DevTools touch emulation — every control ≥ 44px.", fail: "Icon-only buttons smaller than 44px without padded hit area." },
     { rule: "Keyboard operability", check: "Every action reachable and operable by keyboard; no focus traps.", pass: "Full journey with Tab / Shift+Tab / Enter / Space / Esc; focus order matches visual order.", fail: "Trapped modals, unreachable controls, dead Enter on buttons." },
@@ -1027,7 +1027,7 @@ function ContentSpec() {
 
 function AntiPatterns() {
   const items = [
-    { t: "Raw hex in components", d: "Components must reference semantic tokens (var(--primary)), never hard-coded #D4AF37. One-off values break theming and light mode.", fix: "Map any new color to a semantic token in src/index.css first." },
+    { t: "Raw hex in components", d: "Components must reference semantic tokens (var(--primary)), never hard-coded #FF4FA3. One-off values break theming and light mode.", fix: "Map any new color to a semantic token in src/index.css first." },
     { t: "Hidden focus indicators", d: "outline:none without a visible gold ring must not ship. Keyboard users must never guess where focus is.", fix: "Keep the 3px ring; remove outline only by replacing it." },
     { t: "One-off spacing & type", d: "Arbitrary padding (17px) or font sizes (15px) must not appear. The spacing scale and type scale are closed sets.", fix: "Round to the nearest space.* token and type step." },
     { t: "Ambiguous labels", d: "'Click here', 'More…' without context, or icon-only buttons without aria-labels are prohibited.", fix: "Describe the action or destination explicitly." },

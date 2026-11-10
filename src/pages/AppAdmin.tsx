@@ -543,7 +543,7 @@ export function AppAdmin() {
                 className={cn(
                   "grid size-12 shrink-0 place-items-center rounded-2xl border border-primary/25",
                   isSuper
-                    ? "bg-primary/20 text-primary shadow-[0_0_30px_rgba(212,175,55,0.25)]"
+                    ? "bg-primary/20 text-primary"
                     : "bg-accent text-foreground",
                 )}
               >
@@ -654,8 +654,8 @@ export function AppAdmin() {
                     <AreaChart data={stats.messagesPerDay}>
                       <defs>
                         <linearGradient id="goldFill" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#D4AF37" stopOpacity={0.45} />
-                          <stop offset="100%" stopColor="#D4AF37" stopOpacity={0.02} />
+                          <stop offset="0%" stopColor="var(--gold)" stopOpacity={0.45} />
+                          <stop offset="100%" stopColor="var(--gold)" stopOpacity={0.02} />
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
@@ -674,12 +674,12 @@ export function AppAdmin() {
                           borderRadius: 12,
                           fontSize: 12,
                         }}
-                        labelStyle={{ color: "#D4AF37" }}
+                        labelStyle={{ color: "var(--gold)" }}
                       />
                       <Area
                         type="monotone"
                         dataKey="count"
-                        stroke="#D4AF37"
+                        stroke="var(--gold)"
                         strokeWidth={2}
                         fill="url(#goldFill)"
                       />
@@ -720,7 +720,7 @@ export function AppAdmin() {
                         key={String(m._id)}
                         className="flex flex-wrap items-center gap-3 px-4 py-3"
                       >
-                        <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-[#D4AF37]/10 text-[#D4AF37]">
+                        <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/15 text-primary">
                           <Video className="size-4" />
                         </div>
                         <div className="min-w-0 flex-1">
@@ -846,7 +846,7 @@ export function AppAdmin() {
                         checked={selected.has(u._id)}
                         onChange={() => toggleSelected(u._id)}
                         disabled={u.role === "super_admin"}
-                        className="size-4 shrink-0 cursor-pointer accent-[#D4AF37]"
+                        className="size-4 shrink-0 cursor-pointer accent-[var(--gold)]"
                       />
                       <UserAvatar user={u} presence={u.presence} size="md" showStatus />
                       <div className="min-w-0 flex-1">
@@ -1521,7 +1521,7 @@ export function AppAdmin() {
                             className={cn(
                               "flex w-full items-center justify-between rounded-xl border px-4 py-2.5 transition-colors",
                               isTop
-                                ? "border-primary/40 bg-primary/10 shadow-[0_0_24px_rgba(212,175,55,0.15)]"
+                                ? "border-primary/40 bg-primary/10"
                                 : "border-border/70 bg-background/50 hover:border-primary/30",
                             )}
                           >

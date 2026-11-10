@@ -39,12 +39,12 @@ export function GroupAvatar({
       className={cn("relative shrink-0", className)}
       title={title}
     >
-      <Avatar className={cn(SIZES[size], "ring-1 ring-border")}>
+      <Avatar className={cn(SIZES[size], "ring-[1.5px] ring-[var(--sticker-border)]")}>
         {image ? (
           <AvatarImage src={image} alt={name ?? ""} />
         ) : (
           <AvatarFallback
-            className="font-semibold text-white"
+            className="font-bold text-[#121212]"
             style={{ backgroundImage: avatarGradient(seed) }}
           >
             {initials(name ?? (isChannel ? "#" : "G"))}

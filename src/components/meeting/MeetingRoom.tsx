@@ -815,7 +815,7 @@ export function MeetingRoom() {
     return (
       <div className="relative grid min-h-screen place-items-center overflow-hidden bg-background p-4">
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-32 left-1/2 h-[420px] w-[700px] -translate-x-1/2 rounded-full bg-[radial-gradient(ellipse,rgba(212,175,55,0.1),transparent_65%)] blur-3xl" />
+          <div className="absolute -top-32 left-1/2 h-[420px] w-[700px] -translate-x-1/2 rounded-full bg-[radial-gradient(ellipse,var(--gold-soft),transparent_65%)] blur-3xl" />
         </div>
         <div className="glass-strong hairline relative w-full max-w-md overflow-hidden rounded-3xl shadow-2xl">
           <div className="flex items-center gap-2 border-b border-border/70 px-5 py-3">
@@ -860,7 +860,7 @@ export function MeetingRoom() {
     return (
       <div className="relative grid min-h-screen place-items-center overflow-hidden bg-background p-4">
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-32 left-1/2 h-[420px] w-[700px] -translate-x-1/2 rounded-full bg-[radial-gradient(ellipse,rgba(212,175,55,0.1),transparent_65%)] blur-3xl" />
+          <div className="absolute -top-32 left-1/2 h-[420px] w-[700px] -translate-x-1/2 rounded-full bg-[radial-gradient(ellipse,var(--gold-soft),transparent_65%)] blur-3xl" />
         </div>
         <div className="relative w-full max-w-3xl">
           <div className="mb-6 text-center">

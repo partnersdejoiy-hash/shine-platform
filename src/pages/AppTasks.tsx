@@ -339,7 +339,7 @@ export function AppTasks() {
                                   : [...form.assigneeIds, u._id],
                               })
                             }
-                            className="size-3.5 accent-[#D4AF37]"
+                            className="size-3.5 accent-[var(--gold)]"
                           />
                           <UserAvatar user={u} size="xs" />
                           <span className="truncate text-xs">{displayName(u)}</span>

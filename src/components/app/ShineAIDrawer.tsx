@@ -218,7 +218,7 @@ export function ShineAIDrawer({
         {/* header */}
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <div className="flex items-center gap-3">
-            <div className="grid size-10 place-items-center rounded-xl bg-gradient-to-br from-[#f2d469] to-[#9a7b1e] text-black shadow-lg">
+            <div className="grid size-10 place-items-center rounded-xl bg-primary border-2 border-[var(--sticker-border)] text-black shadow-lg">
               <Bot className="size-5" />
             </div>
             <div>
