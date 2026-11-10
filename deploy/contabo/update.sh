@@ -22,9 +22,11 @@ docker run --rm --network host -v "$DIR":/app -v /etc/shine:/etc/shine -w /app \
   -e CONVEX_SELF_HOSTED_URL=http://127.0.0.1:3210 \
   -e CONVEX_SELF_HOSTED_ADMIN_KEY="$(cat /etc/shine/admin-key)" \
   -e SHINE_APP_URL="https://$APP_HOST" -e SHINE_SSO_SECRET="$SSO_SECRET" \
+  -e CONVEX_TMPDIR=/app/.convex-tmp \
   -e VITE_CONVEX_URL="https://$API_HOST" -e VITE_DEJOIY_MAIL_URL=https://mail.dejoiy.com \
   node:22-bookworm bash -ec '
     npm ci --no-audit --no-fund --loglevel=error
+    mkdir -p /app/.convex-tmp
     npx convex deploy -y --typecheck try
     node deploy/contabo/convex-env.mjs
     npx vite build --logLevel warn
