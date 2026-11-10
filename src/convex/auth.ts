@@ -195,6 +195,36 @@ const dejoiyMail = ConvexCredentials({
   },
 });
 
+// ---- Dejoiy Mail email + password ------------------------------------------
+// The sign-in form on app.shine.dejoiy.com: the mailbox email and password are
+// checked by Dejoiy Mail against Zimbra (server to server, shared secret).
+// Shine never stores the password.
+const dejoiyMailPassword = ConvexCredentials({
+  id: "dejoiy-mail-password",
+  authorize: async (credentials, ctx) => {
+    const email = typeof credentials.email === "string" ? credentials.email.trim().toLowerCase() : "";
+    const password = typeof credentials.password === "string" ? credentials.password : "";
+    if (!email || !password) throw new Error("Enter your Dejoiy Mail email and password.");
+    const base = process.env.DEJOIY_MAIL_URL;
+    const secret = process.env.DEJOIY_MAIL_SSO_SECRET;
+    if (!base || !secret) throw new Error("Dejoiy Mail sign-in is not set up on this server yet.");
+    const res = await fetch(`${base}/api/shine/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${secret}` },
+      body: JSON.stringify({ email, password }),
+    });
+    const out = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+    if (!res.ok) throw new Error(String(out.error ?? "Could not sign you in. Try again."));
+    const userId = await ctx.runMutation(internal.dejoiyMail.upsertUser, {
+      email: String(out.email ?? email),
+      name: String(out.name ?? ""),
+      admin: out.admin === "platform" || out.admin === "company" ? String(out.admin) : "",
+      photo: typeof out.photo === "string" && out.photo.startsWith("https://") ? out.photo : "",
+    });
+    return { userId };
+  },
+});
+
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
-  providers: [emailOtp, google, github, microsoftEntraId, apple, adminPassword, dejoiyMail],
+  providers: [emailOtp, google, github, microsoftEntraId, apple, adminPassword, dejoiyMail, dejoiyMailPassword],
 });
