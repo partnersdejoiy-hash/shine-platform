@@ -23,7 +23,8 @@ function resolveRedirectAfterAuth(returnTo: string | null, fallback = "/app") {
  */
 export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
   const { isLoading, isAuthenticated, signIn } = useAuth();
-  const [email, setEmail] = useState("");
+  const [searchParams] = useSearchParams();
+  const [email, setEmail] = useState(() => searchParams.get("email") ?? "");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -45,7 +46,6 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
     }
   };
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const redirect = resolveRedirectAfterAuth(searchParams.get("returnTo"), redirectAfterAuth);
 
   useEffect(() => {

@@ -245,6 +245,7 @@ createRoot(document.getElementById("root")!).render(
                 path="/"
                 element={IS_MEET_HOST ? <Navigate to="/meet" replace /> : <Landing />}
               />
+              <Route path="/home" element={<Landing />} />
               <Route path="/auth" element={<AuthPage redirectAfterAuth={IS_MEET_HOST ? "/meet" : "/app"} />} />
               <Route path="/auth/dejoiy" element={<DejoiyMailSSO />} />
               {/* Forced password change (temp password users are locked out until they set a new one) */}

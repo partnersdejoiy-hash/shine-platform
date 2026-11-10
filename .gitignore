@@ -6,3 +6,4 @@ isolate
 server/tsconfig.build.tsbuildinfo
 src/convex/_generated
 .convex-tmp
+.taste-skill/

@@ -1,0 +1,248 @@
+/* Shine landing (app.shine.dejoiy.com and /home). Direction: "Loud and flat".
+   Every chapter is one flat field in one of Shine's chat colours: the idea is
+   that each chat in Shine has its own colour, so the page does too. */
+.sl {
+  --pink: #ff4fa3;
+  --pink-dark: #7a1047;
+  --lime: #d4f53c;
+  --blue: #4da3ff;
+  --ink: #121212;
+  --paper: #fffbf7;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.76, 0, 0.24, 1);
+  --m: clamp(16px, 3vw, 40px);
+  font-family: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  color: var(--ink);
+  background: var(--ink);
+  font-size: 18px;
+  line-height: 1.5;
+  overflow-x: clip;
+  -webkit-font-smoothing: antialiased;
+}
+.sl *,
+.sl *::before,
+.sl *::after { box-sizing: border-box; }
+.sl :focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+.sl-dark :focus-visible { outline-color: var(--lime); }
+.sl h1, .sl h2, .sl h3, .sl p { margin: 0; }
+.sl :where(button) { font: inherit; color: inherit; }
+
+/* ---- fixed corner bar: takes the ink of the chapter under it ---- */
+.sl-bar {
+  position: fixed; inset: 0 0 auto; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px var(--m);
+  color: var(--bar-ink, var(--ink));
+  transition: color 300ms ease;
+  pointer-events: none;
+}
+.sl-bar > * { pointer-events: auto; }
+.sl-word { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 22px; letter-spacing: -0.04em; color: inherit; text-decoration: none; }
+.sl-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 48px; padding: 0 24px; border: 0; border-radius: 999px;
+  background: var(--ink); color: var(--paper);
+  font-weight: 800; font-size: 18px; text-decoration: none; cursor: pointer;
+  transition: transform 140ms var(--ease-out), background-color 180ms ease, color 180ms ease;
+}
+.sl-btn:hover { transform: translateY(-2px); }
+.sl-btn:active { transform: translateY(1px) scale(0.98); }
+.sl-btn.on-dark { background: var(--lime); color: var(--ink); }
+.sl-bar .sl-btn { min-height: 44px; padding: 0 20px; font-size: 18px; background: var(--bar-ink, var(--ink)); color: var(--bar-ground, var(--paper)); }
+
+/* ---- hero: one pink field, a two-ink statement ---- */
+.sl-hero { position: relative; min-height: 100svh; background: var(--pink); padding: 0 var(--m); }
+.sl-hero h1 {
+  position: absolute; left: var(--m); top: 15%;
+  font-weight: 800; font-size: clamp(110px, 17vw, 280px); line-height: 0.82; letter-spacing: -0.05em;
+}
+.sl-hero h1 span { display: block; }
+.sl-hero h1 .pale { color: var(--paper); }
+.sl-hero h1 .dark { color: var(--ink); }
+.sl-hero-side {
+  position: absolute; right: var(--m); bottom: calc(var(--m) + 8px); width: min(30vw, 420px);
+  display: grid; gap: 20px; justify-items: start;
+}
+.sl-hero-side p { font-size: 22px; line-height: 1.45; color: var(--ink); font-weight: 500; }
+.sl-hero-mark { position: absolute; left: var(--m); bottom: calc(var(--m) + 8px); }
+.sl-peek {
+  position: absolute; right: 34%; bottom: -40px; width: 340px; padding: 14px; border-radius: 28px;
+  background: #fffbf7; color: var(--ink); transform: rotate(-5deg); display: grid; gap: 8px;
+}
+.sl-peek-head { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 22px; padding: 2px 4px 6px; letter-spacing: -0.03em; }
+.sl-peek-row { padding: 10px 14px; border-radius: 18px; border-left: 8px solid var(--t); background: color-mix(in srgb, var(--t) 22%, #fff); }
+.sl-peek-row b { display: block; font-size: 14px; }
+.sl-peek-row span { font-size: 14px; color: #45414a; }
+
+/* ---- the board: your chats, each in its colour (the live thing) ---- */
+.sl-board { background: var(--ink); color: var(--paper); padding: 0 12px; overflow: hidden; }
+.sl-board-in { display: grid; gap: 4px; margin: -36px 0; }
+.sl-row-cut { height: 72px; background: #1d1a20; }
+.sl-row {
+  --t: var(--pink);
+  display: grid; grid-template-columns: 52px 1fr auto auto; align-items: center; gap: 20px;
+  min-height: 72px; padding: 0 20px; border: 0; width: 100%; text-align: left; cursor: pointer;
+  background: #1d1a20; color: var(--paper);
+  transition: background-color 200ms ease;
+}
+.sl-row:hover { background: #26222a; }
+.sl-dot { width: 40px; height: 40px; border-radius: 14px; background: var(--t); display: grid; place-items: center; color: var(--ink); font-weight: 800; font-size: 14px; }
+.sl-row-name { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sl-row-kind { font-size: 18px; color: #c9c2cd; white-space: nowrap; }
+.sl-row-state { min-width: 92px; padding: 8px 14px; border-radius: 12px; background: var(--t); color: var(--ink); font-weight: 800; font-size: 14px; text-align: center; font-variant-numeric: tabular-nums; }
+.sl-row-state.seen { background: #2f2a33; color: #c9c2cd; }
+.sl-row.open { background: var(--t); color: var(--ink); align-items: start; padding: 22px 20px; min-height: 236px; cursor: default; }
+.sl-row.open .sl-dot { background: var(--ink); color: var(--t); }
+.sl-row.open .sl-row-kind { color: var(--ink); }
+.sl-row.open .sl-row-state { background: var(--ink); color: var(--t); }
+.sl-thread { grid-column: 2 / -1; display: grid; gap: 8px; margin-top: 14px; max-width: 760px; }
+.sl-msg { justify-self: start; max-width: 100%; padding: 10px 16px; border-radius: 18px 18px 18px 6px; background: var(--paper); color: var(--ink); font-size: 18px; animation: sl-pop 320ms var(--ease-out) both; }
+.sl-msg.mine { justify-self: end; border-radius: 18px 18px 6px 18px; background: var(--ink); color: var(--t); }
+.sl-msg b { display: block; font-size: 14px; }
+.sl-typing { justify-self: start; display: inline-flex; gap: 5px; padding: 12px 16px; border-radius: 18px; background: rgba(18, 18, 18, 0.14); }
+.sl-typing i { width: 8px; height: 8px; border-radius: 50%; background: var(--ink); animation: sl-blink 1.2s infinite; }
+.sl-typing i:nth-child(2) { animation-delay: 0.15s; }
+.sl-typing i:nth-child(3) { animation-delay: 0.3s; }
+.sl-reply { display: flex; gap: 8px; margin-top: 6px; }
+.sl-reply input { flex: 1; min-width: 0; min-height: 48px; padding: 0 18px; border: 0; border-radius: 999px; background: var(--paper); color: var(--ink); font: inherit; font-size: 18px; }
+.sl-reply input:focus { outline: 3px solid var(--ink); outline-offset: 2px; }
+.sl-board-note { padding: 64px var(--m) 72px; font-size: 22px; line-height: 1.25; font-weight: 700; max-width: 26ch; letter-spacing: -0.02em; }
+.sl-board-note span { color: var(--lime); }
+@keyframes sl-pop { from { opacity: 0; transform: translateY(10px) scale(0.97); } }
+@keyframes sl-blink { 0%, 80%, 100% { opacity: 0.25; } 40% { opacity: 1; } }
+
+/* ---- how it works: an accordion of pink tints, dark to light ---- */
+.sl-how { background: var(--paper); padding: 140px var(--m) 160px; }
+.sl-how-intro { display: grid; grid-template-columns: 5fr 1fr 5fr; gap: 0 24px; align-items: end; margin-bottom: 64px; }
+.sl-how-intro h2 { grid-column: 1; font-size: clamp(44px, 5vw, 84px); line-height: 0.95; letter-spacing: -0.045em; font-weight: 800; }
+.sl-how-intro p { grid-column: 3; font-size: 18px; }
+.sl-acc { display: flex; height: 520px; }
+.sl-stage {
+  position: relative; flex: 1 1 0; min-width: 0; overflow: hidden; border: 0; padding: 0; cursor: pointer; text-align: left;
+  background: var(--c); color: var(--fg, var(--ink));
+  transition: flex-grow 450ms var(--ease-in-out);
+}
+.sl-stage.open { flex-grow: 6; cursor: default; }
+.sl-stage-name { position: absolute; left: 22px; bottom: 22px; font-weight: 800; font-size: 22px; white-space: nowrap; transform: rotate(-90deg); transform-origin: left bottom; translate: 24px 0; transition: opacity 200ms ease; }
+.sl-stage.open .sl-stage-name { opacity: 0; visibility: hidden; }
+.sl-stage-body { position: absolute; inset: 32px; display: flex; flex-direction: column; justify-content: space-between; opacity: 0; visibility: hidden; transition: opacity 250ms ease 150ms; pointer-events: none; }
+.sl-stage.open .sl-stage-body { opacity: 1; visibility: visible; pointer-events: auto; }
+.sl-stage-body h3 { font-size: clamp(44px, 5vw, 84px); line-height: 0.95; letter-spacing: -0.04em; font-weight: 800; max-width: 22ch; }
+.sl-stage-body p { max-width: 36ch; font-size: 22px; font-weight: 500; }
+
+/* ---- what it does: the command menu, scaled up ---- */
+.sl-cmd { background: var(--lime); padding: 140px var(--m) 160px; }
+.sl-cmd-search {
+  display: block; width: min(100%, 980px); height: 1.9em; padding: 0 0.6em; border: 0; border-radius: 0.5em;
+  background: #c2e22f; color: var(--ink); font: inherit; font-weight: 700; font-size: 22px; letter-spacing: -0.01em; height: 64px;
+}
+.sl-cmd-search::placeholder { color: rgba(18, 18, 18, 0.62); }
+.sl-cmd-search:focus { outline: 3px solid var(--ink); outline-offset: 3px; }
+.sl-cmd-list { list-style: none; margin: 32px 0 0; padding: 0; }
+.sl-cmd-item {
+  display: block; width: 100%; border: 0; background: transparent; text-align: left; cursor: pointer;
+  padding: 4px 18px; margin-left: -18px; border-radius: 22px;
+  transition: background-color 180ms ease;
+}
+.sl-cmd-item .row { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.sl-cmd-item .name { font-size: clamp(44px, 5vw, 84px); line-height: 1.1; letter-spacing: -0.04em; font-weight: 800; }
+.sl-cmd-item .keys { display: flex; gap: 6px; }
+.sl-cmd-item kbd { display: grid; place-items: center; min-width: 1.5em; height: 1.5em; padding: 0 0.35em; border-radius: 0.3em; background: var(--ink); color: var(--lime); font: inherit; font-weight: 800; font-size: 22px; }
+.sl-cmd-item .say { display: none; max-width: 56ch; padding: 4px 0 18px; font-size: 22px; font-weight: 500; }
+.sl-cmd-item.sel { background: var(--pink); }
+.sl-cmd-item.sel .say { display: block; animation: sl-pop 260ms var(--ease-out) both; }
+.sl-cmd-empty { padding: 20px 0; font-size: 22px; font-weight: 700; }
+
+/* ---- the first step, already open ---- */
+.sl-cta { position: relative; min-height: 90svh; background: var(--blue); padding: 120px var(--m) 40px; display: grid; grid-template-columns: 5fr 1fr 5fr; gap: 24px; align-items: center; }
+.sl-cta-copy { grid-column: 1; align-self: end; display: grid; gap: 18px; }
+.sl-cta-copy h2 { font-size: clamp(44px, 5vw, 84px); line-height: 0.92; letter-spacing: -0.045em; font-weight: 800; }
+.sl-cta-copy p { font-size: 22px; max-width: 34ch; font-weight: 500; }
+.sl-dialog {
+  grid-column: 3; justify-self: start; width: min(440px, 100%);
+  background: #fff; color: var(--ink); border-radius: 28px; padding: 28px;
+  box-shadow: 0 30px 60px -20px rgba(18, 18, 18, 0.45); /* taste-skill-ignore: the product's dialog, data-ui */
+  display: grid; gap: 16px;
+}
+.sl-dialog h3 { font-size: 22px; letter-spacing: -0.03em; font-weight: 800; }
+.sl-dialog label { display: grid; gap: 6px; font-size: 14px; font-weight: 700; }
+.sl-dialog input { min-height: 50px; padding: 0 16px; border: 2px solid #e2d9de; border-radius: 16px; background: var(--paper); font: inherit; font-size: 18px; color: var(--ink); }
+.sl-dialog input:focus { outline: none; border-color: var(--pink); }
+.sl-seg { display: grid; grid-template-columns: 1fr 1fr; padding: 4px; border-radius: 999px; background: #f1eaee; }
+.sl-seg button { min-height: 42px; border: 0; border-radius: 999px; background: transparent; font-weight: 700; font-size: 14px; cursor: pointer; transition: background-color 180ms ease, color 180ms ease; }
+.sl-seg button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+.sl-dialog .sl-btn { width: 100%; min-height: 52px; background: var(--pink); color: var(--ink); }
+.sl-dialog small { font-size: 14px; color: #5b5560; }
+
+/* ---- footer: an invitation over the cropped name ---- */
+.sl-foot { position: relative; min-height: 100svh; background: var(--ink); color: var(--paper); padding: 120px var(--m) 0; overflow: hidden; display: flex; flex-direction: column; }
+.sl-foot-top { display: grid; grid-template-columns: 7fr 2fr 3fr; gap: 24px; align-items: start; }
+.sl-foot-top h2 { font-size: clamp(44px, 5vw, 84px); line-height: 0.95; letter-spacing: -0.045em; font-weight: 800; margin-bottom: 28px; }
+.sl-foot-links { grid-column: 3; display: grid; gap: 10px; font-size: 18px; }
+.sl-foot-links a { color: var(--paper); text-decoration: underline; text-decoration-color: var(--pink); text-decoration-thickness: 2px; text-underline-offset: 5px; }
+.sl-foot-links a:hover { color: var(--lime); }
+.sl-legal { margin-top: auto; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; font-size: 14px; color: #c9c2cd; padding-bottom: 8px; position: relative; z-index: 1; }
+.sl-legal a { color: inherit; }
+.sl-giant { font-weight: 800; font-size: 30vw; line-height: 0.8; letter-spacing: -0.06em; white-space: nowrap; color: var(--pink); transform: translateY(24%); margin-left: -0.04em; user-select: none; }
+
+/* ---- entrances: parts arrive in reading order, once ---- */
+.sl [data-in] { opacity: 1; transform: none; }
+.sl.js [data-in] { opacity: 0; transform: translateY(24px); transition: opacity 700ms var(--ease-out), transform 700ms var(--ease-out); transition-delay: calc(var(--d, 0) * 80ms); }
+.sl.js [data-in].in { opacity: 1; transform: none; }
+.sl.js .sl-hero h1 span { opacity: 0; transform: translateY(40%); transition: opacity 800ms var(--ease-out), transform 900ms var(--ease-out); }
+.sl.js .sl-hero h1 span:nth-child(2) { transition-delay: 120ms; }
+.sl.js.ready .sl-hero h1 span { opacity: 1; transform: none; }
+.sl-hero-mark svg { animation: sl-bob 5s ease-in-out infinite; }
+@keyframes sl-bob { 50% { transform: translateY(-10px) rotate(-4deg); } }
+
+/* ---- phone: its own composition ---- */
+@media (max-width: 760px) {
+  .sl { font-size: 18px; }
+  .sl-bar { padding: 12px 16px; }
+  .sl-word { font-size: 18px; }
+  .sl-hero h1 { top: 16%; font-size: 23vw; }
+  .sl-hero-side { left: 16px; right: 16px; width: auto; bottom: 28px; }
+  .sl-hero-side p { font-size: 18px; }
+  .sl-hero-mark { display: none; }
+  .sl-peek { right: 16px; bottom: auto; top: 39%; width: 232px; padding: 10px; }
+  .sl-peek-row:nth-child(n+4) { display: none; }
+  .sl-board { padding: 0 8px; }
+  .sl-row { grid-template-columns: 40px 1fr auto; gap: 12px; min-height: 64px; padding: 0 12px; }
+  .sl-dot { width: 34px; height: 34px; border-radius: 12px; font-size: 14px; }
+  .sl-row-kind { display: none; }
+  .sl-row-state { min-width: 0; padding: 6px 10px; font-size: 14px; }
+  .sl-row.open { padding: 16px 12px; }
+  .sl-thread { grid-column: 1 / -1; }
+  .sl-board-note { padding: 48px 16px 56px; }
+  .sl-how { padding: 96px 16px 104px; }
+  .sl-how-intro { grid-template-columns: 1fr; gap: 16px; margin-bottom: 36px; }
+  .sl-how-intro p { grid-column: 1; }
+  .sl-acc { flex-direction: column; height: auto; }
+  .sl-stage { flex: none; min-height: 64px; }
+  .sl-stage-name { transform: none; translate: 0; left: 18px; bottom: auto; top: 20px; font-size: 18px; }
+  .sl-stage-body { position: static; inset: auto; padding: 22px 18px 26px; gap: 14px; display: none; }
+  .sl-stage.open .sl-stage-body { display: flex; }
+  .sl-stage-body p { font-size: 18px; }
+  .sl-cmd { padding: 96px 16px 104px; }
+  .sl-cmd-search { height: 56px; font-size: 18px; }
+  .sl-cmd-item .name { font-size: 9vw; }
+  .sl-cmd-item .keys { display: none; }
+  .sl-cmd-item .say { font-size: 18px; }
+  .sl-cta { grid-template-columns: 1fr; padding: 96px 16px 40px; min-height: 84svh; align-content: space-between; }
+  .sl-cta-copy, .sl-dialog { grid-column: 1; }
+  .sl-cta-copy { align-self: start; }
+  .sl-cta-copy h2 { font-size: 11vw; }
+  .sl-dialog { width: 100%; }
+  .sl-foot { padding: 96px 16px 0; min-height: auto; }
+  .sl-legal { margin-top: 80px; }
+  .sl-foot-top { grid-template-columns: 1fr; }
+  .sl-foot-top h2 { font-size: 11vw; }
+  .sl-foot-links { grid-column: 1; display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 18px; }
+  .sl-foot-top .sl-btn { width: 100%; }
+  .sl-giant { font-size: 38vw; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sl.js [data-in], .sl.js .sl-hero h1 span { opacity: 1; transform: none; transition: none; }
+  .sl-hero-mark svg, .sl-typing i, .sl-msg { animation: none; }
+  .sl-stage { transition: none; }
+}
