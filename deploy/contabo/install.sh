@@ -27,10 +27,20 @@ done
 
 echo "== Docker"
 command -v rsync >/dev/null || { apt-get update -qq && apt-get install -y -qq rsync; }
-if ! command -v docker >/dev/null || ! docker compose version >/dev/null 2>&1; then
-  apt-get update -qq && apt-get install -y -qq docker.io docker-compose-v2 rsync
+if ! command -v docker >/dev/null; then
+  apt-get update -qq && apt-get install -y -qq docker.io
   systemctl enable --now docker
 fi
+if ! docker compose version >/dev/null 2>&1; then
+  # Docker is there but the compose plugin isn't: the package name depends on where Docker came from
+  apt-get update -qq
+  apt-get install -y -qq docker-compose-plugin 2>/dev/null || apt-get install -y -qq docker-compose-v2 2>/dev/null || {
+    mkdir -p /usr/local/lib/docker/cli-plugins
+    curl -fsSL "https://github.com/docker/compose/releases/download/v2.29.7/docker-compose-linux-$(uname -m)" -o /usr/local/lib/docker/cli-plugins/docker-compose
+    chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+  }
+fi
+docker compose version
 
 echo "== Secrets"
 if [ ! -f /etc/shine/convex.env ]; then
