@@ -1,5 +1,7 @@
 "use node";
 
+import { getAuthUserId } from "@convex-dev/auth/server";
+import { internal } from "./_generated/api";
 import { action } from "./_generated/server";
 import { v } from "convex/values";
 import { sendResendBatch, SHINE_EMAIL_FROM } from "./emailProvider";
@@ -56,6 +58,18 @@ export const sendInviteEmails = action({
     siteUrl: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<InviteResult> => {
+    // Connected to Dejoiy Mail: the meeting goes on the host's mail calendar and
+    // the invites go out from there. Falls back to the email service below if that fails.
+    const userId = await getAuthUserId(ctx);
+    if (userId && process.env.DEJOIY_MAIL_URL) {
+      try {
+        if (await ctx.runAction(internal.calendarLink.pushMeeting, { meetingId: args.meetingId, requesterId: userId })) {
+          return { sent: args.invitees.length, error: null, reason: "Added to your Dejoiy Mail calendar" };
+        }
+      } catch (e) {
+        console.warn("Dejoiy Mail calendar:", e instanceof Error ? e.message : e);
+      }
+    }
     try {
       const emails = [...new Set(args.invitees.map((i) => i.email.trim().toLowerCase()))].filter(
         (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e),

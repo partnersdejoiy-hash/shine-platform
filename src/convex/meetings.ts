@@ -1,7 +1,8 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { mutation, query, internalMutation, MutationCtx, QueryCtx } from "./_generated/server";
-import { Id } from "./_generated/dataModel";
-import { v } from "convex/values";
+import { Doc, Id } from "./_generated/dataModel";
+import { internal } from "./_generated/api";
+import { v, type ObjectType } from "convex/values";
 import { getCurrentUser, isSuperAdmin, logAudit } from "./users";
 import { roleHasPermission } from "./permissions";
 
@@ -65,8 +66,7 @@ async function findUserByEmail(ctx: QueryCtx, email: string) {
  * provisions invited attendees (by email) as participants, and returns
  * everything the client needs to send invitation emails.
  */
-export const create = mutation({
-  args: {
+const createArgs = {
     title: v.string(),
     description: v.optional(v.string()),
     orgId: v.optional(v.id("organizations")),
@@ -77,10 +77,13 @@ export const create = mutation({
     recordingEnabled: v.optional(v.boolean()),
     kind: v.optional(v.union(v.literal("meeting"), v.literal("webinar"))),
     openToEveryone: v.optional(v.boolean()),
-  },
-  handler: async (ctx, { title, description, orgId, startTime, endTime, password, inviteEmails, recordingEnabled, kind, openToEveryone }) => {
-    const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+};
+
+async function createMeeting(
+  ctx: MutationCtx,
+  me: Doc<"users">,
+  { title, description, orgId, startTime, endTime, password, inviteEmails, recordingEnabled, kind, openToEveryone }: ObjectType<typeof createArgs>,
+) {
     if (
       !isSuperAdmin(me) &&
       !(await roleHasPermission(ctx, me.role, "start_meeting", me.approvedPermissions))
@@ -210,6 +213,27 @@ export const create = mutation({
       invitees,
       slug: slugifyTitle(title),
     };
+}
+
+export const create = mutation({
+  args: createArgs,
+  handler: async (ctx, args) => {
+    const me = await getCurrentUser(ctx);
+    if (!me) throw new Error("Not authenticated");
+    return createMeeting(ctx, me, args);
+  },
+});
+
+/** "Add Shine meeting" from a Dejoiy Mail calendar event: a room for that event (the mail calendar sends the invites). */
+export const createFromMail = internalMutation({
+  args: { hostEmail: v.string(), ...createArgs },
+  handler: async (ctx, { hostEmail, ...args }) => {
+    const me = await ctx.db
+      .query("users")
+      .withIndex("email", (q) => q.eq("email", hostEmail.toLowerCase()))
+      .first();
+    if (!me || me.isActive === false) throw new Error("This mailbox has no Shine account yet. Open Shine once from Dejoiy Mail.");
+    return createMeeting(ctx, me, args);
   },
 });
 
@@ -839,6 +863,8 @@ export const cancel = mutation({
     const meeting = await ctx.db.get(meetingId);
     if (!meeting || meeting.hostId !== me._id) throw new Error("Only the host can cancel");
     await ctx.db.patch(meetingId, { status: "cancelled" });
+    // cancel it on the Dejoiy Mail calendar too; guests get the cancellation from there
+    if (meeting.calendarInvId) await ctx.scheduler.runAfter(0, internal.calendarLink.cancelMeeting, { meetingId });
   },
 });
 

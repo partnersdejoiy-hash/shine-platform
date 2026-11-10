@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { displayName, formatBytes, formatTime, timeAgo } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { toneFor } from "@/lib/tone";
+import { MailCalendar } from "@/components/app/MailCalendar";
 import { useMutation, useQuery } from "convex/react";
 import { motion } from "framer-motion";
 import {
@@ -246,35 +247,33 @@ export function AppDashboard() {
 
             {/* upcoming meetings */}
             <section>
-              <SectionHeader title="Upcoming meetings" to="/app/meetings" />
-              <div className="glass hairline space-y-2 rounded-2xl p-3.5">
-                {upcoming.length === 0 && (
-                  <p className="text-xs text-muted-foreground">Nothing scheduled. Plan your next sync.</p>
-                )}
-                {upcoming.map((m) => (
-                  <button
-                    key={m._id}
-                    onClick={() => navigate(`/app/meetings/${m._id}`)}
-                    className="flex w-full items-center gap-3 rounded-xl p-2 text-left transition-colors hover:bg-accent/60"
-                  >
-                    <div
-                      className={cn(
-                        "grid size-9 shrink-0 place-items-center rounded-lg",
-                        m.status === "live" ? "bg-emerald-400/15 text-emerald-400" : "bg-primary/12 text-primary",
-                      )}
-                    >
-                      <Video className="size-4" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-xs font-semibold">{m.title}</div>
-                      <div className="text-[11px] text-muted-foreground">
-                        {m.status === "live" ? "Live now" : formatTime(m.startTime)}
-                      </div>
-                    </div>
-                    <ArrowUpRight className="size-3.5 shrink-0 text-muted-foreground" />
-                  </button>
-                ))}
-              </div>
+              <SectionHeader title="Your calendar" to="/app/meetings" />
+              {/* the Dejoiy Mail calendar (Shine meetings are on it too); Shine's own list if there is no mailbox */}
+              <MailCalendar
+                limit={4}
+                onEmpty={
+                  <div className="glass hairline space-y-2 rounded-2xl p-3.5">
+                    {upcoming.length === 0 && (
+                      <p className="text-xs text-muted-foreground">Nothing scheduled. Plan your next sync.</p>
+                    )}
+                    {upcoming.map((m) => (
+                      <button
+                        key={m._id}
+                        onClick={() => navigate(`/app/meetings/${m._id}`)}
+                        className="flex w-full items-center gap-3 rounded-xl p-2 text-left transition-colors hover:bg-accent/60"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-xs font-semibold">{m.title}</div>
+                          <div className="text-[11px] text-muted-foreground">
+                            {m.status === "live" ? "Live now" : formatTime(m.startTime)}
+                          </div>
+                        </div>
+                        <ArrowUpRight className="size-3.5 shrink-0 text-muted-foreground" />
+                      </button>
+                    ))}
+                  </div>
+                }
+              />
             </section>
 
             {/* missed calls */}

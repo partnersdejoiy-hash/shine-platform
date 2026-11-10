@@ -1,4 +1,5 @@
 import { api } from "@/convex/_generated/api";
+import { MailCalendar } from "@/components/app/MailCalendar";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -344,6 +345,12 @@ export function AppMeetings() {
           <StatCard icon={Video} label="Live now" value={upcoming.filter((m) => m.status === "live").length} live />
           <StatCard icon={History} label="Past meetings" value={history?.length ?? 0} />
         </div>
+
+        {/* same calendar as Dejoiy Mail: meetings scheduled here land on it, with the invites */}
+        <section className="mt-6">
+          <h2 className="mb-2.5 text-sm font-bold">Your calendar</h2>
+          <MailCalendar limit={6} />
+        </section>
 
         <Tabs defaultValue="upcoming" className="mt-6">
           <TabsList>

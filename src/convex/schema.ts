@@ -406,6 +406,8 @@ const schema = defineSchema(
       ),
       // email addresses the host invited when scheduling the meeting
       inviteEmails: v.optional(v.array(v.string())),
+      // the matching event in the host's Dejoiy Mail (Zimbra) calendar, see calendarLink.ts
+      calendarInvId: v.optional(v.string()),
       // host opted in to recording this meeting when scheduling it
       recordingEnabled: v.optional(v.boolean()),
       // URL slug derived from the title — used for the stable shareable link
