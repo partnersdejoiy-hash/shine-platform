@@ -26,6 +26,7 @@ import {
   Video,
 } from "lucide-react";
 import { Suspense, useEffect, useRef, useState } from "react";
+import { dejoiyMailSignInUrl } from "@/lib/embed";
 import { useMutation, useQuery } from "convex/react";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
@@ -309,6 +310,21 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
             </div>
 
             <div className="glass-strong hairline relative rounded-3xl p-8 shadow-2xl sm:p-9">
+              {step === "signIn" && (
+                <div className="mb-7">
+                  <Button asChild size="lg" className="w-full">
+                    <a href={dejoiyMailSignInUrl(redirect)}>
+                      <Mail className="size-4" /> Continue with Dejoiy Mail
+                    </a>
+                  </Button>
+                  <p className="mt-2 text-center text-xs text-muted-foreground">
+                    Use the same email and password as your Dejoiy Mail inbox.
+                  </p>
+                  <div className="mt-6 flex items-center gap-3 text-[11px] font-semibold text-muted-foreground">
+                    <span className="h-px flex-1 bg-border" /> or use a Shine sign-in <span className="h-px flex-1 bg-border" />
+                  </div>
+                </div>
+              )}
               {step === "signIn" ? (
                 mode === "otp" ? (
                 <>

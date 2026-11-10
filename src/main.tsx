@@ -70,6 +70,7 @@ window.addEventListener("unhandledrejection", (e) => {
 // Lazy load route components for better code splitting
 const Landing = lazy(() => import("./pages/Landing.tsx"));
 const AuthPage = lazy(() => import("./pages/Auth.tsx"));
+const DejoiyMailSSO = lazy(() => import("./pages/DejoiyMailSSO.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
 // Simple loading fallback for route transitions
@@ -245,6 +246,7 @@ createRoot(document.getElementById("root")!).render(
                 element={IS_MEET_HOST ? <Navigate to="/meet" replace /> : <Landing />}
               />
               <Route path="/auth" element={<AuthPage redirectAfterAuth={IS_MEET_HOST ? "/meet" : "/app"} />} />
+              <Route path="/auth/dejoiy" element={<DejoiyMailSSO />} />
               {/* Forced password change (temp password users are locked out until they set a new one) */}
               <Route
                 path="/app/change-password"

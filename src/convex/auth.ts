@@ -11,7 +11,8 @@ if (process.env.BETTER_AUTH_SECRET && !process.env.AUTH_SECRET) {
 import { convexAuth } from "@convex-dev/auth/server";
 import { ConvexCredentials } from "@convex-dev/auth/providers/ConvexCredentials";
 import { emailOtp } from "./auth/emailOtp";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
+import { verifyDejoiyMailToken } from "./lib/dejoiyMailToken";
 
 // NOTE: guest / anonymous login has been REMOVED (enterprise policy). Everyone
 // who uses SHINE must have a real account — employees are provisioned by an
@@ -180,6 +181,22 @@ const adminPassword = ConvexCredentials({
   },
 });
 
+// ---- Dejoiy Mail sign-in -----------------------------------------------------
+// Accounts live in Dejoiy Mail (Zimbra). mail.dejoiy.com hands its signed-in
+// user a short-lived signed token (see lib/dejoiyMailToken.ts); this provider
+// checks it and signs the same person into Shine. Secret: DEJOIY_MAIL_SSO_SECRET.
+const dejoiyMail = ConvexCredentials({
+  id: "dejoiy-mail",
+  authorize: async (credentials, ctx) => {
+    const claims = await verifyDejoiyMailToken(
+      typeof credentials.token === "string" ? credentials.token : "",
+      process.env.DEJOIY_MAIL_SSO_SECRET,
+    );
+    const userId = await ctx.runMutation(internal.dejoiyMail.upsertUser, claims);
+    return { userId };
+  },
+});
+
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
-  providers: [emailOtp, google, github, microsoftEntraId, apple, adminPassword],
+  providers: [emailOtp, google, github, microsoftEntraId, apple, adminPassword, dejoiyMail],
 });

@@ -23,6 +23,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { usePresenceHeartbeat } from "@/hooks/use-presence-heartbeat";
 import { eventForNotificationKind, playEventSound } from "@/lib/sound";
 import { cn } from "@/lib/utils";
+import { isEmbedded, tellMail } from "@/lib/embed";
 import { useMutation, useQuery } from "convex/react";
 import {
   Bot,
@@ -166,6 +167,11 @@ export function AppShell() {
   };
 
   const unread = useQuery(api.conversations.totalUnread);
+  // Inside Dejoiy Mail's chat panel: no Shine navigation, and the mail page gets the unread count.
+  const embed = useMemo(isEmbedded, []);
+  useEffect(() => {
+    if (embed && unread !== undefined) tellMail({ type: "shine:unread", count: unread });
+  }, [embed, unread]);
 
   const filteredNav = NAV.filter((n) => !n.adminOnly || isAdmin);
   const mobileFilteredNav = MOBILE_NAV.filter((n) => !n.adminOnly || isAdmin);
@@ -176,7 +182,7 @@ export function AppShell() {
       <PolicyAckGate />
 
       {/* ===== DESKTOP NAV RAIL (hidden on mobile & tablet) ===== */}
-      <nav className="hidden md:flex h-full w-[68px] shrink-0 flex-col items-center border-r border-border/70 bg-sidebar">
+      <nav className={embed ? "hidden" : "hidden md:flex h-full w-[68px] shrink-0 flex-col items-center border-r border-border/70 bg-sidebar"}>
         <div className="flex shrink-0 items-center py-3">
           <button
             onClick={() => navigate("/app")}
@@ -271,9 +277,9 @@ export function AppShell() {
       </nav>
 
       {/* MAIN — pb-14 on mobile for bottom nav, pb-0 on desktop */}
-      <div className="flex min-w-0 flex-1 flex-col pb-[calc(5.25rem+env(safe-area-inset-bottom))] md:pb-0">
+      <div className={cn("flex min-w-0 flex-1 flex-col", !embed && "pb-[calc(5.25rem+env(safe-area-inset-bottom))] md:pb-0")}>
         {/* TOPBAR */}
-        <header className="glass flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border/70 px-4">
+        <header className={cn("glass flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border/70 px-4", embed && "hidden")}>
           <div className="flex items-center gap-3">
             {/* Mobile logo (no rail on mobile) */}
             <button
@@ -361,7 +367,7 @@ export function AppShell() {
       </div>
 
       {/* ===== MOBILE BOTTOM NAV (visible only on mobile/tablet) ===== */}
-      <nav className="md:hidden fixed inset-x-2 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-50 rounded-[26px] border-2 border-[var(--sticker-border)] bg-card shadow-[4px_4px_0_var(--sticker-shadow)]">
+      <nav className={cn("md:hidden fixed inset-x-2 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-50 rounded-[26px] border-2 border-[var(--sticker-border)] bg-card shadow-[4px_4px_0_var(--sticker-shadow)]", embed && "hidden")}>
         <div className="flex h-16 items-center justify-around px-1.5">
           {mobileFilteredNav.map((n) => (
             <button
