@@ -9,7 +9,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { displayName, formatBytes, formatTime, timeAgo } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { toneFor } from "@/lib/tone";
-import { MailCalendar } from "@/components/app/MailCalendar";
+import { CalendarBoard } from "@/components/app/CalendarBoard";
 import { useMutation, useQuery } from "convex/react";
 import { motion } from "framer-motion";
 import {
@@ -247,10 +247,10 @@ export function AppDashboard() {
 
             {/* upcoming meetings */}
             <section>
-              <SectionHeader title="Your calendar" to="/app/meetings" />
+              <SectionHeader title="Your calendar" to="/app/calendar" />
               {/* the Dejoiy Mail calendar (Shine meetings are on it too); Shine's own list if there is no mailbox */}
-              <MailCalendar
-                limit={4}
+              <CalendarBoard
+                compact
                 onEmpty={
                   <div className="glass hairline space-y-2 rounded-2xl p-3.5">
                     {upcoming.length === 0 && (

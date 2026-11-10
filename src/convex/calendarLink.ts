@@ -1,7 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import { action, internalAction, internalMutation, internalQuery } from "./_generated/server";
+import { action, type ActionCtx, internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 
 /**
@@ -89,16 +89,14 @@ export const cancelMeeting = internalAction({
   },
 });
 
-/** My Dejoiy Mail calendar (same events as mail.dejoiy.com), for Shine's upcoming lists. */
+/** My Dejoiy Mail calendar (same events as mail.dejoiy.com): the next `days`, or the range start..end. */
 export const myCalendar = action({
-  args: { days: v.optional(v.number()) },
-  handler: async (ctx, { days }): Promise<{ connected: boolean; events: CalendarEvent[] }> => {
-    const userId: Id<"users"> | null = await getAuthUserId(ctx);
-    if (!userId) return { connected: false, events: [] };
-    const me = await ctx.runQuery(internal.calendarLink.emailOf, { userId });
+  args: { days: v.optional(v.number()), start: v.optional(v.number()), end: v.optional(v.number()) },
+  handler: async (ctx, args): Promise<{ connected: boolean; events: CalendarEvent[] }> => {
+    const me = await myEmail(ctx);
     if (!me) return { connected: false, events: [] };
-    const start = Date.now() - 3600_000;
-    const end = start + Math.min(Math.max(days ?? 14, 1), 60) * 86_400_000;
+    const start = args.start ?? Date.now() - 3600_000;
+    const end = Math.min(args.end ?? start + Math.min(Math.max(args.days ?? 14, 1), 60) * 86_400_000, start + 100 * 86_400_000);
     try {
       const out = await mail("/api/shine/calendar", { op: "list", owner: me, start, end });
       if (!out) return { connected: false, events: [] };
@@ -109,6 +107,43 @@ export const myCalendar = action({
   },
 });
 
+/** Add an event to my Dejoiy Mail calendar from Shine (Zimbra sends any invites). */
+export const addEvent = action({
+  args: {
+    title: v.string(),
+    start: v.number(),
+    end: v.number(),
+    allDay: v.optional(v.boolean()),
+    guests: v.optional(v.string()),
+    location: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    tz: v.optional(v.string()),
+  },
+  handler: async (ctx, event) => {
+    const me = await myEmail(ctx);
+    if (!me) throw new Error("Sign in first.");
+    const out = await mail("/api/shine/calendar", { op: "save", owner: me, event: { reminder: 10, ...event } });
+    if (!out) throw new Error("Shine isn't connected to Dejoiy Mail yet.");
+    return { ok: true };
+  },
+});
+
+/** Delete an event I organise on my Dejoiy Mail calendar (guests get a cancellation). */
+export const removeEvent = action({
+  args: { invId: v.string(), title: v.string() },
+  handler: async (ctx, { invId, title }) => {
+    const me = await myEmail(ctx);
+    if (!me) throw new Error("Sign in first.");
+    await mail("/api/shine/calendar", { op: "delete", owner: me, event: { invId, title } });
+    return { ok: true };
+  },
+});
+
+async function myEmail(ctx: ActionCtx): Promise<string | null> {
+  const userId: Id<"users"> | null = await getAuthUserId(ctx);
+  return userId ? await ctx.runQuery(internal.calendarLink.emailOf, { userId }) : null;
+}
+
 export interface CalendarEvent {
   id: string;
   invId: string;
@@ -117,7 +152,8 @@ export interface CalendarEvent {
   start: number;
   end: number;
   allDay: boolean;
-  organizer?: string;
+  organizer?: boolean;
+  repeats?: boolean;
   booked?: boolean;
 }
 

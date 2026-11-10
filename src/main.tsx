@@ -9,6 +9,7 @@ import { AppShell } from "@/components/app/AppShell";
 import { AppDashboard } from "@/pages/AppDashboard";
 import { AppChats } from "@/pages/AppChats";
 import { AppMeetings } from "@/pages/AppMeetings";
+import { AppCalendar } from "@/pages/AppCalendar";
 import { AppFiles } from "@/pages/AppFiles";
 import { AppTasks } from "@/pages/AppTasks";
 import { AppContacts } from "@/pages/AppContacts";
@@ -269,6 +270,7 @@ createRoot(document.getElementById("root")!).render(
                 <Route path="chats" element={<PageErrorBoundary name="Messages"><AppChats /></PageErrorBoundary>} />
                 <Route path="chats/:id" element={<PageErrorBoundary name="Messages"><AppChats /></PageErrorBoundary>} />
                 <Route path="meetings" element={<PageErrorBoundary name="Meetings"><AppMeetings /></PageErrorBoundary>} />
+                <Route path="calendar" element={<PageErrorBoundary name="Calendar"><AppCalendar /></PageErrorBoundary>} />
                 <Route path="files" element={<PageErrorBoundary name="Files"><AppFiles /></PageErrorBoundary>} />
                 <Route path="tasks" element={<PageErrorBoundary name="Tasks"><AppTasks /></PageErrorBoundary>} />
                 <Route path="contacts" element={<PageErrorBoundary name="Contacts"><AppContacts /></PageErrorBoundary>} />

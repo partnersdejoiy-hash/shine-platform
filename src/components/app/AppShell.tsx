@@ -28,6 +28,7 @@ import { useMutation, useQuery } from "convex/react";
 import {
   Bot,
   Building2,
+  CalendarDays,
   FileStack,
   FolderKanban,
   LayoutDashboard,
@@ -51,6 +52,7 @@ const NAV = [
   { to: "/app", icon: LayoutDashboard, label: "Home", match: (p: string) => p === "/app" },
   { to: "/app/chats", icon: MessagesSquare, label: "Messages", match: (p: string) => p.startsWith("/app/chats") },
   { to: "/app/meetings", icon: Video, label: "Meetings", match: (p: string) => p.startsWith("/app/meetings") },
+  { to: "/app/calendar", icon: CalendarDays, label: "Calendar", match: (p: string) => p.startsWith("/app/calendar") },
   { to: "/app/files", icon: FileStack, label: "Files", match: (p: string) => p.startsWith("/app/files") },
   { to: "/app/tasks", icon: FolderKanban, label: "Tasks", match: (p: string) => p.startsWith("/app/tasks") },
   { to: "/app/contacts", icon: Users, label: "Contacts", match: (p: string) => p.startsWith("/app/contacts") },
