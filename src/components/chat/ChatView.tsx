@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { api } from "@/convex/_generated/api";
 import { ConversationList, conversationTitle } from "@/components/chat/ConversationList";
 import { GroupAvatar } from "@/components/chat/GroupAvatar";
@@ -19,6 +20,7 @@ import { displayName, formatBytes, formatDayLabel, isSameDay } from "@/lib/forma
 import { effectiveStatus, isOnline } from "@/lib/presence";
 import { prepareAvatarImage, uploadFile } from "@/lib/upload";
 import { cn } from "@/lib/utils";
+import { toneFor } from "@/lib/tone";
 import { useMutation, useQuery } from "convex/react";
 import { motion } from "framer-motion";
 import {
@@ -321,11 +323,14 @@ export function ChatView({
   }
 
   return (
-    <div className="flex h-full min-w-0">
+    <div
+      className="flex h-full min-w-0"
+      style={{ "--t": toneFor(other?._id ?? conversation._id, conversation.kind) } as CSSProperties}
+    >
       {/* MAIN THREAD */}
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* header */}
-        <div className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border/70 px-4">
+        {/* header: a band in the chat's colour, like an opened Dejoiy Mail card */}
+        <div className="flex h-16 shrink-0 items-center justify-between gap-3 border-b-2 border-[var(--sticker-border)] bg-[color-mix(in_oklch,var(--t)_22%,var(--card))] px-4">
           <div className="flex min-w-0 items-center gap-3">
             {onBack && (
               <Button variant="ghost" size="icon-sm" onClick={onBack} className="lg:hidden">

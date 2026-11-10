@@ -7,34 +7,32 @@ interface Props {
   wordClassName?: string;
 }
 
-/**
- * SHINE logo — a chat-bubble sticker (ink outline, hard shadow, three dots),
- * same family as the Dejoiy Mail mark. The fill reads --gold, so it follows the
- * user's accent colour (Settings → Appearance).
- */
+/** The Dejoiy ":D" mark, the same one Dejoiy Mail wears; follows the accent colour (--gold). */
+export function DejoiyMark({ size = 36, className }: { size?: number; className?: string }) {
+  return (
+    <svg viewBox="0 -25 150 150" width={size} height={size} aria-hidden="true" className={cn("shrink-0", className)}>
+      <path d="M18 -20H80A70 70 0 0 1 80 120H18A18 18 0 0 1 0 102V-2A18 18 0 0 1 18 -20Z" fill="var(--gold)" />
+      <g transform="translate(22 17) scale(.66)">
+        <circle cx="13" cy="28" r="12" fill="#FFFFFF" />
+        <circle cx="13" cy="72" r="12" fill="#121212" />
+        <path fillRule="evenodd" d="M38 0H88A50 50 0 0 1 88 100H38Z M62 26H86A24 24 0 0 1 86 74H62Z" fill="#121212" />
+      </g>
+    </svg>
+  );
+}
+
+/** ":D Shine" — Dejoiy's chat app, styled like ":D Mail". */
 export function ShineLogo({ size = 36, className, showWordmark = true, wordClassName }: Props) {
   return (
-    <div className={cn("flex items-center gap-2.5", className)}>
-      <svg viewBox="0 0 64 64" width={size} height={size} fill="none" aria-label="SHINE logo" className="shrink-0 -rotate-6">
-        {/* hard offset shadow */}
-        <path d="M14 8h38a8 8 0 0 1 8 8v24a8 8 0 0 1-8 8H32l-12 10v-10h-6a8 8 0 0 1-8-8V16a8 8 0 0 1 8-8Z" transform="translate(3 3)" fill="#121212" />
-        <path
-          d="M14 8h38a8 8 0 0 1 8 8v24a8 8 0 0 1-8 8H32l-12 10v-10h-6a8 8 0 0 1-8-8V16a8 8 0 0 1 8-8Z"
-          fill="var(--gold)"
-          stroke="#121212"
-          strokeWidth="3.5"
-          strokeLinejoin="round"
-        />
-        <circle cx="22" cy="28" r="3.8" fill="#121212" />
-        <circle cx="33" cy="28" r="3.8" fill="#121212" />
-        <circle cx="44" cy="28" r="3.8" fill="#121212" />
-        <path d="M14.5 15.5h9" stroke="#fff" strokeOpacity=".75" strokeWidth="3" strokeLinecap="round" />
-      </svg>
+    <div className={cn("flex items-center gap-2", className)} aria-label="Shine by Dejoiy">
+      <DejoiyMark size={size} />
       {showWordmark && (
-        <div className="leading-none">
-          <div className={cn("text-xl font-extrabold tracking-[-0.04em] text-foreground", wordClassName)}>Shine</div>
-          <div className="mt-1 text-[10px] font-semibold text-muted-foreground">by Dejoiy</div>
-        </div>
+        <span
+          className={cn("font-extrabold leading-none tracking-[-0.045em] text-foreground", wordClassName)}
+          style={{ fontSize: Math.round(size * 0.78) }}
+        >
+          Shine
+        </span>
       )}
     </div>
   );

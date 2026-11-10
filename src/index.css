@@ -241,10 +241,11 @@
     border-color: var(--sticker-border);
     box-shadow: 4px 4px 0 var(--gold);
   }
+  /* own messages take the chat's colour (--t), like an opened Dejoiy Mail card */
   .bubble-out {
-    background: var(--bubble-out);
-    border: 1.5px solid color-mix(in oklch, var(--gold) 55%, var(--sticker-border));
-    box-shadow: 2px 2px 0 color-mix(in oklch, var(--gold) 60%, transparent);
+    background: color-mix(in oklch, var(--t, var(--gold)) 30%, var(--card));
+    border: 1.5px solid color-mix(in oklch, var(--t, var(--gold)) 70%, var(--sticker-border));
+    box-shadow: 3px 3px 0 color-mix(in oklch, var(--t, var(--gold)) 75%, var(--sticker-shadow));
   }
   .bubble-in {
     background: var(--card);
@@ -254,6 +255,23 @@
   @media (prefers-reduced-motion: reduce) {
     .card-hover, .card-hover:hover { transition: none; transform: none; }
   }
+  /* chat cards, coloured like Dejoiy Mail's mail cards (--t comes from lib/tone.ts) */
+  .tone-card {
+    background: color-mix(in oklch, var(--t) 13%, var(--card));
+    border: 1.5px solid color-mix(in oklch, var(--t) 38%, transparent);
+    border-radius: 22px;
+    transition: background-color 0.18s, box-shadow 0.18s, transform 0.18s, border-color 0.18s;
+  }
+  .tone-card:hover { background: color-mix(in oklch, var(--t) 22%, var(--card)); }
+  .tone-card.is-unread { border-color: color-mix(in oklch, var(--t) 78%, transparent); }
+  .tone-card.is-active {
+    background: color-mix(in oklch, var(--t) 34%, var(--card));
+    border: 2px solid var(--sticker-border);
+    box-shadow: 4px 4px 0 var(--sticker-shadow);
+  }
+  .tone-card:active { transform: scale(0.985); }
+  .tone-card [data-slot="avatar"] { box-shadow: 0 0 0 2.5px var(--t); }
+  .tone-dot { background: var(--t); }
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }

@@ -4,7 +4,7 @@ import { CommandPalette } from "@/components/app/CommandPalette";
 import { NotificationsPopover } from "@/components/app/NotificationsPopover";
 import { PolicyAckGate } from "@/components/chat/PolicyAckGate";
 import { ShineAIDrawer } from "@/components/app/ShineAIDrawer";
-import { ShineLogo } from "@/components/ShineLogo";
+import { DejoiyMark, ShineLogo } from "@/components/ShineLogo";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,7 @@ import {
   LogOut,
   MessagesSquare,
   MoreHorizontal,
+  PenSquare,
   Palette,
   Search,
   Settings,
@@ -154,6 +155,11 @@ export function AppShell() {
   const chatMatch = location.pathname.match(/^\/app\/chats\/(.+)/);
   const conversationId = chatMatch ? chatMatch[1] : null;
 
+  const startNewChat = () => {
+    if (location.pathname.startsWith("/app/chats")) window.dispatchEvent(new Event("shine:new-chat"));
+    else navigate("/app/chats?compose=1");
+  };
+
   const handleSignOut = async () => {
     await signOut();
     navigate("/");
@@ -175,19 +181,22 @@ export function AppShell() {
       <PolicyAckGate />
 
       {/* ===== DESKTOP NAV RAIL (hidden on mobile & tablet) ===== */}
-      <nav className={embed ? "hidden" : "hidden md:flex h-full w-[68px] shrink-0 flex-col items-center border-r border-border/70 bg-sidebar"}>
-        <div className="flex shrink-0 items-center py-3">
-          <button
-            onClick={() => navigate("/app")}
-            className="transition-transform hover:scale-105"
-            title="SHINE"
-          >
-            <ShineLogo size={38} showWordmark={false} />
+      <nav className={embed ? "hidden" : "hidden md:flex h-full w-[68px] lg:w-[252px] shrink-0 flex-col items-center lg:items-stretch border-r border-border/70 bg-sidebar"}>
+        <div className="flex shrink-0 items-center py-3 lg:px-5 lg:py-4">
+          <button onClick={() => navigate("/app")} className="transition-transform hover:scale-105" title="Shine">
+            <ShineLogo size={38} showWordmark={false} className="lg:hidden" />
+            <ShineLogo size={34} className="hidden lg:flex" />
           </button>
+        </div>
+        {/* like Dejoiy Mail's Compose */}
+        <div className="hidden shrink-0 px-4 pb-4 lg:block">
+          <Button size="lg" className="w-full" onClick={startNewChat}>
+            <PenSquare className="size-4" /> New chat
+          </Button>
         </div>
 
         {/* Scrollable nav items — hidden scrollbar, smooth wheel scroll */}
-        <div className="flex min-h-0 flex-1 flex-col items-center gap-1.5 overflow-y-auto px-1 pb-2 no-scrollbar">
+        <div className="flex min-h-0 flex-1 flex-col items-center gap-1.5 overflow-y-auto px-1 pb-2 no-scrollbar lg:items-stretch lg:gap-0.5 lg:px-3">
           {filteredNav.map((n) => (
             <Tooltip key={n.to}>
               <TooltipTrigger asChild>
@@ -195,20 +204,22 @@ export function AppShell() {
                   onClick={() => navigate(n.to)}
                   className={cn(
                     "relative grid size-11 shrink-0 place-items-center rounded-2xl border-2 transition-[transform,background-color,box-shadow,color] duration-150 active:translate-x-px active:translate-y-px",
+                    "lg:flex lg:h-11 lg:w-full lg:items-center lg:justify-start lg:gap-3.5 lg:rounded-full lg:border-0 lg:px-4 lg:shadow-none",
                     n.match(location.pathname)
-                      ? "border-[var(--sticker-border)] bg-primary text-primary-foreground shadow-[3px_3px_0_var(--sticker-shadow)]"
+                      ? "border-[var(--sticker-border)] bg-primary text-primary-foreground shadow-[3px_3px_0_var(--sticker-shadow)] lg:bg-accent lg:font-bold lg:text-foreground lg:[&_svg]:text-primary"
                       : "border-transparent text-muted-foreground hover:bg-accent hover:text-foreground",
                   )}
                 >
                   <n.icon className="size-5" />
+                  <span className="hidden text-[15px] lg:inline">{n.label}</span>
                   {n.to === "/app/chats" && (unread ?? 0) > 0 && (
-                    <span className="absolute -right-1.5 -top-1.5 grid h-[18px] min-w-[18px] place-items-center rounded-full border-2 border-sidebar bg-foreground px-1 text-[10px] font-bold text-background">
+                    <span className="absolute -right-1.5 -top-1.5 grid h-[18px] min-w-[18px] place-items-center rounded-full border-2 border-sidebar bg-foreground px-1 text-[10px] font-bold text-background lg:static lg:ml-auto lg:h-auto lg:min-w-0 lg:border-0 lg:bg-transparent lg:text-[13px] lg:text-foreground">
                       {unread}
                     </span>
                   )}
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="right" className="ml-2">
+              <TooltipContent side="right" className="ml-2 lg:hidden">
                 {n.label}
               </TooltipContent>
             </Tooltip>
@@ -216,7 +227,14 @@ export function AppShell() {
         </div>
 
         {/* Fixed bottom section: AI + user menu */}
-        <div className="flex shrink-0 flex-col items-center gap-2 border-t border-border/50 pt-2 pb-2">
+        <div className="flex shrink-0 flex-col items-center gap-2 border-t border-border/50 pt-2 pb-2 lg:flex-row lg:flex-wrap lg:justify-between lg:px-4 lg:pb-4 lg:pt-3">
+          <div className="hidden w-full items-center gap-2.5 lg:flex">
+            <DejoiyMark size={30} />
+            <div className="leading-tight">
+              <div className="text-[13px] font-bold">Dejoiy workspace</div>
+              <div className="text-[11px] text-muted-foreground">Signed in with Dejoiy Mail</div>
+            </div>
+          </div>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -293,11 +311,14 @@ export function AppShell() {
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => setPaletteOpen(true)}
-              className="hidden h-10 w-72 items-center gap-2 rounded-full border-[1.5px] border-border bg-card px-4 text-sm text-muted-foreground transition-colors hover:border-[var(--sticker-border)] sm:flex"
+              className="hidden h-11 w-[min(520px,40vw)] items-center gap-2 rounded-full border-[1.5px] border-border bg-card pl-5 pr-1 text-sm text-muted-foreground transition-colors hover:border-[var(--sticker-border)] sm:flex"
             >
-              <Search className="size-4" />
-              <span className="flex-1 text-left text-xs">Search everything…</span>
+              <span className="flex-1 text-left">Find chats, people, files or messages</span>
               <kbd className="rounded-md border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px]">⌘K</kbd>
+              {/* the pink search key, like Dejoiy Mail's */}
+              <span className="grid h-9 w-12 place-items-center rounded-full bg-primary text-primary-foreground">
+                <Search className="size-4" />
+              </span>
             </button>
             <Button
               variant="ghost"

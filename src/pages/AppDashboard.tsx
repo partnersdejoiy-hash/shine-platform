@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { api } from "@/convex/_generated/api";
 import { conversationTitle, type ConversationItem } from "@/components/chat/ConversationList";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -7,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/use-auth";
 import { displayName, formatBytes, formatTime, timeAgo } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { toneFor } from "@/lib/tone";
 import { useMutation, useQuery } from "convex/react";
 import { motion } from "framer-motion";
 import {
@@ -118,6 +120,7 @@ export function AppDashboard() {
           <Stat
             icon={MessageSquare}
             label="Conversations"
+            tone="#ff4fa3"
             value={String((conversations ?? []).length)}
             sub={`${unreadTotal} unread`}
             onClick={() => navigate("/app/chats")}
@@ -125,6 +128,7 @@ export function AppDashboard() {
           <Stat
             icon={Video}
             label="Meetings"
+            tone="#4da3ff"
             value={String(upcoming.length)}
             sub={upcoming.some((m) => m.status === "live") ? "One is live now" : "scheduled"}
             onClick={() => navigate("/app/meetings")}
@@ -133,6 +137,7 @@ export function AppDashboard() {
           <Stat
             icon={FileStack}
             label="Storage"
+            tone="#3ddc84"
             value={formatBytes(totalBytes)}
             sub="across your files"
             onClick={() => navigate("/app/files")}
@@ -140,6 +145,7 @@ export function AppDashboard() {
           <Stat
             icon={Zap}
             label="Tasks"
+            tone="#ffd23f"
             value={String(tasks.length)}
             sub={`${tasks.filter((t) => t.status === "done").length} done`}
             onClick={() => navigate("/app/tasks")}
@@ -151,23 +157,21 @@ export function AppDashboard() {
           {/* recent chats */}
           <section className="lg:col-span-2">
             <SectionHeader title="Recent conversations" to="/app/chats" />
-            <div className="glass hairline overflow-hidden rounded-2xl">
+            <div className="space-y-2">
               {recentChats.length === 0 && (
                 <div className="p-8 text-center text-sm text-muted-foreground">
                   No conversations yet — start one to see it here.
                 </div>
               )}
-              {recentChats.map((c, i) => (
+              {recentChats.map((c) => (
                 <button
                   key={c.conversation._id}
                   onClick={() => navigate(`/app/chats/${c.conversation._id}`)}
-                  className={cn(
-                    "flex w-full items-center gap-3 p-3.5 text-left transition-colors hover:bg-accent/50",
-                    i > 0 && "border-t border-border/60",
-                  )}
+                  style={{ "--t": toneFor(c.members.find((m) => m._id !== user?._id)?._id ?? c.conversation._id, c.conversation.kind) } as CSSProperties}
+                  className={cn("tone-card flex min-h-[72px] w-full items-center gap-3 px-3.5 py-3 text-left", c.unread > 0 && "is-unread")}
                 >
                   {c.conversation.kind === "channel" ? (
-                    <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/12 text-primary">
+                    <div className="tone-dot grid size-10 shrink-0 place-items-center rounded-2xl border-2 border-[var(--sticker-border)] text-[#121212]">
                       <Hash className="size-4" />
                     </div>
                   ) : (
@@ -180,7 +184,7 @@ export function AppDashboard() {
                   )}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="truncate text-sm font-medium">
+                      <span className={cn("truncate text-[15px]", c.unread > 0 ? "font-extrabold" : "font-semibold")}>
                         {conversationTitle(c as ConversationItem, user?._id)}
                       </span>
                       <span className="text-[10px] text-muted-foreground">
@@ -200,7 +204,7 @@ export function AppDashboard() {
                           : "Say hello 👋"}
                       </span>
                       {c.unread > 0 && (
-                        <span className="grid min-w-5 place-items-center rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">
+                        <span className="grid h-5 min-w-5 place-items-center rounded-full bg-foreground px-1.5 text-[11px] font-bold text-background">
                           {c.unread}
                         </span>
                       )}
@@ -389,7 +393,9 @@ function Stat({
   sub,
   onClick,
   live,
+  tone,
 }: {
+  tone: string;
   icon: React.ElementType;
   label: string;
   value: string;
@@ -401,23 +407,19 @@ function Stat({
     <motion.button
       whileHover={{ y: -2 }}
       onClick={onClick}
-      className="glass hairline card-hover flex items-center gap-3 rounded-2xl p-4 text-left"
+      style={{ "--t": tone } as CSSProperties}
+      className="tone-card card-hover flex flex-col items-start gap-3 p-4 text-left"
     >
-      <div
-        className={cn(
-          "grid size-10 shrink-0 place-items-center rounded-xl",
-          live ? "bg-emerald-400/15 text-emerald-400" : "bg-primary/12 text-primary",
-        )}
-      >
+      <div className="tone-dot grid size-11 shrink-0 place-items-center rounded-2xl border-2 border-[var(--sticker-border)] text-[#121212] shadow-[2px_2px_0_var(--sticker-shadow)]">
         <Icon className="size-5" />
       </div>
       <div className="min-w-0">
-        <div className={cn("truncate text-lg font-bold tabular-nums", live && "text-emerald-400")}>
+        <div className="truncate text-2xl font-extrabold tracking-[-0.03em] tabular-nums">
           {value}
+          {live && <span className="ml-2 align-middle text-xs font-bold text-emerald-500">● live</span>}
         </div>
-        <div className="truncate text-xs text-muted-foreground">
-          {label} · {sub}
-        </div>
+        <div className="text-sm font-bold">{label}</div>
+        <div className="truncate text-xs text-muted-foreground">{sub}</div>
       </div>
     </motion.button>
   );

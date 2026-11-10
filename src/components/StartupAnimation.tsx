@@ -1,15 +1,13 @@
 import { AnimatePresence, motion } from "framer-motion";
+import { DejoiyMark } from "@/components/ShineLogo";
 import { useEffect, useMemo, useState } from "react";
 
 /**
- * SHINE startup: a quick sticker pop (~1.6s), same family as Dejoiy Mail.
- * The bubble stamps in, its shadow slides under it, three dots pop, the
- * wordmark slides up. Once per session; skipped for reduced motion.
+ * SHINE startup: the Dejoiy :D mark pops in (~1.6s), same family as Dejoiy Mail,
+ * then the wordmark slides up. Once per session; skipped for reduced motion.
  * Colours follow the user's accent through --gold.
  */
 
-const BUBBLE = "M14 8h38a8 8 0 0 1 8 8v24a8 8 0 0 1-8 8H32l-12 10v-10h-6a8 8 0 0 1-8-8V16a8 8 0 0 1 8-8Z";
-const DOTS = [22, 33, 44];
 const SHOW_MS = 1600;
 
 export function StartupAnimation() {
@@ -52,37 +50,13 @@ export function StartupAnimation() {
           aria-hidden="true"
         >
           <div className="flex flex-col items-center">
-            <svg viewBox="-4 -4 72 72" width={132} height={132} fill="none" className="overflow-visible">
-              <motion.path
-                d={BUBBLE}
-                fill="var(--sticker-shadow)"
-                initial={{ x: 0, y: 0, opacity: 0 }}
-                animate={{ x: 4, y: 4, opacity: 1 }}
-                transition={{ delay: 0.32, duration: 0.25, ease: "easeOut" }}
-              />
-              <motion.g
-                style={{ originX: "50%", originY: "50%" }}
-                initial={{ scale: 0.2, rotate: -30, opacity: 0 }}
-                animate={{ scale: 1, rotate: -6, opacity: 1 }}
-                transition={{ type: "spring", stiffness: 420, damping: 16 }}
-              >
-                <path d={BUBBLE} fill="var(--gold)" stroke="#121212" strokeWidth="3.5" strokeLinejoin="round" />
-                {DOTS.map((cx, i) => (
-                  <motion.circle
-                    key={cx}
-                    cx={cx}
-                    cy={28}
-                    r={3.8}
-                    fill="#121212"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: [0, 1.5, 1] }}
-                    transition={{ delay: 0.45 + i * 0.14, duration: 0.35 }}
-                    style={{ originX: `${cx}px`, originY: "28px" }}
-                  />
-                ))}
-                <path d="M14.5 15.5h9" stroke="#fff" strokeOpacity=".75" strokeWidth="3" strokeLinecap="round" />
-              </motion.g>
-            </svg>
+            <motion.div
+              initial={{ scale: 0.2, rotate: -20, opacity: 0 }}
+              animate={{ scale: 1, rotate: 0, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 420, damping: 15 }}
+            >
+              <DejoiyMark size={128} />
+            </motion.div>
             <motion.div
               className="mt-6 text-center leading-none"
               initial={{ opacity: 0, y: 14 }}

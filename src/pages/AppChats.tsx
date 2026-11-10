@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "convex/react";
 import { MessageSquarePlus } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 
 export function AppChats() {
@@ -18,7 +18,13 @@ export function AppChats() {
   const { user } = useAuth();
   const conversations = useQuery(api.conversations.list);
   const presenceAll = useQuery(api.users.presenceAll);
-  const [newOpen, setNewOpen] = useState(false);
+  // "New chat" in the sidebar: ?compose=1 when it brings you here, an event when you're already here
+  const [newOpen, setNewOpen] = useState(() => searchParams.get("compose") === "1");
+  useEffect(() => {
+    const open = () => setNewOpen(true);
+    window.addEventListener("shine:new-chat", open);
+    return () => window.removeEventListener("shine:new-chat", open);
+  }, []);
 
   const preselect = searchParams.get("new");
   const selectedId = id ?? null;
@@ -40,7 +46,7 @@ export function AppChats() {
 
   const closeNew = () => {
     setNewOpen(false);
-    if (preselect) setSearchParams({});
+    if (preselect || searchParams.get("compose")) setSearchParams({});
   };
 
   const emptyState = (

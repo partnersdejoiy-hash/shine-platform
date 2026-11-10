@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { GroupAvatar } from "@/components/chat/GroupAvatar";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
@@ -5,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { displayName, formatTime, timeAgo } from "@/lib/format";
 import { effectiveStatus, isOnline, type PresenceLike } from "@/lib/presence";
 import { cn } from "@/lib/utils";
+import { toneFor } from "@/lib/tone";
 import { motion } from "framer-motion";
 import { api } from "@/convex/_generated/api";
 import { Hash, MessageSquarePlus, Mic, Pin, PinOff, Search, Volume2, VolumeX, Archive, ArchiveRestore } from "lucide-react";
@@ -139,23 +141,18 @@ export function ConversationList({
                   muted: !!item.membership.isMuted,
                 });
               }}
+              style={{ "--t": toneFor(other?._id ?? item.conversation._id, item.conversation.kind) } as CSSProperties}
               className={cn(
-                "mb-1.5 flex w-full items-center gap-3 rounded-2xl border-2 p-2.5 text-left transition-[background-color,box-shadow,transform] duration-150 active:scale-[0.99]",
-                active
-                  ? "border-[var(--sticker-border)] bg-accent shadow-[3px_3px_0_var(--gold)]"
-                  : "border-transparent hover:bg-accent/60",
+                "tone-card mb-2 flex min-h-[76px] w-full items-center gap-3 px-3.5 py-3 text-left",
+                active && "is-active",
+                item.unread > 0 && "is-unread",
               )}
             >
               {isChannel ? (
                 item.conversation.image ? (
                   <GroupAvatar image={item.conversation.image} name={item.conversation.name} isChannel size="md" />
                 ) : (
-                  <div
-                    className={cn(
-                      "grid size-10 shrink-0 place-items-center rounded-xl",
-                      active ? "bg-primary/20 text-primary" : "bg-accent text-muted-foreground",
-                    )}
-                  >
+                  <div className="tone-dot grid size-10 shrink-0 place-items-center rounded-2xl border-2 border-[var(--sticker-border)] text-[#121212]">
                     <Hash className="size-4" />
                   </div>
                 )
@@ -167,10 +164,10 @@ export function ConversationList({
 
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
-                  <span className={cn("truncate text-sm", active ? "font-semibold" : "font-medium")}>
+                  <span className={cn("truncate text-[15px]", item.unread > 0 || active ? "font-extrabold" : "font-semibold")}>
                     {conversationTitle(item, myId)}
                   </span>
-                  <span className="shrink-0 text-[10px] text-muted-foreground">
+                  <span className={cn("shrink-0 text-[11px]", item.unread > 0 ? "font-bold text-foreground" : "text-muted-foreground")}>
                     {item.lastMessage ? formatTime(item.lastMessage.createdAt ?? 0) : ""}
                   </span>
                 </div>
@@ -180,12 +177,12 @@ export function ConversationList({
                       {typing.map((t) => t.name ?? "Someone").join(", ")} typing…
                     </span>
                   ) : (
-                    <span className="truncate text-xs text-muted-foreground">
+                    <span className={cn("truncate text-[13px]", item.unread > 0 ? "font-semibold text-foreground" : "text-muted-foreground")}>
                       {previewText(item, myId)}
                     </span>
                   )}
                   {item.unread > 0 && (
-                    <span className="grid h-5 min-w-5 shrink-0 place-items-center rounded-full border-[1.5px] border-[var(--sticker-border)] bg-primary px-1.5 text-[11px] font-bold text-primary-foreground">
+                    <span className="grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-foreground px-1.5 text-[11px] font-bold text-background">
                       {item.unread}
                     </span>
                   )}
