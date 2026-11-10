@@ -98,6 +98,7 @@ const schema = defineSchema(
       availability: v.optional(availabilityValidator),
       customStatus: v.optional(v.string()),
       accentColor: v.optional(v.string()), // per-user app accent (see lib/accent.ts)
+      source: v.optional(v.string()), // "dejoiy-mail" = this person is a Dejoiy Mail mailbox (kept in sync)
       lastSeen: v.optional(v.number()),
       isActive: v.optional(v.boolean()),
       // password compliance: force a change on next sign-in (temp passwords)

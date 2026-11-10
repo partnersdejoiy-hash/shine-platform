@@ -4,6 +4,7 @@ import { ConversationList } from "@/components/chat/ConversationList";
 import { PolicyLinks } from "@/components/chat/PolicyLinks";
 import { NewChatDialog } from "@/components/chat/NewChatDialog";
 import { ShineMark } from "@/components/ShineLogo";
+import { isEmbedded } from "@/lib/embed";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "convex/react";
@@ -101,7 +102,8 @@ export function AppChats() {
       </div>
 
       {/* enterprise policy links — bottom of the messaging app */}
-      <PolicyLinks />
+      {/* inside Dejoiy Mail's chat panel there is no room for the footer */}
+      {!isEmbedded() && <PolicyLinks />}
 
       <NewChatDialog
         open={newOpen}

@@ -29,6 +29,7 @@ docker run --rm --network host -v "$DIR":/app -v /etc/shine:/etc/shine -w /app \
     mkdir -p /app/.convex-tmp
     npx convex deploy -y --typecheck try
     node deploy/contabo/convex-env.mjs
+    npx convex run dejoiyMail:syncDirectory || echo "(people list from Dejoiy Mail not loaded yet: needs PROVISION_ADMIN in /etc/dmail/adapter.env)"
     npx vite build --logLevel warn
   '
 rsync -a --delete dist/ /var/www/shine/

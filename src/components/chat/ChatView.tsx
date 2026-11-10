@@ -41,6 +41,7 @@ import {
   Users,
   Video,
   X,
+  ArrowLeft,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
@@ -333,8 +334,8 @@ export function ChatView({
         <div className="flex h-16 shrink-0 items-center justify-between gap-3 border-b-2 border-[var(--sticker-border)] bg-[color-mix(in_oklch,var(--t)_22%,var(--card))] px-4">
           <div className="flex min-w-0 items-center gap-3">
             {onBack && (
-              <Button variant="ghost" size="icon-sm" onClick={onBack} className="lg:hidden">
-                <X className="size-4" />
+              <Button variant="ghost" size="icon-sm" onClick={onBack} className="lg:hidden" aria-label="Back to chats">
+                <ArrowLeft className="size-5" />
               </Button>
             )}
             {isGroup || isChannel ? (

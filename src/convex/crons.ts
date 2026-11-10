@@ -10,6 +10,9 @@ import { internal } from "./_generated/api";
  */
 const crons = cronJobs();
 
+// Everyone in Dejoiy Mail shows up in Shine (see dejoiyMail.syncDirectory).
+crons.interval("dejoiy-mail-directory", { minutes: 15 }, internal.dejoiyMail.syncDirectory);
+
 crons.interval(
   "sweep-idle-meetings",
   { minutes: 5 },

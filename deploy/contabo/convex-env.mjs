@@ -20,6 +20,7 @@ const vars = {
   ...keys,
   SITE_URL: process.env.SHINE_APP_URL,
   DEJOIY_MAIL_SSO_SECRET: process.env.SHINE_SSO_SECRET,
+  DEJOIY_MAIL_URL: "https://mail.dejoiy.com",
 };
 for (const [name, value] of Object.entries(vars)) {
   if (!value) throw new Error(`${name} is empty`);

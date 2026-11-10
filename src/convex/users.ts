@@ -45,10 +45,22 @@ export const authProviderStatus = query({
 });
 
 /** Directory of all users (company directory / search). */
+/** People you can see: your own company (same mail domain); the Dejoiy team sees everyone. */
+export function sameCompany(me: { email?: string | null; role?: string | null }, u: { email?: string | null }) {
+  if (me.role === "super_admin" || me.role === "dejoiy_admin") return true;
+  const domain = (e?: string | null) => (e ?? "").toLowerCase().split("@")[1] ?? "";
+  return !!domain(me.email) && domain(me.email) === domain(u.email);
+}
+
 export const directory = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query("users").collect();
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return [];
+    const me = await ctx.db.get(userId);
+    if (!me) return [];
+    const users = await ctx.db.query("users").collect();
+    return users.filter((u) => u._id === me._id || (u.isActive !== false && sameCompany(me, u)));
   },
 });
 
@@ -84,13 +96,16 @@ export const mentionSearch = query({
   handler: async (ctx, { query }) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) return [];
+    const me = await ctx.db.get(userId);
+    if (!me) return [];
     const q = (query ?? "").toLowerCase().trim();
-    const users = await ctx.db.query("users").take(500);
+    const users = await ctx.db.query("users").collect();
     return users
       .filter(
         (u) =>
           String(u._id) !== String(userId) &&
           u.isActive !== false &&
+          sameCompany(me, u) &&
           (!q ||
             (u.name ?? "").toLowerCase().includes(q) ||
             (u.email ?? "").toLowerCase().includes(q) ||
