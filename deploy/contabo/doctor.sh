@@ -22,6 +22,9 @@ echo "== Shine's backend can reach mail.dejoiy.com"
 docker compose -p shine -f /opt/shine/deploy/contabo/docker-compose.yml exec -T backend \
   sh -c 'curl -s -o /dev/null -w "%{http_code}" https://mail.dejoiy.com/api/config' 2>/dev/null | grep -q 200 \
   && ok "yes" || bad "no: the backend container can't open https://mail.dejoiy.com (firewall or DNS inside Docker)"
+echo "== Recent backend errors (last hour)"
+docker compose -p shine -f /opt/shine/deploy/contabo/docker-compose.yml logs --since 1h backend 2>/dev/null \
+  | grep -iE "error|panic|limit" | grep -viE "secret|key|token" | tail -15 | sed 's/^/  /' || true
 echo "== Shine backend"
 docker run --rm --network host -v /opt/shine:/app -w /app \
   -e CONVEX_SELF_HOSTED_URL=http://127.0.0.1:3210 -e CONVEX_SELF_HOSTED_ADMIN_KEY="$(cat /etc/shine/admin-key)" \

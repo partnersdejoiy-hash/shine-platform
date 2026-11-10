@@ -113,12 +113,17 @@ function isConvexOfflineError(err: unknown): boolean {
     msg.includes("usage limit") ||
     msg.includes("function calls limit") ||
     msg.includes("convex deployment paused") ||
-    msg.includes("shared hosting") ||
-    msg.includes("network") ||
     msg.includes("failed to fetch") ||
     msg.includes("load failed") ||
-    msg.includes("convex")
+    msg.includes("networkerror") ||
+    // the web app is newer than the backend functions, e.g. halfway through update.sh
+    msg.includes("could not find public function")
   );
+}
+
+/** The first line of an error, without Convex's "[CONVEX Q(x)] [Request ID: ..]" prefix, for the error page. */
+function shortError(msg: string): string {
+  return msg.split("\n")[0].replace(/^\[CONVEX [^\]]*\]\s*(\[Request ID: [^\]]*\]\s*)?/, "").replace(/^(Server Error\s*)?Uncaught Error:\s*/, "").slice(0, 200);
 }
 
 class RootErrorBoundary extends React.Component<
@@ -135,6 +140,8 @@ class RootErrorBoundary extends React.Component<
   }
   componentDidCatch(err: Error, info: React.ErrorInfo) {
     console.error("[SHINE] Runtime error:", err, info?.componentStack);
+    // a server restart or update is over in seconds: try again by itself
+    if (isConvexOfflineError(err)) setTimeout(() => window.location.reload(), 8000);
   }
   render() {
     if (this.state.hasError) {
@@ -148,8 +155,8 @@ class RootErrorBoundary extends React.Component<
               <div>
                 <h2 className="text-lg font-semibold">SHINE is temporarily unavailable</h2>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  The backend service has reached its usage limit. Our team has been notified.
-                  Please try again in a few minutes.
+                  Shine can't reach its server right now. It is usually restarting after an update
+                  and is back in a few seconds; this page retries by itself.
                 </p>
               </div>
               <div className="flex flex-col items-center gap-2">
@@ -178,6 +185,9 @@ class RootErrorBoundary extends React.Component<
               <p className="mt-2 text-sm text-muted-foreground">
                 SHINE encountered an unexpected error. Please try refreshing the page.
               </p>
+              {this.state.errorMsg && (
+                <p className="mt-3 break-words rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">{shortError(this.state.errorMsg)}</p>
+              )}
             </div>
             <button
               onClick={() => window.location.reload()}
