@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { api } from "@/convex/_generated/api";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Badge } from "@/components/ui/badge";
@@ -18,8 +19,9 @@ import { useAuth } from "@/hooks/use-auth";
 import { usePermission } from "@/hooks/use-permission";
 import { displayName } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { toneFor } from "@/lib/tone";
 import { useMutation, useQuery } from "convex/react";
-import { CornerDownLeft, Hash, Loader2, Search, Shield, Users } from "lucide-react";
+import { CornerDownLeft, Hash, Loader2, MessageCircle, Search, Shield, Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -201,19 +203,32 @@ export function NewChatDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>New message</DialogTitle>
-          <DialogDescription>Start a direct chat, group or channel.</DialogDescription>
+          <DialogTitle className="text-2xl font-extrabold tracking-[-0.03em]">Start a chat</DialogTitle>
+          <DialogDescription>Pick what kind, then who.</DialogDescription>
         </DialogHeader>
 
         <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="direct">Direct</TabsTrigger>
-            <TabsTrigger value="group" disabled={!canGroup}>
-              Group
-            </TabsTrigger>
-            <TabsTrigger value="channel" disabled={!canGroup}>
-              Channel
-            </TabsTrigger>
+          {/* three colour cards instead of tabs, like Dejoiy Mail's label colours */}
+          <TabsList className="grid h-auto w-full grid-cols-3 gap-2 rounded-none border-0 bg-transparent p-0">
+            {([
+              ["direct", "One person", "#ff4fa3", MessageCircle],
+              ["group", "A few people", "#ffd23f", Users],
+              ["channel", "Whole team", "#4da3ff", Hash],
+            ] as const).map(([value, hint, tone, Icon]) => (
+              <TabsTrigger
+                key={value}
+                value={value}
+                disabled={value !== "direct" && !canGroup}
+                style={{ "--t": tone } as CSSProperties}
+                className="tone-card h-auto flex-col items-start gap-2 rounded-[20px] p-3 text-left text-foreground data-[state=active]:border-2 data-[state=active]:border-[var(--sticker-border)] data-[state=active]:bg-[color-mix(in_oklch,var(--t)_38%,var(--card))] data-[state=active]:text-foreground data-[state=active]:shadow-[3px_3px_0_var(--sticker-shadow)] dark:data-[state=active]:bg-[color-mix(in_oklch,var(--t)_38%,var(--card))] dark:data-[state=active]:text-foreground"
+              >
+                <span className="tone-dot grid size-9 place-items-center rounded-xl border-2 border-[var(--sticker-border)] text-[#121212]">
+                  <Icon className="size-4" />
+                </span>
+                <span className="text-sm font-extrabold capitalize">{value}</span>
+                <span className="text-[11px] font-medium text-muted-foreground">{hint}</span>
+              </TabsTrigger>
+            ))}
           </TabsList>
           {!canGroup && (
             <p className="mt-3 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
@@ -372,12 +387,8 @@ export function NewChatDialog({
                 <button
                   key={k}
                   onClick={() => setChanKind(k)}
-                  className={cn(
-                    "rounded-xl border p-2.5 text-left text-xs transition-colors",
-                    chanKind === k
-                      ? "border-primary/50 bg-primary/8 text-primary"
-                      : "border-border/80 text-muted-foreground hover:border-primary/30",
-                  )}
+                  style={{ "--t": k === "announcement" ? "#ff8a3d" : k === "broadcast" ? "#b892ff" : "#4da3ff" } as CSSProperties}
+                  className={cn("tone-card p-3 text-left text-xs", chanKind === k && "is-active")}
                 >
                   <div className="font-semibold capitalize">{k}</div>
                   <div className="mt-0.5 text-[10px] opacity-70">
@@ -508,14 +519,12 @@ function PeopleDropdown({
               onPick(p);
             }}
             onMouseEnter={() => onHover(i)}
-            className={cn(
-              "flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left transition-colors",
-              index === i ? "bg-accent" : "hover:bg-accent/60",
-            )}
+            style={{ "--t": toneFor(p._id) } as CSSProperties}
+            className={cn("tone-card mb-1.5 flex w-full items-center gap-3 px-3 py-2.5 text-left", index === i && "is-active")}
           >
-            <UserAvatar user={p} size="sm" />
+            <UserAvatar user={p} size="md" />
             <div className="min-w-0 flex-1">
-              <div className="truncate text-xs font-medium">{displayName(p)}</div>
+              <div className="truncate text-sm font-bold">{displayName(p)}</div>
               <div className="truncate text-[11px] text-muted-foreground">
                 {p.email ?? ""}
                 {p.designation || p.department ? ` · ${p.designation || p.department}` : ""}

@@ -3,7 +3,7 @@ import { ChatView } from "@/components/chat/ChatView";
 import { ConversationList } from "@/components/chat/ConversationList";
 import { PolicyLinks } from "@/components/chat/PolicyLinks";
 import { NewChatDialog } from "@/components/chat/NewChatDialog";
-import { ShineLogo } from "@/components/ShineLogo";
+import { ShineMark } from "@/components/ShineLogo";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "convex/react";
@@ -50,22 +50,16 @@ export function AppChats() {
   };
 
   const emptyState = (
-    <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
-      <div className="glass hairline grid size-20 place-items-center rounded-3xl">
-        <ShineLogo size={44} showWordmark={false} />
-      </div>
+    <div className="flex flex-1 flex-col items-center justify-center gap-5 px-6 text-center">
+      <ShineMark size={88} className="drop-shadow-[5px_5px_0_var(--sticker-shadow)]" />
       <div>
-        <h2 className="text-lg font-semibold">Your messages</h2>
-        <p className="mx-auto mt-1 max-w-xs text-sm text-muted-foreground">
-          Start a direct chat, gather a group, or spin up a team channel — everything updates in
-          realtime.
+        <h2 className="text-3xl font-extrabold tracking-[-0.04em]">Pick a chat</h2>
+        <p className="mx-auto mt-2 max-w-xs text-sm text-muted-foreground">
+          Or start a new one: one person, a few people, or your whole team.
         </p>
       </div>
-      <Button
-        className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
-        onClick={() => openNew()}
-      >
-        <MessageSquarePlus className="size-4" /> Start a conversation
+      <Button size="lg" onClick={() => openNew()}>
+        <MessageSquarePlus className="size-4" /> Start a chat
       </Button>
     </div>
   );

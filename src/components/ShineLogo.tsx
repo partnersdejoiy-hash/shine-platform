@@ -7,29 +7,30 @@ interface Props {
   wordClassName?: string;
 }
 
-/** The Dejoiy ":D" mark, the same one Dejoiy Mail wears; follows the accent colour (--gold). */
-export function DejoiyMark({ size = 36, className }: { size?: number; className?: string }) {
+// Shine's mark: a pink tile, a white D that is also a chat bubble, a lime and a white dot.
+export const SHINE_D = "M34.8 24.8H59.2A23.8 23.8 0 0 1 59.2 72.4H46.3L35.8 81.9V72.4H34.8Z M47.2 38.9H58.1A9.5 9.5 0 0 1 58.1 57.9H47.2Z";
+export const SHINE_PINK = "#FF4FA3";
+export const SHINE_LIME = "#D4F53C";
+
+export function ShineMark({ size = 36, className }: { size?: number; className?: string }) {
   return (
-    <svg viewBox="0 -25 150 150" width={size} height={size} aria-hidden="true" className={cn("shrink-0", className)}>
-      <path d="M18 -20H80A70 70 0 0 1 80 120H18A18 18 0 0 1 0 102V-2A18 18 0 0 1 18 -20Z" fill="var(--gold)" />
-      <g transform="translate(22 17) scale(.66)">
-        <circle cx="13" cy="28" r="12" fill="#FFFFFF" />
-        <circle cx="13" cy="72" r="12" fill="#121212" />
-        <path fillRule="evenodd" d="M38 0H88A50 50 0 0 1 88 100H38Z M62 26H86A24 24 0 0 1 86 74H62Z" fill="#121212" />
-      </g>
+    <svg viewBox="0 0 100 100" width={size} height={size} aria-hidden="true" className={cn("shine-mark shrink-0", className)}>
+      <rect width="100" height="100" rx="25" fill={SHINE_PINK} />
+      <path d={SHINE_D} fill="#fff" fillRule="evenodd" />
+      <circle className="shine-dot-lime" cx="22.8" cy="37.9" r="6.7" fill={SHINE_LIME} />
+      <circle className="shine-dot-white" cx="22.8" cy="59" r="6.7" fill="#fff" />
     </svg>
   );
 }
 
-/** ":D Shine" — Dejoiy's chat app, styled like ":D Mail". */
 export function ShineLogo({ size = 36, className, showWordmark = true, wordClassName }: Props) {
   return (
-    <div className={cn("flex items-center gap-2", className)} aria-label="Shine by Dejoiy">
-      <DejoiyMark size={size} />
+    <div className={cn("shine-logo flex items-center gap-2.5", className)} aria-label="Shine by Dejoiy">
+      <ShineMark size={size} />
       {showWordmark && (
         <span
           className={cn("font-extrabold leading-none tracking-[-0.045em] text-foreground", wordClassName)}
-          style={{ fontSize: Math.round(size * 0.78) }}
+          style={{ fontSize: Math.round(size * 0.74) }}
         >
           Shine
         </span>

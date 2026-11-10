@@ -4,7 +4,7 @@ import { CommandPalette } from "@/components/app/CommandPalette";
 import { NotificationsPopover } from "@/components/app/NotificationsPopover";
 import { PolicyAckGate } from "@/components/chat/PolicyAckGate";
 import { ShineAIDrawer } from "@/components/app/ShineAIDrawer";
-import { DejoiyMark, ShineLogo } from "@/components/ShineLogo";
+import { ShineMark, ShineLogo } from "@/components/ShineLogo";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -229,7 +229,7 @@ export function AppShell() {
         {/* Fixed bottom section: AI + user menu */}
         <div className="flex shrink-0 flex-col items-center gap-2 border-t border-border/50 pt-2 pb-2 lg:flex-row lg:flex-wrap lg:justify-between lg:px-4 lg:pb-4 lg:pt-3">
           <div className="hidden w-full items-center gap-2.5 lg:flex">
-            <DejoiyMark size={30} />
+            <ShineMark size={30} />
             <div className="leading-tight">
               <div className="text-[13px] font-bold">Dejoiy workspace</div>
               <div className="text-[11px] text-muted-foreground">Signed in with Dejoiy Mail</div>

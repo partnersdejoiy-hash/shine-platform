@@ -248,9 +248,9 @@
     box-shadow: 3px 3px 0 color-mix(in oklch, var(--t, var(--gold)) 75%, var(--sticker-shadow));
   }
   .bubble-in {
-    background: var(--card);
-    border: 1.5px solid var(--border);
-    box-shadow: 2px 2px 0 color-mix(in oklch, var(--foreground) 10%, transparent);
+    background: color-mix(in oklch, var(--t, var(--gold)) 6%, var(--card));
+    border: 1.5px solid color-mix(in oklch, var(--t, var(--gold)) 28%, var(--border));
+    box-shadow: 2px 2px 0 color-mix(in oklch, var(--t, var(--gold)) 22%, transparent);
   }
   @media (prefers-reduced-motion: reduce) {
     .card-hover, .card-hover:hover { transition: none; transform: none; }
@@ -272,6 +272,12 @@
   .tone-card:active { transform: scale(0.985); }
   .tone-card [data-slot="avatar"] { box-shadow: 0 0 0 2.5px var(--t); }
   .tone-dot { background: var(--t); }
+  /* the logo's dots bounce when you point at it */
+  .shine-mark circle { transform-box: fill-box; transform-origin: center; }
+  .shine-logo:hover .shine-dot-lime, button:hover > .shine-logo .shine-dot-lime { animation: shine-hop 0.5s cubic-bezier(0.3, 1.6, 0.5, 1); }
+  .shine-logo:hover .shine-dot-white, button:hover > .shine-logo .shine-dot-white { animation: shine-hop 0.5s 0.08s cubic-bezier(0.3, 1.6, 0.5, 1); }
+  @keyframes shine-hop { 40% { transform: translateY(-18%) scale(1.15); } }
+  @media (prefers-reduced-motion: reduce) { .shine-mark circle { animation: none !important; } }
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }

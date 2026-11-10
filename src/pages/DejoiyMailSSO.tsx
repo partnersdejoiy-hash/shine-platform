@@ -4,6 +4,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { dejoiyMailSignInUrl } from "@/lib/embed";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
+import { api } from "@/convex/_generated/api";
+import { useAction } from "convex/react";
 
 /** Same-site paths only, so the token can never send someone elsewhere. */
 function safeNext(raw: string | null): string {
@@ -27,6 +29,7 @@ function tokenEmail(token: string): string {
 export default function DejoiyMailSSO() {
   const { isLoading, isAuthenticated, user, signIn, signOut } = useAuth();
   const navigate = useNavigate();
+  const refresh = useAction(api.dejoiyMail.refresh);
   const [params] = useState(() => new URLSearchParams(window.location.hash.slice(1)));
   const [error, setError] = useState<string | null>(() => (params.get("t") ? null : "This sign-in link is missing its token."));
   const started = useRef(false);
@@ -45,6 +48,7 @@ export default function DejoiyMailSSO() {
     (async () => {
       try {
         if (isAuthenticated && user?.email?.toLowerCase() === tokenEmail(token)) {
+          await refresh({ token }).catch(() => {}); // role + photo follow Dejoiy Mail; never blocks opening
           navigate(next, { replace: true });
           return;
         }
@@ -55,7 +59,7 @@ export default function DejoiyMailSSO() {
         setError(e instanceof Error ? e.message.replace(/^.*Uncaught Error:\s*/s, "").split("\n")[0] : "Could not sign you in.");
       }
     })();
-  }, [params, isLoading, isAuthenticated, user?.email, signIn, signOut, navigate]);
+  }, [params, isLoading, isAuthenticated, user?.email, signIn, signOut, navigate, refresh]);
 
   return (
     <div className="grid min-h-dvh place-items-center bg-background px-4">
