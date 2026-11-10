@@ -7,7 +7,9 @@ import { ShineMark } from "@/components/ShineLogo";
 import { isEmbedded } from "@/lib/embed";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { MessageSquarePlus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
@@ -19,6 +21,16 @@ export function AppChats() {
   const { user } = useAuth();
   const conversations = useQuery(api.conversations.list);
   const presenceAll = useQuery(api.users.presenceAll);
+  const people = useQuery(api.users.directory);
+  const openDirect = useMutation(api.conversations.openDirectChat);
+  const startDirect = async (userId: string) => {
+    try {
+      const convId = await openDirect({ userId: userId as never });
+      navigate(`/app/chats/${convId}`);
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Could not start the chat");
+    }
+  };
   // "New chat" in the sidebar: ?compose=1 when it brings you here, an event when you're already here
   const [newOpen, setNewOpen] = useState(() => searchParams.get("compose") === "1");
   useEffect(() => {
@@ -85,6 +97,8 @@ export function AppChats() {
             loading={conversations === undefined}
             onSelect={(cid) => navigate(`/app/chats/${cid}`)}
             onNewChat={() => openNew()}
+            people={people as never}
+            onStartDirect={startDirect}
           />
         </div>
 
@@ -102,8 +116,26 @@ export function AppChats() {
       </div>
 
       {/* enterprise policy links — bottom of the messaging app */}
-      {/* inside Dejoiy Mail's chat panel there is no room for the footer */}
-      {!isEmbedded() && <PolicyLinks />}
+      {/* the footer only on big screens, never inside Dejoiy Mail's chat panel */}
+      {!isEmbedded() && (
+        <div className="hidden lg:block">
+          <PolicyLinks />
+        </div>
+      )}
+
+      {/* phones: a floating New chat button, like Compose in Dejoiy Mail */}
+      {!selectedId && (
+        <Button
+          size="lg"
+          onClick={() => openNew()}
+          className={cn(
+            "fixed right-4 z-40 h-14 rounded-full px-6 text-base lg:hidden",
+            isEmbedded() ? "bottom-4" : "bottom-[calc(6rem+env(safe-area-inset-bottom))]",
+          )}
+        >
+          <MessageSquarePlus className="size-5" /> New chat
+        </Button>
+      )}
 
       <NewChatDialog
         open={newOpen}

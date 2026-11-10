@@ -46,7 +46,18 @@ interface Props {
   onSelect: (id: string) => void;
   onNewChat: () => void;
   loading?: boolean;
+  /** your colleagues, for the "Active now" row */
+  people?: { _id: string; name?: string | null; email?: string | null; image?: string | null }[];
+  onStartDirect?: (userId: string) => void;
 }
+
+const FILTERS = [
+  ["all", "All"],
+  ["unread", "Unread"],
+  ["direct", "People"],
+  ["group", "Groups"],
+  ["channel", "Channels"],
+] as const;
 
 export function ConversationList({
   items,
@@ -57,8 +68,11 @@ export function ConversationList({
   onSelect,
   onNewChat,
   loading,
+  people,
+  onStartDirect,
 }: Props) {
   const [q, setQ] = useState("");
+  const [show, setShow] = useState<(typeof FILTERS)[number][0]>("all");
   const [ctxMenu, setCtxMenu] = useState<{ id: string; x: number; y: number; pinned: boolean; muted: boolean } | null>(null);
   const setMuted = useMutation(api.conversations.setMuted);
   const togglePin = useMutation(api.conversations.togglePin);
@@ -67,25 +81,87 @@ export function ConversationList({
   const filtered = useMemo(() => {
     if (!items) return [];
     const query = q.toLowerCase().trim();
-    if (!query) return items;
-    return items.filter((item) => {
+    const kind = (i: ConversationItem) =>
+      i.conversation.kind === "channel" ? "channel" : i.conversation.chatType === "group" ? "group" : "direct";
+    const byChip = items.filter((i) => (show === "all" ? true : show === "unread" ? i.unread > 0 : kind(i) === show));
+    if (!query) return byChip;
+    return byChip.filter((item) => {
       const name = conversationTitle(item, myId).toLowerCase();
       const preview = item.lastMessage?.body.toLowerCase() ?? "";
       return name.includes(query) || preview.includes(query);
     });
-  }, [items, q, myId]);
+  }, [items, q, myId, show]);
+
+  // "Active now": colleagues online first, like the top row of a messaging app
+  const active = useMemo(
+    () =>
+      (people ?? [])
+        .filter((p) => p._id !== myId)
+        .map((p) => ({ p, on: isOnline(presenceMap[p._id]) }))
+        .sort((a, b) => Number(b.on) - Number(a.on) || (a.p.name ?? "").localeCompare(b.p.name ?? ""))
+        .slice(0, 16),
+    [people, presenceMap, myId],
+  );
 
   return (
     <div className="flex h-full flex-col">
-      <div className="shrink-0 p-3">
+      <div className="shrink-0 space-y-3 px-3 pb-2 pt-3">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search conversations…"
-            className="h-9 rounded-xl pl-9 text-sm"
+            placeholder="Search chats"
+            className="h-11 rounded-full pl-10"
           />
+        </div>
+
+        {active.length > 0 && (
+          <div className="-mx-3 flex gap-3 overflow-x-auto px-3 pb-1 no-scrollbar" aria-label="Your team">
+            <button onClick={onNewChat} className="flex w-16 shrink-0 flex-col items-center gap-1.5 text-center">
+              <span className="grid size-14 place-items-center rounded-[20px] border-2 border-dashed border-primary bg-accent text-primary">
+                <MessageSquarePlus className="size-5" />
+              </span>
+              <span className="w-full truncate text-[11px] font-bold">New</span>
+            </button>
+            {active.map(({ p, on }) => (
+              <button
+                key={p._id}
+                onClick={() => onStartDirect?.(p._id)}
+                style={{ "--t": toneFor(p._id) } as CSSProperties}
+                className="flex w-16 shrink-0 flex-col items-center gap-1.5 text-center transition-transform active:scale-95"
+                title={displayName(p)}
+              >
+                <span className={cn("rounded-full p-[3px]", on ? "bg-[var(--t)]" : "bg-transparent")}>
+                  <UserAvatar user={p} presence={presenceMap[p._id]} size="lg" showStatus />
+                </span>
+                <span className="w-full truncate text-[11px] font-semibold">{displayName(p).split(" ")[0]}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* like Dejoiy Mail's "All messages · Unread · …" */}
+        <div className="-mx-3 flex gap-1.5 overflow-x-auto px-3 no-scrollbar" role="tablist" aria-label="Show">
+          {FILTERS.map(([value, label]) => (
+            <button
+              key={value}
+              role="tab"
+              aria-selected={show === value}
+              onClick={() => setShow(value)}
+              className={cn(
+                "h-9 shrink-0 rounded-full border-[1.5px] px-4 text-sm font-semibold transition-colors",
+                show === value
+                  ? "border-[var(--sticker-border)] bg-foreground text-background"
+                  : "border-border bg-card text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {label}
+              {value === "unread" && (items ?? []).some((i) => i.unread > 0) && (
+                <span className="ml-1.5 inline-block size-2 rounded-full bg-primary align-middle" />
+              )}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -106,7 +182,7 @@ export function ConversationList({
 
         {!loading && filtered.length === 0 && (
           <div className="px-4 py-10 text-center text-sm text-muted-foreground">
-            {q ? "No conversations match" : "No conversations yet"}
+            {q ? "No chats match" : show !== "all" ? "Nothing here right now" : "No chats yet"}
             <div className="mt-2 text-xs">
               <Button variant="link" className="h-auto p-0 text-primary" onClick={onNewChat}>
                 Start your first chat
@@ -193,7 +269,8 @@ export function ConversationList({
         })}
       </div>
 
-      <div className="shrink-0 border-t border-border/70 p-2.5">
+      {/* phones get the floating New chat button instead (AppChats) */}
+      <div className="hidden shrink-0 border-t border-border/70 p-2.5 lg:block">
         <Button
           className="h-11 w-full gap-2"
           onClick={onNewChat}
