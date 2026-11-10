@@ -33,7 +33,7 @@ health, and prints the URLs. Then:
    (`external-ip=...`), then `docker compose restart coturn livekit`.
 4. First boot runs `prisma migrate deploy` + `prisma db seed` inside the API
    container — this creates the DEJOIY organization, the 8-role permission
-   hierarchy, and the permanent super admin `deepak.sharma@dejoiy.com`
+   hierarchy, and the permanent super admin `deepak.sharma@corp.dejoiy.com`
    (password = `SUPER_ADMIN_PASSWORD` in `.env`).
 
 ## 3. Where things live

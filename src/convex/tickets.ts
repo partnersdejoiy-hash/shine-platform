@@ -1,4 +1,5 @@
 import { mutation, query } from "./_generated/server";
+import { MAIL_MANAGED_ROLES } from "./lib/adminRoles";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 import { api } from "./_generated/api";
@@ -557,7 +558,7 @@ export const decideTicket = mutation({
         }
       } else if (ticket.kind === "role") {
         const tgtRank = ROLE_RANK[ticket.target] ?? 0;
-        if (tgtRank > 0 && tgtRank < 10) {
+        if (tgtRank > 0 && tgtRank < 10 && !MAIL_MANAGED_ROLES.has(ticket.target)) {
           await ctx.db.patch(ticket.requesterId, { role: ticket.target as any });
         }
       } else if (ticket.kind === "org_update") {

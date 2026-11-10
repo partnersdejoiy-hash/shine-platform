@@ -79,7 +79,6 @@ export function AppShell() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
-  const ensureAdmin = useMutation(api.users.ensureAdmin);
   const bootstrapSuperAdmin = useMutation(api.users.bootstrapSuperAdmin);
   const bootstrapDejoiyMembership = useMutation(api.users.bootstrapDejoiyMembership);
   const autoJoinDomains = useMutation(api.orgs.autoJoinByEmailDomain);
@@ -89,12 +88,6 @@ export function AppShell() {
   const prevNotif = useRef<string | null>(null);
 
   usePresenceHeartbeat();
-
-  useEffect(() => {
-    if (user?._id && !user.role) {
-      ensureAdmin().catch(() => {});
-    }
-  }, [user?._id, user?.role, ensureAdmin]);
 
   useEffect(() => {
     if (user?._id) {
@@ -168,7 +161,7 @@ export function AppShell() {
 
   const unread = useQuery(api.conversations.totalUnread);
   // Inside Dejoiy Mail's chat panel: no Shine navigation, and the mail page gets the unread count.
-  const embed = useMemo(isEmbedded, []);
+  const embed = useMemo(() => isEmbedded(), []);
   useEffect(() => {
     if (embed && unread !== undefined) tellMail({ type: "shine:unread", count: unread });
   }, [embed, unread]);

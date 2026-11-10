@@ -1,13 +1,11 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import bcrypt from "bcryptjs";
 import { api } from "./_generated/api";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import {
-  SUPER_ADMIN_EMAIL,
   getCurrentUser,
   isSuperAdmin,
-  isSuperAdminEmail,
   logAudit,
 } from "./users";
 
@@ -19,7 +17,7 @@ import {
  *
  * The `password` auth provider's `authorize` callback runs inside a Convex
  * ACTION (no direct `ctx.db`), so credential verification happens here via
- * `ctx.runMutation(api.passwords.loginWithPassword, …)`.
+ * `ctx.runMutation(internal.passwords.loginWithPassword, …)`.
  */
 
 export const PASSWORD_MIN_LENGTH = 8;
@@ -132,10 +130,10 @@ async function assertNotReused(ctx: any, userId: string, newPassword: string) {
 }
 
 /**
- * Verify email + password for sign-in. Called from the `password` auth
- * provider. Also provisions the CEO account on the very first password login.
+ * Verify email + password for sign-in. Internal: only the `password` auth
+ * provider calls it, so it can't be used to guess passwords from outside.
  */
-export const loginWithPassword = mutation({
+export const loginWithPassword = internalMutation({
   args: { email: v.string(), password: v.string() },
   handler: async (ctx, { email, password }) => {
     const normalized = email.trim().toLowerCase();
@@ -143,23 +141,11 @@ export const loginWithPassword = mutation({
       throw new Error("Email and password are required.");
     }
 
-    let user: any = await ctx.db
+    const user: any = await ctx.db
       .query("users")
       .withIndex("email", (q) => q.eq("email", normalized))
       .first();
 
-    // First-ever CEO login: provision the permanent super admin account.
-    if (!user && normalized === SUPER_ADMIN_EMAIL) {
-      const userId = await ctx.db.insert("users", {
-        email: SUPER_ADMIN_EMAIL,
-        name: "Deepak Sharma",
-        designation: "CEO",
-        company: "DEJOIY",
-        role: "super_admin",
-        isActive: true,
-      });
-      user = { _id: userId, isActive: true };
-    }
     if (!user) {
       throw new Error("No account found with this email.");
     }
@@ -174,20 +160,12 @@ export const loginWithPassword = mutation({
       .withIndex("by_user", (q) => q.eq("userId", user._id))
       .unique();
 
-    // CEO fallback: before the CEO ever sets a password, honor the provisioned
-    // SUPER_ADMIN_PASSWORD env credential.
-    const expectedEnv = process.env.SUPER_ADMIN_PASSWORD || "Jaymaakaali@321";
-    const legacyCeoOk =
-      isSuperAdminEmail(normalized) && !row && password === expectedEnv;
-
-    if (!row && !legacyCeoOk) {
+    if (!row) {
       throw new Error(
         "No password set for this account yet. Sign in with your email verification code, then create a password in Settings → Security.",
       );
     }
-    if (legacyCeoOk) {
-      // Provisioned-password path (CEO before they set their own password).
-    } else if (!bcrypt.compareSync(password, row!.hash)) {
+    if (!bcrypt.compareSync(password, row.hash)) {
       throw new Error("Invalid email or password.");
     }
 

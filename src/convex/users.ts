@@ -383,7 +383,7 @@ export const bootstrapDejoiyMembership = mutation({
 // The permanent SHINE super admin account. This identity is provisioned and
 // protected automatically — it can never be demoted or deactivated by other
 // admins (see src/convex/admin.ts).
-export const SUPER_ADMIN_EMAIL = "deepak.sharma@dejoiy.com";
+export const SUPER_ADMIN_EMAIL = "deepak.sharma@corp.dejoiy.com";
 
 export function isSuperAdminEmail(email?: string | null): boolean {
   return (email ?? "").toLowerCase().trim() === SUPER_ADMIN_EMAIL;
@@ -398,7 +398,7 @@ export function isSuperAdmin(user: { email?: string | null; role?: string | null
  * Bootstrap the permanent super admin + the DEJOIY company.
  * Called on every app shell mount for the signed-in user. Idempotent.
  *
- * When deepak.sharma@dejoiy.com signs in, they are locked in as Super Admin,
+ * When deepak.sharma@corp.dejoiy.com signs in, they are locked in as Super Admin,
  * CEO of DEJOIY, and owner of the DEJOIY organization (created on first run).
  */
 export const bootstrapSuperAdmin = mutation({
@@ -510,27 +510,6 @@ export const removeAvatar = mutation({
 });
 
 /** Bootstrap: promote the very first registered user to admin. */
-export const ensureAdmin = mutation({
-  args: {},
-  handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (userId === null) return;
-    const me = await ctx.db.get(userId);
-    if (!me) return;
-    if (me.role === "admin") return;
-    const admins = await ctx.db
-      .query("users")
-      .filter((q) => q.eq(q.field("role"), "admin"))
-      .take(1);
-    if (admins.length > 0) return;
-    const earliest = await ctx.db.query("users").order("asc").first();
-    if (earliest && earliest._id === userId) {
-      await ctx.db.patch(userId, { role: "admin" });
-      await logAudit(ctx, userId, "user.promoted_admin", "users", String(userId), "first user bootstrap");
-    }
-  },
-});
-
 // ---- Devices & sessions -----------------------------------------------------
 
 export const registerDevice = mutation({

@@ -89,7 +89,7 @@ dependency. It accompanies the deployable artifacts in this repository:
     logs, chat, notifications, files, tasks, invites, email log).
   - `prisma/seed.ts` — seeds the 8-role SHINE hierarchy, the permission
     matrix, the DEJOIY organization and the permanent super admin
-    `deepak.sharma@dejoiy.com` (password from `SUPER_ADMIN_PASSWORD`).
+    `deepak.sharma@corp.dejoiy.com` (password from `SUPER_ADMIN_PASSWORD`).
   - Auth module (JWT + Argon2/bcrypt password hashing, remember-me).
   - Users module (profile, directory, device & network policy fields).
   - Realtime gateway (Socket.IO with JWT auth, presence, typing, chat).

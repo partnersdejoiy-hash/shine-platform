@@ -1,7 +1,7 @@
 /**
  * SHINE database seed — creates the DEJOIY organization, the 8-level role
  * hierarchy, the full permission matrix and the permanent super admin
- * (deepak.sharma@dejoiy.com). Idempotent.
+ * (deepak.sharma@corp.dejoiy.com). Idempotent.
  */
 import { PrismaClient } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
@@ -9,9 +9,10 @@ import * as bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 const SUPER_ADMIN_EMAIL =
-  process.env.SUPER_ADMIN_EMAIL || "deepak.sharma@dejoiy.com";
-const SUPER_ADMIN_PASSWORD =
-  process.env.SUPER_ADMIN_PASSWORD || "Jaymaakaali@321";
+  process.env.SUPER_ADMIN_EMAIL || "deepak.sharma@corp.dejoiy.com";
+// No default: a password in the code would be public to anyone who can read the repo.
+const SUPER_ADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD;
+if (!SUPER_ADMIN_PASSWORD) throw new Error("Set SUPER_ADMIN_PASSWORD before seeding.");
 
 /** Permission keys — keep in sync with the frontend capability map. */
 const PERMISSIONS: Record<string, string> = {
@@ -182,7 +183,7 @@ async function main() {
     });
   }
 
-  // 4. Permanent super admin — deepak.sharma@dejoiy.com (CEO)
+  // 4. Permanent super admin — deepak.sharma@corp.dejoiy.com (CEO)
   const superAdmin = await prisma.user.upsert({
     where: { email: SUPER_ADMIN_EMAIL },
     update: {

@@ -8,6 +8,7 @@ import {
   isSuperAdminEmail,
   logAudit,
 } from "./users";
+import { MAIL_MANAGED_MESSAGE, MAIL_MANAGED_ROLES, assertNotMailManaged } from "./lib/adminRoles";
 
 /** Platform hierarchy — higher number = higher rank (final authority: super admin). */
 export const ROLE_RANK: Record<string, number> = {
@@ -143,6 +144,9 @@ export const setUserRole = mutation({
     }
     const target = await ctx.db.get(userId);
     if (!target) throw new Error("User not found");
+    // Admin rights are managed in Dejoiy Mail, in both directions.
+    assertNotMailManaged(role);
+    if (MAIL_MANAGED_ROLES.has(target.role ?? "")) throw new Error(MAIL_MANAGED_MESSAGE);
     // The permanent super admin can never be demoted.
     if (isSuperAdmin(target) && !isSuperAdmin(actor)) {
       throw new Error("The super admin account cannot be modified");

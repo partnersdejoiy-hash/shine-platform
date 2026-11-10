@@ -5,6 +5,7 @@ import { api } from "./_generated/api";
 import { Role } from "./schema";
 import { generateTempPassword, PASSWORD_MIN_LENGTH } from "./passwords";
 import { ensureEmployeeId, getCurrentUser, isSuperAdmin, logAudit } from "./users";
+import { MAIL_MANAGED_MESSAGE, MAIL_MANAGED_ROLES, assertNotMailManaged } from "./lib/adminRoles";
 
 /**
  * Excel / CSV bulk workflows (admin console).
@@ -138,6 +139,10 @@ export const importUsers = mutation({
         errors.push({ row: line, message: `Invalid role "${role}"` });
         return;
       }
+      if (MAIL_MANAGED_ROLES.has(role)) {
+        errors.push({ row: line, message: MAIL_MANAGED_MESSAGE });
+        return;
+      }
       if (SUPER_ONLY_ROLES.has(role) && !isSuperAdmin(me)) {
         errors.push({ row: line, message: `Only the super admin can import the ${role} role` });
         return;
@@ -259,6 +264,7 @@ export const bulkUserAction = mutation({
         if (!VALID_ROLES.has(nextRole)) {
           throw new Error(`Invalid role "${nextRole}"`);
         }
+        assertNotMailManaged(nextRole);
         if (SUPER_ONLY_ROLES.has(nextRole) && !isSuperAdmin(me)) {
           throw new Error(`Only the super admin can grant the ${nextRole} role`);
         }

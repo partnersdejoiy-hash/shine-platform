@@ -11,7 +11,7 @@ if (process.env.BETTER_AUTH_SECRET && !process.env.AUTH_SECRET) {
 import { convexAuth } from "@convex-dev/auth/server";
 import { ConvexCredentials } from "@convex-dev/auth/providers/ConvexCredentials";
 import { emailOtp } from "./auth/emailOtp";
-import { api, internal } from "./_generated/api";
+import { internal } from "./_generated/api";
 import { verifyDejoiyMailToken } from "./lib/dejoiyMailToken";
 
 // NOTE: guest / anonymous login has been REMOVED (enterprise policy). Everyone
@@ -154,8 +154,6 @@ const apple = {
 //   - Settings → Security  (users create / change their own password)
 //   - Admin console → Users → Password  (admins & IT reset for employees)
 //   - Excel import optional "Password" column (bulk provisioning)
-// The CEO super admin keeps the legacy provisioned-password fallback until
-// they set a password themselves (see passwords.loginWithPassword).
 //
 // IMPORTANT: `authorize` runs inside a Convex ACTION, which has NO direct
 // ctx.db access — that used to crash with "Cannot read properties of
@@ -173,7 +171,7 @@ const adminPassword = ConvexCredentials({
     if (!email || !password) {
       throw new Error("Email and password are required.");
     }
-    const userId = await ctx.runMutation(api.passwords.loginWithPassword, {
+    const userId = await ctx.runMutation(internal.passwords.loginWithPassword, {
       email,
       password,
     });

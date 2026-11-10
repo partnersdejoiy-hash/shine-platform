@@ -45,7 +45,7 @@ administration — built for organizations of any size, from small teams to
 millions of concurrent users.
 
 - **Primary organization:** DEJOIY India Private Limited
-- **Owner/CEO account:** `deepak.sharma@dejoiy.com` — permanent **Super Admin**
+- **Owner/CEO account:** `deepak.sharma@corp.dejoiy.com` — permanent **Super Admin**
 - **Tagline:** *Powered by DEJOIY*
 
 Competing surface: Amazon Chime · Microsoft Teams · Slack · Discord ·
@@ -154,7 +154,7 @@ src/
 
 ### 6.2 Password login (super admin — CEO)
 - Provider: `ConvexCredentials` provider `id: "password"` in `src/convex/auth.ts`.
-- Credentials: **`deepak.sharma@dejoiy.com` / `Jaymaakaali@321`** (default; overridable via `SUPER_ADMIN_PASSWORD` key).
+- Sign-in: through Dejoiy Mail (mail.dejoiy.com). Admin rights come from Dejoiy Mail: Zimbra global admins become DEJOIY Admin, company admins become Client Admin. There is no default password in the code.
 - Flow: sign-in card toggle **"Sign in with password instead"** → username + password form → session minted for the SHINE user row → `bootstrapSuperAdmin` locks in role/company/org → audit log `auth.password_login`.
 - Only this one email accepts a password; wrong credentials → clean "Invalid email or password."
 
@@ -179,7 +179,7 @@ src/
 ## 7. Super Admin & Roles
 
 ### 7.1 The permanent super admin
-- `SUPER_ADMIN_EMAIL = "deepak.sharma@dejoiy.com"` (`src/convex/users.ts`).
+- `SUPER_ADMIN_EMAIL = "deepak.sharma@corp.dejoiy.com"` (`src/convex/users.ts`).
 - **Protected:** cannot be demoted or deactivated by other admins (`admin.ts`).
 - `bootstrapSuperAdmin` runs on every app-shell mount (idempotent): sets `role: super_admin`, `company: DEJOIY`, `designation: CEO`, `isActive`, creates the **DEJOIY** organization (owner membership) on first run, and audit-logs the provisioning.
 
@@ -390,7 +390,7 @@ Every managed dependency and its replacement (full table in `SELF_HOSTING.md`):
 Organizations, departments, teams, the 8-role hierarchy with the permission matrix **and per-role device/network policies** (allowed platforms/OS, VPN/IP/country restrictions, exports/uploads/downloads/printing), users/sessions/devices, meetings + recordings, calendar (personal/department/org/holiday/leave/training/reminder) with shares, policies + acknowledgements, chat (conversations/messages), notifications, files, tasks, invites, audit logs, email log.
 
 ### Seed (`prisma/seed.ts`)
-Idempotent: 38 permissions → role matrix for all 8 roles → DEJOIY organization (gold branding JSON) → **super admin `deepak.sharma@dejoiy.com`** (password from `SUPER_ADMIN_PASSWORD`, default `Jaymaakaali@321`, employee ID `DEJ-0001`, CEO) → 7 required policies.
+Idempotent: 38 permissions → role matrix for all 8 roles → DEJOIY organization (gold branding JSON) → **super admin `deepak.sharma@corp.dejoiy.com`** (password from `SUPER_ADMIN_PASSWORD`, required, employee ID `DEJ-0001`, CEO) → 7 required policies.
 
 ### Verification status
 `bun install` ✅ · `prisma validate` ✅ (0 errors) · `prisma generate` ✅ · `tsc --noEmit` ✅ exit 0.
