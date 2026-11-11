@@ -84,7 +84,7 @@ const NOTIF_ROWS: { key: PrefKey; label: string; desc: string }[] = [
 
 const SHORTCUTS: { keys: string[]; label: string }[] = [
   { keys: ["Cmd", "K"], label: "Global search" },
-  { keys: ["Cmd", "Shift", "A"], label: "Open Shine AI" },
+  { keys: ["Cmd", "J"], label: "Chat with Joi" },
   { keys: ["Cmd", "N"], label: "New chat" },
   { keys: ["Cmd", "Shift", "M"], label: "Toggle mute" },
   { keys: ["Esc"], label: "Close dialogs / dismiss" },

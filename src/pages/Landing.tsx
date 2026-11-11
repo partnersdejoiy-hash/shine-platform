@@ -41,7 +41,7 @@ const COMMANDS: { name: string; say: string; keys?: string[] }[] = [
   { name: "Call or meet", say: "Voice and video calls, screen sharing, and meetings with their own room code." },
   { name: "Share a file", say: "Drop files into a chat; they stay in that chat's Files." },
   { name: "Track a task", say: "Turn a conversation into tasks with an owner and a due date." },
-  { name: "Ask Shine AI", say: "A summary of a long chat, or help writing the reply.", keys: ["⌘", "J"] },
+  { name: "Ask Joi", say: "A summary of a long chat, or help writing the reply.", keys: ["⌘", "J"] },
 ];
 
 export default function Landing() {

@@ -313,7 +313,7 @@ export function AppDashboard() {
           <div className="glass hairline overflow-hidden rounded-2xl">
             {tasks.length === 0 && (
               <div className="p-8 text-center text-sm text-muted-foreground">
-                No tasks assigned to you. Ask Shine AI to extract action items from a chat.
+                No tasks assigned to you. Ask Joi to extract action items from a chat.
               </div>
             )}
             {tasks.map((t, i) => (

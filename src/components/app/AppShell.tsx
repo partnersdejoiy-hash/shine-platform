@@ -24,9 +24,10 @@ import { eventForNotificationKind, playEventSound } from "@/lib/sound";
 import { cn } from "@/lib/utils";
 import { presenceLabel } from "@/lib/presence";
 import { isEmbedded, tellMail } from "@/lib/embed";
-import { useMutation, useQuery } from "convex/react";
+import { JOI_AVATAR, openJoi } from "@/lib/joi";
+import { useAction, useMutation, useQuery } from "convex/react";
+import { toast } from "sonner";
 import {
-  Bot,
   Building2,
   CalendarDays,
   FileStack,
@@ -40,7 +41,6 @@ import {
   Search,
   Settings,
   ShieldCheck,
-  Sparkles,
   Ticket,
   Users,
   Video,
@@ -75,6 +75,14 @@ export function AppShell() {
   const location = useLocation();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
+  const joiToken = useAction(api.joi.widgetToken);
+  // Joi, DEJOIY's AI buddy, is Shine's assistant (she took over from Shine AI)
+  const askJoi = () => {
+    setAiOpen(false);
+    void openJoi(user ?? undefined, joiToken().catch(() => null)).then((ok) => {
+      if (!ok) toast("Joi can't be reached right now. Try again in a bit.");
+    });
+  };
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
   const bootstrapSuperAdmin = useMutation(api.users.bootstrapSuperAdmin);
@@ -95,7 +103,9 @@ export function AppShell() {
     }
   }, [user?._id, bootstrapSuperAdmin, bootstrapDejoiyMembership, autoJoinDomains]);
 
-  // keyboard: Cmd+K / Cmd+J for search & AI
+  const askJoiRef = useRef(askJoi);
+  askJoiRef.current = askJoi;
+  // keyboard: Cmd+K / Cmd+J for search & Joi
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
@@ -104,7 +114,7 @@ export function AppShell() {
       }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "j") {
         e.preventDefault();
-        setAiOpen(true);
+        askJoiRef.current();
       }
     };
     window.addEventListener("keydown", onKey);
@@ -236,16 +246,11 @@ export function AppShell() {
           </div>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-10 text-muted-foreground"
-                onClick={() => setAiOpen(true)}
-              >
-                <Bot className="size-5" />
-              </Button>
+              <button onClick={askJoi} className="rounded-full transition-transform hover:scale-105 active:scale-95" aria-label="Ask Joi">
+                <img src={JOI_AVATAR} alt="" className="size-9 rounded-full border-2 border-[var(--sticker-border)] bg-primary object-cover" />
+              </button>
             </TooltipTrigger>
-            <TooltipContent side="right">Shine AI (⌘J)</TooltipContent>
+            <TooltipContent side="right">Ask Joi (⌘J)</TooltipContent>
           </Tooltip>
 
           <DropdownMenu>
@@ -329,15 +334,15 @@ export function AppShell() {
             >
               <Search className="size-[18px]" />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-9 text-muted-foreground"
-              onClick={() => setAiOpen(true)}
-              title="Shine AI (⌘J)"
+            {/* Joi: chat with her; on a chat page, her tools for that chat */}
+            <button
+              onClick={() => (conversationId ? setAiOpen(true) : askJoi())}
+              title={conversationId ? "Joi: tools for this chat (⌘J to chat with her)" : "Ask Joi (⌘J)"}
+              className="flex h-9 items-center gap-1.5 rounded-full border-[1.5px] border-[var(--sticker-border)] bg-primary py-0.5 pl-0.5 pr-3 text-[13px] font-extrabold text-primary-foreground transition-transform active:scale-95"
             >
-              <Sparkles className="size-[18px]" />
-            </Button>
+              <img src={JOI_AVATAR} alt="" className="size-7 rounded-full border-[1.5px] border-[var(--sticker-border)] bg-card object-cover" />
+              Joi
+            </button>
             <NotificationsPopover />
           </div>
         </header>
@@ -415,8 +420,8 @@ export function AppShell() {
                   </DropdownMenuItem>
                 ))}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => { setAiOpen(true); setMobileMoreOpen(false); }} className="cursor-pointer gap-3">
-                  <Bot className="size-4" /> Shine AI
+                <DropdownMenuItem onClick={() => { askJoi(); setMobileMoreOpen(false); }} className="cursor-pointer gap-3">
+                  <img src={JOI_AVATAR} alt="" className="size-5 rounded-full object-cover" /> Ask Joi
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -436,7 +441,7 @@ export function AppShell() {
 
       {/* GLOBAL OVERLAYS */}
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
-      <ShineAIDrawer open={aiOpen} onOpenChange={setAiOpen} conversationId={conversationId} />
+      <ShineAIDrawer open={aiOpen} onOpenChange={setAiOpen} conversationId={conversationId} onChatWithJoi={askJoi} />
       <CallOverlay />
     </div>
   );

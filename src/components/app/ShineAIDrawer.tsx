@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { motion } from "framer-motion";
 import {
-  Bot,
   CheckCircle2,
   ClipboardList,
   Languages,
@@ -20,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { JOI_AVATAR } from "@/lib/joi";
 import { toast } from "sonner";
 
 type ChatItem = { role: "user" | "ai"; content: string; kind?: string };
@@ -28,10 +28,12 @@ export function ShineAIDrawer({
   open,
   onOpenChange,
   conversationId,
+  onChatWithJoi,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   conversationId?: string | null;
+  onChatWithJoi: () => void;
 }) {
   const [items, setItems] = useState<ChatItem[]>([]);
   const [input, setInput] = useState("");
@@ -70,7 +72,7 @@ export function ShineAIDrawer({
         {
           role: "ai",
           content:
-            "Hi, I'm Shine AI ✨ I can summarize this chat, extract action items, draft replies, translate and more.",
+            "Hiii, I'm Joi 👋 I can summarize this chat, pull out action items, draft a reply, fix grammar or translate. Want a proper chat? Tap “Chat with Joi”.",
         },
       ]);
     }
@@ -107,7 +109,7 @@ export function ShineAIDrawer({
         run("Summarize this chat", async () => {
           const res = await summarize({ messages: transcript });
           if (res.source === "local") {
-            return res.summary + "\n\n_Heuristic mode — connect an LLM key for deeper summaries._";
+            return res.summary + "\n\n(Quick summary. Joi writes a proper one as soon as her server is connected.)";
           }
           return res.summary;
         }),
@@ -205,7 +207,7 @@ export function ShineAIDrawer({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[80] bg-black/40-[2px]"
+          className="fixed inset-0 z-[80] bg-black/40"
           onClick={() => onOpenChange(false)}
         />
       )}
@@ -218,32 +220,29 @@ export function ShineAIDrawer({
         {/* header */}
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <div className="flex items-center gap-3">
-            <div className="grid size-10 place-items-center rounded-xl bg-primary border-2 border-[var(--sticker-border)] text-black shadow-lg">
-              <Bot className="size-5" />
-            </div>
+            <img src={JOI_AVATAR} alt="" className="size-11 rounded-full border-2 border-[var(--sticker-border)] bg-primary object-cover" />
             <div>
-              <div className="flex items-center gap-2 text-sm font-semibold">
-                Shine AI
+              <div className="flex items-center gap-2 text-[15px] font-extrabold">
+                Joi
                 {status?.configured ? (
-                  <span className="flex items-center gap-1 rounded-full bg-emerald-400/15 px-2 py-0.5 text-[10px] font-medium text-emerald-400">
-                    <CheckCircle2 className="size-3" /> {status.model}
+                  <span className="flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                    <CheckCircle2 className="size-3" /> Connected
                   </span>
                 ) : (
-                  <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] text-muted-foreground">
-                    heuristic mode
-                  </span>
+                  <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold text-foreground">Getting ready</span>
                 )}
               </div>
-              <p className="text-[11px] text-muted-foreground">
-                {status?.configured
-                  ? `via ${status.provider}`
-                  : "Works locally · add an LLM key for full power"}
-              </p>
+              <p className="text-[11px] text-muted-foreground">DEJOIY's AI buddy · tools for this chat</p>
             </div>
           </div>
-          <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)}>
-            <X className="size-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button size="sm" onClick={onChatWithJoi}>
+              Chat with Joi
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)} aria-label="Close">
+              <X className="size-4" />
+            </Button>
+          </div>
         </div>
 
         {/* conversation */}
@@ -307,7 +306,7 @@ export function ShineAIDrawer({
           )}
           {busy && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Loader2 className="size-3.5 animate-spin text-primary" /> Shine AI is thinking…
+              <Loader2 className="size-3.5 animate-spin text-primary" /> Joi is thinking…
             </div>
           )}
         </div>
@@ -318,7 +317,7 @@ export function ShineAIDrawer({
             <Textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask Shine AI anything…"
+              placeholder="Ask Joi about this chat…"
               className="min-h-11 max-h-32 flex-1 resize-none"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
@@ -337,7 +336,7 @@ export function ShineAIDrawer({
             </Button>
           </div>
           <p className="mt-2 text-center text-[10px] text-muted-foreground">
-            Shine AI may produce inaccurate results. Verify important outputs.
+            Joi is an AI. It can make mistakes.
           </p>
         </div>
       </motion.aside>

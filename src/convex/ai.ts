@@ -1,11 +1,22 @@
 import { action } from "./_generated/server";
 import { v } from "convex/values";
+import { askJoi } from "./joi";
 
 const SHINE_AI_KEY = process.env.SHINE_AI_API_KEY;
+const HAS_AI = () => JOI_ON || Boolean(SHINE_AI_KEY);
 const SHINE_AI_BASE = process.env.SHINE_AI_BASE_URL ?? "https://api.openai.com/v1";
 const SHINE_AI_MODEL = process.env.SHINE_AI_MODEL ?? "gpt-4o-mini";
 
+// Joi is Shine's assistant: her brain on the Joi server answers when it's set up (JOI_API_URL + JOI_APP_SECRET)
+const JOI_ON = Boolean(process.env.JOI_API_URL && process.env.JOI_APP_SECRET);
+
 async function llm(messages: { role: "system" | "user" | "assistant"; content: string }[]) {
+  if (JOI_ON) {
+    const task = messages.filter((m) => m.role === "system").map((m) => m.content).join("\n");
+    const turns = messages.filter((m) => m.role !== "system").map((m) => ({ role: m.role, content: m.content }));
+    const out = await askJoi(turns, task).catch(() => null);
+    if (out) return out;
+  }
   if (!SHINE_AI_KEY) return null;
   try {
     const res = await fetch(`${SHINE_AI_BASE}/chat/completions`, {
@@ -28,9 +39,9 @@ async function llm(messages: { role: "system" | "user" | "assistant"; content: s
 export const status = action({
   args: {},
   handler: async () => ({
-    configured: Boolean(SHINE_AI_KEY),
-    model: SHINE_AI_MODEL,
-    provider: SHINE_AI_BASE.replace(/^https?:\/\//, "").replace(/\/v1$/, ""),
+    configured: HAS_AI(),
+    model: JOI_ON ? "Joi" : SHINE_AI_MODEL,
+    provider: JOI_ON ? "Joi" : SHINE_AI_BASE.replace(/^https?:\/\//, "").replace(/\/v1$/, ""),
   }),
 });
 
@@ -42,12 +53,12 @@ export const summarizeChat = action({
       return { summary: "No messages to summarize yet.", source: "local" as const };
     }
     const transcript = messages.slice(-200).join("\n");
-    if (SHINE_AI_KEY) {
+    if (HAS_AI()) {
       const out = await llm([
         {
           role: "system",
           content:
-            "You are Shine AI, an enterprise assistant. Summarize the chat transcript into 4-6 concise bullet points covering decisions, questions, and action items. Use the same language as the transcript.",
+            "Summarize the chat transcript into 4-6 concise bullet points covering decisions, questions, and action items. Use the same language as the transcript.",
         },
         { role: "user", content: transcript },
       ]);
@@ -96,7 +107,7 @@ export const extractActionItems = action({
   args: { messages: v.array(v.string()) },
   handler: async (_, { messages }) => {
     const transcript = messages.slice(-200).join("\n");
-    if (SHINE_AI_KEY) {
+    if (HAS_AI()) {
       const out = await llm([
         {
           role: "system",
@@ -136,12 +147,12 @@ export const extractActionItems = action({
 export const generateReply = action({
   args: { context: v.string() },
   handler: async (_, { context }) => {
-    if (!SHINE_AI_KEY) return { reply: null, reason: "Connect an LLM API key to enable AI replies." };
+    if (!HAS_AI()) return { reply: null, reason: "Joi will answer here as soon as her server is connected." };
     const reply = await llm([
       {
         role: "system",
         content:
-          "You are Shine AI embedded in an enterprise messenger. Write one concise, professional reply draft (2-3 sentences max) to the message thread. Match the tone of the thread.",
+          "Write one concise, professional reply draft (2-3 sentences max) to the message thread. Match the tone of the thread.",
       },
       { role: "user", content: context },
     ]);
@@ -153,7 +164,7 @@ export const generateReply = action({
 export const translate = action({
   args: { text: v.string(), target: v.string() },
   handler: async (_, { text, target }) => {
-    if (!SHINE_AI_KEY) return { translated: null, reason: "Connect an LLM API key to enable translation." };
+    if (!HAS_AI()) return { translated: null, reason: "Joi will translate here as soon as her server is connected." };
     const translated = await llm([
       {
         role: "system",
@@ -169,7 +180,7 @@ export const translate = action({
 export const fixGrammar = action({
   args: { text: v.string() },
   handler: async (_, { text }) => {
-    if (!SHINE_AI_KEY) return { corrected: null, reason: "Connect an LLM API key to enable grammar correction." };
+    if (!HAS_AI()) return { corrected: null, reason: "Joi will fix grammar here as soon as her server is connected." };
     const corrected = await llm([
       {
         role: "system",

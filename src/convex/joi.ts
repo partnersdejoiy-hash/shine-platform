@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { internalAction, internalMutation, internalQuery, type MutationCtx, type QueryCtx } from "./_generated/server";
+import { getAuthUserId } from "@convex-dev/auth/server";
+import { action, internalAction, internalMutation, internalQuery, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { notifyMembers } from "./messages";
@@ -178,9 +179,9 @@ export const context = internalQuery({
   },
 });
 
-export async function signForJoi(secret: string): Promise<string> {
+export async function signForJoi(secret: string, minutes = 5): Promise<string> {
   const b64 = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-  const body = b64(new TextEncoder().encode(JSON.stringify({ app: "shine", exp: Date.now() + 5 * 60_000 })));
+  const body = b64(new TextEncoder().encode(JSON.stringify({ app: "shine", exp: Date.now() + minutes * 60_000 })));
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   const mac = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(body)));
   return `${body}.${b64(mac)}`;
@@ -203,7 +204,24 @@ export async function verifyJoiToken(token: string): Promise<boolean> {
   }
 }
 
-async function askJoi(turns: Array<{ role: string; content: string }>, task: string): Promise<string | null> {
+/**
+ * For Joi's chat panel in Shine: a 12-hour token so she may use DEJOIY's internal memory.
+ * Only DEJOIY's own people get one (JOI_INTERNAL_DOMAINS, default dejoiy.com and mail.dejoiy.com);
+ * everyone else still talks to Joi, with public knowledge only.
+ */
+export const widgetToken = action({
+  args: {},
+  handler: async (ctx): Promise<string | null> => {
+    const userId = await getAuthUserId(ctx);
+    const secret = process.env.JOI_APP_SECRET;
+    if (!userId || !secret) return null;
+    const email = await ctx.runQuery(internal.dejoiyMail.emailOf, { userId });
+    const domains = (process.env.JOI_INTERNAL_DOMAINS ?? "dejoiy.com,mail.dejoiy.com").split(",").map((d) => d.trim().toLowerCase());
+    return email && domains.includes(email.split("@")[1] ?? "") ? await signForJoi(secret, 12 * 60) : null;
+  },
+});
+
+export async function askJoi(turns: Array<{ role: string; content: string }>, task: string): Promise<string | null> {
   const url = process.env.JOI_API_URL?.replace(/\/+$/, "");
   const secret = process.env.JOI_APP_SECRET;
   if (!url || !secret) return null;
