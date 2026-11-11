@@ -101,6 +101,7 @@ const schema = defineSchema(
       presenceChoice: v.optional(v.union(v.literal("auto"), v.literal("away"), v.literal("busy"), v.literal("invisible"))),
       // may this person message/email supervisors at other companies? unset = follow their company's setting
       reachSupervisors: v.optional(v.boolean()),
+      joiWelcomedAt: v.optional(v.number()), // when Joi said hi to this new person
       accentColor: v.optional(v.string()), // per-user app accent (see lib/accent.ts)
       source: v.optional(v.string()), // "dejoiy-mail" = this person is a Dejoiy Mail mailbox (kept in sync)
       lastSeen: v.optional(v.number()),

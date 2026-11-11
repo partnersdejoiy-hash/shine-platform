@@ -176,6 +176,19 @@ export const refresh = action({
   },
 });
 
+/** Photos uploaded in Shine (not the ones that came from Dejoiy Mail), so Dejoiy Mail can show them too. */
+export const shinePhotos = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const out: Record<string, string> = {};
+    for (const u of await ctx.db.query("users").take(5000)) {
+      const email = u.email?.toLowerCase();
+      if (email && u.source !== "joi" && u.image?.startsWith("https://") && !MAIL_PHOTO.test(u.image)) out[email] = u.image;
+    }
+    return out;
+  },
+});
+
 /**
  * One profile photo for Shine and Dejoiy Mail. Dejoiy Mail keeps the photos;
  * a photo changed there arrives here (POST /dejoiy/photo), and one uploaded

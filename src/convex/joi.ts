@@ -241,20 +241,96 @@ export const post = internalMutation({
     if (!joi) return null;
     const convId = conversationId ?? (await findChannel(ctx, joi._id))?._id;
     if (!convId) return null;
-    const typing = await ctx.db.query("typing").withIndex("by_user", (q) => q.eq("userId", joi._id)).collect();
-    for (const t of typing) if (t.conversationId === convId) await ctx.db.delete(t._id);
-    const text = body?.trim().slice(0, 8000);
-    if (!text) return null;
-    const conversation = await ctx.db.get(convId);
-    if (!conversation) return null;
-    const now = Date.now();
-    const id = await ctx.db.insert("messages", { conversationId: convId, senderId: joi._id, kind: "text", body: text, parentId, createdAt: now });
-    await ctx.db.patch(convId, { lastMessageAt: now });
-    const title = conversation.kind === "channel" ? `#${conversation.name}` : conversation.chatType === "direct" ? "Joi" : conversation.name;
-    await notifyMembers(ctx, conversation, joi._id, title, conversation.chatType === "group" ? `Joi: ${text.slice(0, 140)}` : text.slice(0, 140), `/app/chats/${convId}`, "message", []);
-    return id;
+    return await postAs(ctx, joi, convId, body, parentId);
   },
 });
+
+/** Joi's direct chat with someone (made the first time). Joi may start one with anyone, on any domain. */
+async function directWith(ctx: MutationCtx, joi: Doc<"users">, userId: Id<"users">): Promise<Id<"conversations">> {
+  for (const m of await ctx.db.query("conversationMembers").withIndex("by_user", (q) => q.eq("userId", userId)).collect()) {
+    const conv = await ctx.db.get(m.conversationId);
+    if (!conv || conv.kind !== "chat" || conv.chatType !== "direct") continue;
+    const members = await ctx.db.query("conversationMembers").withIndex("by_conversation", (q) => q.eq("conversationId", conv._id)).collect();
+    if (members.some((x) => x.userId === joi._id)) return conv._id;
+  }
+  const now = Date.now();
+  const id = await ctx.db.insert("conversations", { kind: "chat", chatType: "direct", name: "", createdBy: joi._id, createdAt: now, lastMessageAt: now });
+  await ctx.db.insert("conversationMembers", { conversationId: id, userId: joi._id, role: "owner", lastReadAt: now, joinedAt: now });
+  await ctx.db.insert("conversationMembers", { conversationId: id, userId, role: "member", joinedAt: now });
+  return id;
+}
+
+/** Joi starts (or continues) a direct chat with anyone: POST /joi/dm from the Joi server. */
+export const dm = internalMutation({
+  args: { email: v.string(), body: v.string() },
+  handler: async (ctx, { email, body }) => {
+    const joi = await findJoi(ctx);
+    const user = await ctx.db.query("users").withIndex("email", (q) => q.eq("email", email.trim().toLowerCase())).first();
+    if (!joi || !user || user._id === joi._id || user.isActive === false) return null;
+    return await postAs(ctx, joi, await directWith(ctx, joi, user._id), body);
+  },
+});
+
+export const WELCOME = (name?: string) =>
+  `Hiii ${(name ?? "").trim().split(/\s+/)[0] || "there"}! 👋 I'm Joi, DEJOIY's AI buddy, and I'm so happy you're here.\n\n` +
+  `Here's how I can help, in Shine and in Dejoiy Mail:\n` +
+  `• Ask me anything right here in this chat, or @Joi me in any chat\n` +
+  `• Draft or polish a message or an email with you\n` +
+  `• Share what's new every morning in #joi\n\n` +
+  `My own mailbox is joi-ai@mail.dejoiy.com if you'd rather write to me. Say hi any time!\n\n${JOI_STATUS}`;
+
+/** New people from the last 3 days that Joi hasn't greeted yet: she says hi in a direct chat. */
+export const welcomeDue = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const joi = await findJoi(ctx);
+    if (!joi) return [];
+    const since = Date.now() - 3 * 86_400_000;
+    const fresh = await ctx.db.query("users").withIndex("by_creation_time", (q) => q.gt("_creationTime", since)).collect();
+    const out: Array<{ email: string; name: string; mailbox: boolean }> = [];
+    for (const u of fresh) {
+      if (out.length >= 50) break;
+      if (u.joiWelcomedAt || u._id === joi._id || u.source === "joi" || u.isActive === false || !u.email) continue;
+      await ctx.db.patch(u._id, { joiWelcomedAt: Date.now() });
+      await postAs(ctx, joi, await directWith(ctx, joi, u._id), WELCOME(u.name));
+      out.push({ email: u.email, name: u.name ?? "", mailbox: u.source === "dejoiy-mail" });
+    }
+    return out;
+  },
+});
+
+/** Every 10 minutes: Joi greets new people in Shine, and mailboxes also get her welcome email. */
+export const welcomeNew = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    const people = await ctx.runMutation(internal.joi.welcomeDue, {});
+    const url = process.env.JOI_API_URL?.replace(/\/+$/, "");
+    const secret = process.env.JOI_APP_SECRET;
+    if (!url || !secret) return;
+    for (const p of people.filter((x) => x.mailbox)) {
+      await fetch(`${url}/api/bots/welcome`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ appId: "shine", appToken: await signForJoi(secret), email: p.email, name: p.name }),
+      }).catch(() => null);
+    }
+  },
+});
+
+async function postAs(ctx: MutationCtx, joi: Doc<"users">, convId: Id<"conversations">, body?: string, parentId?: Id<"messages">) {
+  const typing = await ctx.db.query("typing").withIndex("by_user", (q) => q.eq("userId", joi._id)).collect();
+  for (const t of typing) if (t.conversationId === convId) await ctx.db.delete(t._id);
+  const text = body?.trim().slice(0, 8000);
+  if (!text) return null;
+  const conversation = await ctx.db.get(convId);
+  if (!conversation) return null;
+  const now = Date.now();
+  const id = await ctx.db.insert("messages", { conversationId: convId, senderId: joi._id, kind: "text", body: text, parentId, createdAt: now });
+  await ctx.db.patch(convId, { lastMessageAt: now });
+  const title = conversation.kind === "channel" ? `#${conversation.name}` : conversation.chatType === "direct" ? "Joi" : conversation.name;
+  await notifyMembers(ctx, conversation, joi._id, title, conversation.chatType === "group" ? `Joi: ${text.slice(0, 140)}` : text.slice(0, 140), `/app/chats/${convId}`, "message", []);
+  return id;
+}
 
 /** Joi's good-morning post in #joi (Monday to Saturday). */
 export const morning = internalAction({

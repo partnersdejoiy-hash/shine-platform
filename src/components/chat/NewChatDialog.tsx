@@ -42,7 +42,10 @@ export function NewChatDialog({
   // plus supervisors at other companies on Shine you're allowed to reach
   const supervisors = useQuery(api.reach.supervisors);
   const directory = useMemo(
-    () => (colleagues ? [...colleagues, ...((supervisors ?? []) as unknown as typeof colleagues)] : colleagues),
+    () =>
+      colleagues
+        ? [...colleagues, ...((supervisors ?? []) as unknown as typeof colleagues).filter((p) => !colleagues.some((c) => c._id === p._id))]
+        : colleagues,
     [colleagues, supervisors],
   );
   const myOrgs = useQuery(api.orgs.myOrgs);

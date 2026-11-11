@@ -15,6 +15,8 @@ crons.interval("dejoiy-mail-directory", { minutes: 15 }, internal.dejoiyMail.syn
 
 // Joi: her user, her #joi channel and its members; and her good-morning post (9:17 IST, Mon-Sat)
 crons.interval("joi-setup", { minutes: 30 }, internal.joi.ensureJoi);
+// Joi says hi to new people (a direct chat, and her welcome email for Dejoiy Mail mailboxes)
+crons.interval("joi-welcome", { minutes: 10 }, internal.joi.welcomeNew);
 crons.daily("joi-morning", { hourUTC: 3, minuteUTC: 47 }, internal.joi.morning);
 
 crons.interval(

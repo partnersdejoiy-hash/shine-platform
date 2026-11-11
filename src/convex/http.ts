@@ -104,6 +104,16 @@ http.route({
   }),
 });
 
+// Dejoiy Mail: photos people uploaded in Shine, so the mail app shows them too (one photo in both apps).
+http.route({
+  path: "/dejoiy/photos",
+  method: "POST",
+  handler: httpAction(async (ctx, req) => {
+    if (!mailAllowed(req)) return json(403, { error: "Not allowed" });
+    return json(200, { photos: await ctx.runQuery(internal.dejoiyMail.shinePhotos, {}) });
+  }),
+});
+
 // Dejoiy Mail: someone changed their profile photo there, so Shine shows the same one.
 http.route({
   path: "/dejoiy/photo",
@@ -133,6 +143,22 @@ http.route({
     if (!ids) return json(409, { error: "Shine has no organization yet" });
     await ctx.runMutation(internal.joi.post, { conversationId: ids.channelId, body: text });
     return json(200, { ok: true });
+  }),
+});
+
+// Joi starts a direct chat with anyone on Shine, on any domain: { email, text }.
+http.route({
+  path: "/joi/dm",
+  method: "POST",
+  handler: httpAction(async (ctx, req) => {
+    const header = req.headers.get("Authorization") ?? "";
+    if (!header.startsWith("Bearer ") || !(await verifyJoiToken(header.slice(7)))) return json(403, { error: "Not allowed" });
+    const body = (await req.json().catch(() => null)) as { email?: unknown; text?: unknown } | null;
+    const text = String(body?.text ?? "").trim().slice(0, 4000);
+    if (!text) return json(400, { error: "Nothing to post" });
+    await ctx.runMutation(internal.joi.ensureJoi, {});
+    const id = await ctx.runMutation(internal.joi.dm, { email: String(body?.email ?? ""), body: text });
+    return id ? json(200, { ok: true }) : json(404, { error: "No one on Shine with that email" });
   }),
 });
 

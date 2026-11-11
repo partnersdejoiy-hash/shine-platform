@@ -2,7 +2,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { internalQuery, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
-import { logAudit } from "./users";
+import { isSuperAdmin, logAudit } from "./users";
 
 /**
  * Everyone on Shine and Dejoiy Mail sees their own company. On top of that,
@@ -31,27 +31,31 @@ export async function mayReach(ctx: Ctx, me: Doc<"users">) {
   return (await policy(ctx, domainOf(me.email)))?.enabled ?? true;
 }
 
+/** DEJOIY's platform admins and Joi may start a conversation with anyone, on any domain. */
+export const reachesEveryone = (me: Doc<"users">) => PLATFORM.has(me.role ?? "") || isSuperAdmin(me) || me.source === "joi";
+
 /** Can `me` start a chat with `target`? Same company always; Joi always; other companies only their supervisors. */
 export async function canContact(ctx: Ctx, me: Doc<"users">, target: Doc<"users">) {
   if (target.isActive === false) return false;
-  if (PLATFORM.has(me.role ?? "") || me.role === "super_admin") return true;
+  if (reachesEveryone(me)) return true;
   if (domainOf(me.email) && domainOf(me.email) === domainOf(target.email)) return true;
   if (target.source === "joi") return true;
   return SUPERVISOR_ROLES.has(target.role ?? "") && (await mayReach(ctx, me));
 }
 
 async function reachableFor(ctx: Ctx, me: Doc<"users">) {
-  if (!(await mayReach(ctx, me))) return [];
+  const everyone = reachesEveryone(me);
+  if (!everyone && !(await mayReach(ctx, me))) return [];
   const mine = domainOf(me.email);
   const users = await ctx.db.query("users").collect();
   return users
-    .filter((u) => u._id !== me._id && u.isActive !== false && domainOf(u.email) !== mine && SUPERVISOR_ROLES.has(u.role ?? ""))
+    .filter((u) => u._id !== me._id && u.isActive !== false && u.email && domainOf(u.email) !== mine && (everyone || SUPERVISOR_ROLES.has(u.role ?? "")))
     .map((u) => ({
       _id: u._id,
       name: u.name,
       email: u.email,
       image: u.image,
-      designation: `${u.designation || ROLE_LABEL[u.role ?? ""]} · ${u.company || domainOf(u.email)}`,
+      designation: [u.designation || ROLE_LABEL[u.role ?? ""], u.company || domainOf(u.email)].filter(Boolean).join(" · "),
       department: u.department,
       customStatus: u.customStatus,
       company: u.company || domainOf(u.email),
