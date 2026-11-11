@@ -1,7 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { action, internalAction, internalMutation, type MutationCtx } from "./_generated/server";
+import { action, internalAction, internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { roleFromMail } from "./lib/adminRoles";
 import { verifyDejoiyMailToken } from "./lib/dejoiyMailToken";
@@ -16,7 +16,7 @@ import { ensureEmployeeId, isSuperAdminEmail, logAudit } from "./users";
  * photo follow Dejoiy Mail again (see lib/adminRoles.ts).
  */
 const claims = { email: v.string(), name: v.string(), admin: v.string(), photo: v.string() };
-const MAIL_PHOTO = "/api/avatar?email=";
+const MAIL_PHOTO = /\/api\/(public\/)?avatar\?/; // a photo that came from Dejoiy Mail
 
 async function applyMail(
   ctx: MutationCtx,
@@ -28,7 +28,7 @@ async function applyMail(
   if (!user.name && c.name) patch.name = c.name;
   // a photo uploaded in Shine wins; otherwise show the Dejoiy Mail one (or none once it's removed there)
   if (!user.avatarStorageId) {
-    const image = c.photo || (user.image?.includes(MAIL_PHOTO) ? undefined : user.image);
+    const image = c.photo || (user.image && MAIL_PHOTO.test(user.image) ? undefined : user.image);
     if (image !== user.image) patch.image = image;
   }
   if (user.role !== role) patch.role = role;
@@ -174,4 +174,52 @@ export const refresh = action({
     const c = await verifyDejoiyMailToken(token, process.env.DEJOIY_MAIL_SSO_SECRET);
     await ctx.runMutation(internal.dejoiyMail.syncMe, { userId, ...c });
   },
+});
+
+/**
+ * One profile photo for Shine and Dejoiy Mail. Dejoiy Mail keeps the photos;
+ * a photo changed there arrives here (POST /dejoiy/photo), and one uploaded
+ * here is sent there (pushPhoto), so both apps always show the same picture.
+ */
+export const photoFromMail = internalMutation({
+  args: { email: v.string(), photo: v.string() },
+  handler: async (ctx, { email, photo }) => {
+    const user = await ctx.db.query("users").withIndex("email", (q) => q.eq("email", email.trim().toLowerCase())).first();
+    if (!user || user.source === "joi") return false;
+    const old = user.avatarStorageId;
+    await ctx.db.patch(user._id, { image: photo, avatarStorageId: "" });
+    if (old) {
+      try {
+        await ctx.storage.delete(old as never);
+      } catch {
+        /* already gone, or a self-hosted key */
+      }
+    }
+    return true;
+  },
+});
+
+export const pushPhoto = action({
+  // a small square picture (data: URL) made in the browser, or "" when the photo was removed
+  args: { image: v.string() },
+  handler: async (ctx, { image }): Promise<boolean> => {
+    const userId: Id<"users"> | null = await getAuthUserId(ctx);
+    if (!userId) return false;
+    const me = await ctx.runQuery(internal.dejoiyMail.emailOf, { userId });
+    const base = process.env.DEJOIY_MAIL_URL;
+    const secret = process.env.DEJOIY_MAIL_SSO_SECRET;
+    if (!me || !base || !secret) return false;
+    if (image && !/^data:image\/(png|jpeg|webp);base64,/.test(image)) return false;
+    const res = await fetch(`${base}/api/shine/avatar`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${secret}` },
+      body: JSON.stringify({ email: me, image }),
+    });
+    return res.ok;
+  },
+});
+
+export const emailOf = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => (await ctx.db.get(userId))?.email?.toLowerCase() ?? null,
 });

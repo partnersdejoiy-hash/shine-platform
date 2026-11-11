@@ -1,3 +1,4 @@
+import { ReachSettings } from "@/components/admin/ReachSettings";
 import { api } from "@/convex/_generated/api";
 import { TicketCard as AdminTicketCard } from "@/components/admin/TicketCard";
 import { StorageHealthTile } from "@/components/admin/StorageHealthTile";
@@ -638,6 +639,7 @@ export function AppAdmin() {
             {canManagePolicies && <TabsTrigger value="policies">Policies</TabsTrigger>}
             {isDejoiyAdmin && <TabsTrigger value="hierarchy">Hierarchy</TabsTrigger>}
             {isSuper && <TabsTrigger value="organizations">Organizations</TabsTrigger>}
+            {(isAdmin || user?.role === "client_admin") && <TabsTrigger value="reach">Contact access</TabsTrigger>}
             <TabsTrigger value="health">System health</TabsTrigger>
             {isSuper && <TabsTrigger value="excel">Excel import / export</TabsTrigger>}
             {(isSuper || isAdmin) && <TabsTrigger value="control-sheet">Control Sheet</TabsTrigger>}
@@ -1623,6 +1625,10 @@ export function AppAdmin() {
               </Card>
             </TabsContent>
           )}
+
+          <TabsContent value="reach" className="mt-4">
+            <ReachSettings />
+          </TabsContent>
 
           <TabsContent value="health" className="mt-4">
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

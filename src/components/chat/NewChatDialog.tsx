@@ -38,7 +38,13 @@ export function NewChatDialog({
   const { user } = useAuth();
   const navigate = useNavigate();
   const { can } = usePermission();
-  const directory = useQuery(api.users.directory);
+  const colleagues = useQuery(api.users.directory);
+  // plus supervisors at other companies on Shine you're allowed to reach
+  const supervisors = useQuery(api.reach.supervisors);
+  const directory = useMemo(
+    () => (colleagues ? [...colleagues, ...((supervisors ?? []) as unknown as typeof colleagues)] : colleagues),
+    [colleagues, supervisors],
+  );
   const myOrgs = useQuery(api.orgs.myOrgs);
   const openDirect = useMutation(api.conversations.openDirectChat);
   const createGroup = useMutation(api.conversations.createGroupChat);

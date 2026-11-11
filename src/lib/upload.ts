@@ -258,3 +258,16 @@ export async function uploadBlob(
     kind: "audio",
   };
 }
+
+/** A small square (centre-cropped) JPEG of a photo as a data: URL, for Dejoiy Mail's copy of your picture. */
+export async function squareAvatarDataUrl(file: Blob, size = 256): Promise<string> {
+  const bitmap = await createImageBitmap(file);
+  const side = Math.min(bitmap.width, bitmap.height);
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = size;
+  const g = canvas.getContext("2d");
+  if (!g) throw new Error("Could not process this image");
+  g.drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, size, size);
+  bitmap.close();
+  return canvas.toDataURL("image/jpeg", 0.86);
+}

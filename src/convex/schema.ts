@@ -99,6 +99,8 @@ const schema = defineSchema(
       customStatus: v.optional(v.string()), // the written status everyone sees (like WhatsApp's)
       // how the person wants to show up: "auto" = Active, or Away when idle (like Gmail)
       presenceChoice: v.optional(v.union(v.literal("auto"), v.literal("away"), v.literal("busy"), v.literal("invisible"))),
+      // may this person message/email supervisors at other companies? unset = follow their company's setting
+      reachSupervisors: v.optional(v.boolean()),
       accentColor: v.optional(v.string()), // per-user app accent (see lib/accent.ts)
       source: v.optional(v.string()), // "dejoiy-mail" = this person is a Dejoiy Mail mailbox (kept in sync)
       lastSeen: v.optional(v.number()),
@@ -130,6 +132,14 @@ const schema = defineSchema(
         }),
       ),
     }).index("email", ["email"]), // do not remove or modify
+
+    // per company (email domain): can its employees reach supervisors at other companies on Shine / Dejoiy Mail?
+    reachPolicies: defineTable({
+      domain: v.string(),
+      enabled: v.boolean(),
+      updatedBy: v.id("users"),
+      updatedAt: v.number(),
+    }).index("by_domain", ["domain"]),
 
     presence: defineTable({
       userId: v.id("users"),

@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { UserAvatar } from "@/components/UserAvatar";
 import { useAuth } from "@/hooks/use-auth";
 import { timeAgo } from "@/lib/format";
-import { prepareAvatarImage, uploadBlob, uploadFile } from "@/lib/upload";
+import { prepareAvatarImage, squareAvatarDataUrl, uploadBlob, uploadFile } from "@/lib/upload";
 import { SOUND_CHOICES, SOUND_EVENTS, playEventSound, previewSound } from "@/lib/sound";
 import { cn } from "@/lib/utils";
 import { getFriendlyError } from "@/lib/errors";
@@ -105,6 +105,8 @@ export function AppSettings() {
   const generateUploadUrl = useMutation(api.files.generateUploadUrl);
   const updateAvatar = useMutation(api.users.updateAvatar);
   const removeAvatar = useMutation(api.users.removeAvatar);
+  // the same picture in Dejoiy Mail
+  const pushPhoto = useAction(api.dejoiyMail.pushPhoto);
   const myPermissionRequests = useQuery(api.admin.myPermissionRequests);
   const requestPermission = useMutation(api.admin.requestPermission);
   const hasPassword = useQuery(api.passwords.hasPassword);
@@ -241,6 +243,9 @@ export function AppSettings() {
       const ready = await prepareAvatarImage(file);
       const { storageId, url } = await uploadFile(ready, () => generateUploadUrl());
       await updateAvatar({ storageId, url });
+      squareAvatarDataUrl(ready)
+        .then((image) => pushPhoto({ image }))
+        .catch(() => {});
       toast.success("Profile picture updated");
     } catch (err) {
       toast.error(getFriendlyError(err) || "Upload failed");
@@ -252,6 +257,7 @@ export function AppSettings() {
   const handleRemoveAvatar = async () => {
     try {
       await removeAvatar();
+      pushPhoto({ image: "" }).catch(() => {});
       toast.success("Profile picture removed");
     } catch (e) {
       toast.error(getFriendlyError(e) || "Failed to remove picture");

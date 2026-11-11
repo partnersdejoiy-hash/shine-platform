@@ -92,6 +92,32 @@ http.route({
   }),
 });
 
+// Dejoiy Mail: supervisors at other companies this mailbox may write to (contacts, address suggestions).
+http.route({
+  path: "/dejoiy/supervisors",
+  method: "POST",
+  handler: httpAction(async (ctx, req) => {
+    if (!mailAllowed(req)) return json(403, { error: "Not allowed" });
+    const b = (await req.json().catch(() => null)) as { email?: unknown } | null;
+    const people = await ctx.runQuery(internal.reach.supervisorsForMail, { email: String(b?.email ?? "") });
+    return people ? json(200, { people }) : json(404, { error: "No Shine account for this mailbox yet" });
+  }),
+});
+
+// Dejoiy Mail: someone changed their profile photo there, so Shine shows the same one.
+http.route({
+  path: "/dejoiy/photo",
+  method: "POST",
+  handler: httpAction(async (ctx, req) => {
+    if (!mailAllowed(req)) return json(403, { error: "Not allowed" });
+    const b = (await req.json().catch(() => null)) as { email?: unknown; photo?: unknown } | null;
+    const email = String(b?.email ?? "").trim().toLowerCase();
+    const photo = String(b?.photo ?? "");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || (photo && !photo.startsWith("https://"))) return json(400, { error: "Invalid request" });
+    return json(200, { ok: await ctx.runMutation(internal.dejoiyMail.photoFromMail, { email, photo }) });
+  }),
+});
+
 // Joi posts in her own #joi channel by herself (mail that came in, news).
 // Signed by the Joi server with the Shine app secret (JOI_APP_SECRET here).
 http.route({

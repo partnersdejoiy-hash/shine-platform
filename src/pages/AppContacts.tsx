@@ -56,7 +56,13 @@ export function AppContacts() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const contacts = useQuery(api.contacts.myContacts);
-  const directory = useQuery(api.users.directory);
+  const colleagues = useQuery(api.users.directory);
+  // plus supervisors at other companies on Shine you're allowed to reach
+  const supervisors = useQuery(api.reach.supervisors);
+  const directory = useMemo(
+    () => (colleagues ? [...colleagues, ...((supervisors ?? []) as unknown as typeof colleagues)] : colleagues),
+    [colleagues, supervisors],
+  );
   const presenceRows = useQuery(api.users.presenceAll);
   const openDirect = useMutation(api.conversations.openDirectChat);
   const addContact = useMutation(api.contacts.add);

@@ -1,3 +1,4 @@
+import { canContact } from "./reach";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
@@ -192,6 +193,9 @@ export const openDirectChat = mutation({
     const me = await getCurrentUser(ctx);
     if (!me) throw new Error("Not authenticated");
     if (me._id === userId) throw new Error("Cannot chat with yourself");
+    const them = await ctx.db.get(userId);
+    // other companies: only their supervisors, and only if your admins allow it
+    if (!them || !(await canContact(ctx, me, them))) throw new Error("You can't message this person from your company.");
 
     const myMemberships = await ctx.db
       .query("conversationMembers")
