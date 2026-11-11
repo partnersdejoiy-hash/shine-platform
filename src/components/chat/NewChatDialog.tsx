@@ -432,6 +432,7 @@ interface PeopleSuggestion {
   email?: string | null;
   image?: string | null;
   designation?: string | null;
+  customStatus?: string | null;
   department?: string | null;
 }
 
@@ -526,7 +527,7 @@ function PeopleDropdown({
             <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-bold">{displayName(p)}</div>
               <div className="truncate text-[11px] text-muted-foreground">
-                {p.email ?? ""}
+                {p.customStatus || p.email || ""}
                 {p.designation || p.department ? ` · ${p.designation || p.department}` : ""}
               </div>
             </div>

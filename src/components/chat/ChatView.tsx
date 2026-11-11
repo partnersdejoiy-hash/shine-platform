@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/use-auth";
 import { displayName, formatBytes, formatDayLabel, isSameDay } from "@/lib/format";
-import { effectiveStatus, isOnline } from "@/lib/presence";
+import { effectiveStatus, isOnline, presenceDotClass, presenceLabel } from "@/lib/presence";
 import { prepareAvatarImage, uploadFile } from "@/lib/upload";
 import { cn } from "@/lib/utils";
 import { toneFor } from "@/lib/tone";
@@ -281,11 +281,15 @@ export function ChatView({
     : other?.source === "joi"
       ? `AI · ${other.customStatus || "Joi is an AI. It can make mistakes."}`
       : other
-      ? isOnline(otherPresence)
-        ? effectiveStatus(otherPresence) === "away"
-          ? "Away"
-          : "Online"
-        : `Last seen ${other?.lastSeen ? new Date(other.lastSeen).toLocaleString() : "recently"}`
+      ? // like Gmail's dot plus WhatsApp's status line: "Active · 📅 In a meeting"
+        [
+          isOnline(otherPresence)
+            ? presenceLabel(otherPresence)
+            : `Last seen ${other?.lastSeen ? new Date(other.lastSeen).toLocaleString() : "recently"}`,
+          otherPresence?.customStatus || other.customStatus,
+        ]
+          .filter(Boolean)
+          .join(" · ")
       : isChannel
         ? `${members.length} members`
         : "";
@@ -408,15 +412,16 @@ export function ChatView({
                   </Badge>
                 )}
               </div>
-              <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+              <div className="flex min-w-0 items-center gap-1 text-[12px] text-muted-foreground">
                 {typingNames.length > 0 ? (
-                  <span className="text-primary">● {statusLine}</span>
+                  <span className="truncate text-primary">● {statusLine}</span>
                 ) : otherPresence && isOnline(otherPresence) ? (
                   <>
-                    <span className="size-1.5 rounded-full bg-emerald-400" /> {statusLine}
+                    <span className={cn("size-1.5 shrink-0 rounded-full", presenceDotClass(otherPresence))} />
+                    <span className="truncate">{statusLine}</span>
                   </>
                 ) : (
-                  statusLine
+                  <span className="truncate">{statusLine}</span>
                 )}
               </div>
             </div>

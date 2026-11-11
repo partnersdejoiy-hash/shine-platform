@@ -123,17 +123,19 @@ export function AppChats() {
         </div>
       )}
 
-      {/* phones: a floating New chat button, like Compose in Dejoiy Mail */}
+      {/* phones: a round New chat button over the list, like WhatsApp and Zoho Cliq */}
       {!selectedId && (
         <Button
-          size="lg"
+          size="icon"
           onClick={() => openNew()}
+          aria-label="New chat"
+          title="New chat"
           className={cn(
-            "fixed right-4 z-40 h-14 rounded-full px-6 text-base lg:hidden",
-            isEmbedded() ? "bottom-4" : "bottom-[calc(6rem+env(safe-area-inset-bottom))]",
+            "fixed right-4 z-40 size-14 rounded-2xl lg:hidden",
+            isEmbedded() ? "bottom-4" : "bottom-[calc(5.25rem+env(safe-area-inset-bottom))]",
           )}
         >
-          <MessageSquarePlus className="size-5" /> New chat
+          <MessageSquarePlus className="size-6" />
         </Button>
       )}
 

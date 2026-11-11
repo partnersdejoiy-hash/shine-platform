@@ -53,6 +53,45 @@ http.route({
   }),
 });
 
+// Dejoiy Mail keeps presence and written status in step with Shine (same people, same dot).
+// Server to server, with the shared Dejoiy Mail secret.
+const mailAllowed = (req: Request) => {
+  const secret = process.env.DEJOIY_MAIL_SSO_SECRET;
+  const header = req.headers.get("Authorization") ?? "";
+  return Boolean(secret && header.startsWith("Bearer ") && sameSecret(header.slice(7), secret));
+};
+const CHOICES = ["auto", "away", "busy", "invisible"] as const;
+
+http.route({
+  path: "/dejoiy/presence",
+  method: "POST",
+  handler: httpAction(async (ctx, req) => {
+    if (!mailAllowed(req)) return json(403, { error: "Not allowed" });
+    const b = (await req.json().catch(() => null)) as Record<string, unknown> | null;
+    const email = String(b?.email ?? "").trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json(400, { error: "Invalid email" });
+    const choice = CHOICES.find((c) => c === b?.choice);
+    const out = await ctx.runMutation(internal.presence.fromMail, {
+      email,
+      idle: typeof b?.idle === "boolean" ? b.idle : undefined,
+      choice,
+      text: typeof b?.text === "string" ? b.text : undefined,
+    });
+    return out ? json(200, out) : json(404, { error: "No Shine account for this mailbox yet" });
+  }),
+});
+
+http.route({
+  path: "/dejoiy/people",
+  method: "POST",
+  handler: httpAction(async (ctx, req) => {
+    if (!mailAllowed(req)) return json(403, { error: "Not allowed" });
+    const b = (await req.json().catch(() => null)) as { emails?: unknown } | null;
+    const emails = Array.isArray(b?.emails) ? b.emails.map(String).slice(0, 200) : [];
+    return json(200, { people: await ctx.runQuery(internal.presence.forMail, { emails }) });
+  }),
+});
+
 // Joi posts in her own #joi channel by herself (mail that came in, news).
 // Signed by the Joi server with the Shine app secret (JOI_APP_SECRET here).
 http.route({

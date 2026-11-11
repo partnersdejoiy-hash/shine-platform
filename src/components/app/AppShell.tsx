@@ -13,16 +13,16 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/use-auth";
 import { usePresenceHeartbeat } from "@/hooks/use-presence-heartbeat";
+import { StatusSheet } from "@/components/app/StatusSheet";
 import { eventForNotificationKind, playEventSound } from "@/lib/sound";
 import { cn } from "@/lib/utils";
+import { presenceLabel } from "@/lib/presence";
 import { isEmbedded, tellMail } from "@/lib/embed";
 import { useMutation, useQuery } from "convex/react";
 import {
@@ -68,12 +68,6 @@ const MOBILE_NAV = NAV.slice(0, 5);
 /** Extra items hidden behind "More" on mobile */
 const MOBILE_MORE_NAV = NAV.slice(5);
 
-const PRESENCE_OPTIONS = [
-  { value: "online", label: "Online", dot: "bg-emerald-400" },
-  { value: "away", label: "Away", dot: "bg-amber-400" },
-  { value: "busy", label: "Busy", dot: "bg-rose-500" },
-  { value: "invisible", label: "Invisible", dot: "bg-zinc-500" },
-] as const;
 
 export function AppShell() {
   const { user, signOut } = useAuth();
@@ -82,6 +76,7 @@ export function AppShell() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
+  const [statusOpen, setStatusOpen] = useState(false);
   const bootstrapSuperAdmin = useMutation(api.users.bootstrapSuperAdmin);
   const bootstrapDejoiyMembership = useMutation(api.users.bootstrapDejoiyMembership);
   const autoJoinDomains = useMutation(api.orgs.autoJoinByEmailDomain);
@@ -156,6 +151,8 @@ export function AppShell() {
 
   const chatMatch = location.pathname.match(/^\/app\/chats\/(.+)/);
   const conversationId = chatMatch ? chatMatch[1] : null;
+  // phones: an open chat takes the whole screen (its own header and composer), like WhatsApp
+  const fullChat = Boolean(conversationId);
 
   const startNewChat = () => {
     if (location.pathname.startsWith("/app/chats")) window.dispatchEvent(new Event("shine:new-chat"));
@@ -266,8 +263,10 @@ export function AppShell() {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuLabel className="text-xs text-muted-foreground">Presence</DropdownMenuLabel>
-              <PresenceSelector />
+              <DropdownMenuItem onClick={() => setStatusOpen(true)} className="cursor-pointer flex-col items-start gap-0.5 py-2">
+                <span className="text-sm font-semibold">{user?.customStatus || "Set a status"}</span>
+                <span className="text-xs text-muted-foreground">{presenceLabel(myPresence)} · change status and presence</span>
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => navigate("/app/settings")} className="cursor-pointer">
                 <Settings className="mr-2 size-4" /> Settings
@@ -290,17 +289,17 @@ export function AppShell() {
       </nav>
 
       {/* MAIN — pb-14 on mobile for bottom nav, pb-0 on desktop */}
-      <div className={cn("flex min-w-0 flex-1 flex-col", !embed && "pb-[calc(5.25rem+env(safe-area-inset-bottom))] md:pb-0")}>
+      <div className={cn("flex min-w-0 flex-1 flex-col", !embed && !fullChat && "pb-[calc(4.25rem+env(safe-area-inset-bottom))] md:pb-0")}>
         {/* TOPBAR */}
-        <header className={cn("glass flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border/70 px-4", embed && "hidden")}>
+        <header className={cn("glass flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border/70 px-4", embed && "hidden", fullChat && "max-md:hidden")}>
           <div className="flex items-center gap-3">
-            {/* Mobile logo (no rail on mobile) */}
+            {/* Phones: your picture opens your status and profile sheet (like Zoho Cliq, WhatsApp) */}
             <button
-              onClick={() => navigate("/app")}
-              className="md:hidden transition-transform hover:scale-105"
-              title="SHINE"
+              onClick={() => setStatusOpen(true)}
+              className="md:hidden rounded-full transition-transform active:scale-95"
+              aria-label="Your status and profile"
             >
-              <ShineLogo size={28} showWordmark={false} />
+              <UserAvatar user={user} presence={myPresence} size="sm" showStatus />
             </button>
             <span className="text-lg font-extrabold tracking-[-0.03em]">{pageTitle}</span>
             <Badge
@@ -340,40 +339,6 @@ export function AppShell() {
               <Sparkles className="size-[18px]" />
             </Button>
             <NotificationsPopover />
-            {/* Mobile user avatar (replaces rail bottom section) */}
-            <div className="md:hidden">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="relative">
-                    <UserAvatar user={user} presence={myPresence} size="sm" showStatus />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-64">
-                  <DropdownMenuLabel className="flex items-center gap-3 p-3">
-                    <UserAvatar user={user} presence={myPresence} size="md" showStatus />
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-semibold">{user?.name ?? "You"}</div>
-                      <div className="truncate text-xs text-muted-foreground">{user?.email ?? ""}</div>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <PresenceSelector />
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate("/app/settings")} className="cursor-pointer">
-                    <Settings className="mr-2 size-4" /> Settings
-                  </DropdownMenuItem>
-                  {isAdmin && (
-                    <DropdownMenuItem onClick={() => navigate("/app/admin")} className="cursor-pointer">
-                      <ShieldCheck className="mr-2 size-4" /> Admin
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-destructive focus:text-destructive">
-                    <LogOut className="mr-2 size-4" /> Sign out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
           </div>
         </header>
 
@@ -383,26 +348,36 @@ export function AppShell() {
       </div>
 
       {/* ===== MOBILE BOTTOM NAV (visible only on mobile/tablet) ===== */}
-      <nav className={cn("md:hidden fixed inset-x-2 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-50 rounded-[26px] border-2 border-[var(--sticker-border)] bg-card shadow-[4px_4px_0_var(--sticker-shadow)]", embed && "hidden")}>
-        <div className="flex h-16 items-center justify-around px-1.5">
+      {/* docked like a phone app's tab bar (Zoho Cliq, WhatsApp): the active tab gets a pill behind its icon */}
+      <nav
+        className={cn("md:hidden fixed inset-x-0 bottom-0 z-50 border-t border-border/80 bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl", (embed || fullChat) && "hidden")}
+        aria-label="Shine"
+      >
+        <div className="flex h-[4.25rem] items-stretch justify-around px-1">
           {mobileFilteredNav.map((n) => (
             <button
               key={n.to}
               onClick={() => navigate(n.to)}
+              aria-current={n.match(location.pathname) ? "page" : undefined}
               className={cn(
-                "relative flex min-w-[52px] flex-col items-center gap-1 rounded-2xl px-2.5 py-1.5 transition-colors active:scale-95",
-                n.match(location.pathname)
-                  ? "bg-accent font-bold text-foreground [&_svg]:text-primary"
-                  : "text-muted-foreground",
+                "group relative flex flex-1 flex-col items-center justify-center gap-1 transition-colors active:scale-95",
+                n.match(location.pathname) ? "font-bold text-foreground" : "text-muted-foreground",
               )}
             >
-              <n.icon className="size-5" />
+              <span
+                className={cn(
+                  "relative grid h-8 w-14 place-items-center rounded-full transition-colors",
+                  n.match(location.pathname) ? "bg-accent [&_svg]:text-primary" : "group-hover:bg-accent/60",
+                )}
+              >
+                <n.icon className="size-[22px]" strokeWidth={n.match(location.pathname) ? 2.4 : 1.9} />
+                {n.to === "/app/chats" && (unread ?? 0) > 0 && (
+                  <span className="absolute -top-1 left-[calc(50%+6px)] grid h-[18px] min-w-[18px] place-items-center rounded-full border-2 border-card bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+                    {(unread ?? 0) > 99 ? "99+" : unread}
+                  </span>
+                )}
+              </span>
               <span className="text-[11px] leading-none">{n.label}</span>
-              {n.to === "/app/chats" && (unread ?? 0) > 0 && (
-                <span className="absolute -right-1.5 -top-1.5 grid h-[18px] min-w-[18px] place-items-center rounded-full border-2 border-sidebar bg-foreground px-1 text-[10px] font-bold text-background">
-                  {unread}
-                </span>
-              )}
             </button>
           ))}
           {mobileFilteredMore.length > 0 && (
@@ -410,13 +385,18 @@ export function AppShell() {
               <DropdownMenuTrigger asChild>
                 <button
                   className={cn(
-                    "flex min-w-[52px] flex-col items-center gap-1 rounded-2xl px-2.5 py-1.5 transition-colors active:scale-95",
-                    mobileFilteredMore.some((n) => n.match(location.pathname))
-                      ? "bg-accent font-bold text-foreground [&_svg]:text-primary"
-                      : "text-muted-foreground",
+                    "group flex flex-1 flex-col items-center justify-center gap-1 transition-colors active:scale-95",
+                    mobileFilteredMore.some((n) => n.match(location.pathname)) ? "font-bold text-foreground" : "text-muted-foreground",
                   )}
                 >
-                  <MoreHorizontal className="size-5" />
+                  <span
+                    className={cn(
+                      "grid h-8 w-14 place-items-center rounded-full transition-colors",
+                      mobileFilteredMore.some((n) => n.match(location.pathname)) ? "bg-accent [&_svg]:text-primary" : "group-hover:bg-accent/60",
+                    )}
+                  >
+                    <MoreHorizontal className="size-[22px]" />
+                  </span>
                   <span className="text-[11px] leading-none">More</span>
                 </button>
               </DropdownMenuTrigger>
@@ -444,31 +424,20 @@ export function AppShell() {
         </div>
       </nav>
 
+      <StatusSheet
+        open={statusOpen}
+        onOpenChange={setStatusOpen}
+        user={user as never}
+        presence={myPresence}
+        isAdmin={isAdmin}
+        onNavigate={navigate}
+        onSignOut={handleSignOut}
+      />
+
       {/* GLOBAL OVERLAYS */}
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
       <ShineAIDrawer open={aiOpen} onOpenChange={setAiOpen} conversationId={conversationId} />
       <CallOverlay />
     </div>
-  );
-}
-
-function PresenceSelector() {
-  const { setStatus } = usePresenceHeartbeat();
-  const [value, setValue] = useState("online");
-  return (
-    <DropdownMenuRadioGroup
-      value={value}
-      onValueChange={(v) => {
-        setValue(v);
-        setStatus(v as (typeof PRESENCE_OPTIONS)[number]["value"]);
-      }}
-    >
-      {PRESENCE_OPTIONS.map((o) => (
-        <DropdownMenuRadioItem key={o.value} value={o.value} className="cursor-pointer">
-          <span className={cn("mr-2 size-2 rounded-full", o.dot)} />
-          {o.label}
-        </DropdownMenuRadioItem>
-      ))}
-    </DropdownMenuRadioGroup>
   );
 }

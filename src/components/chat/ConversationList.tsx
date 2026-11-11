@@ -105,35 +105,33 @@ export function ConversationList({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="shrink-0 space-y-3 px-3 pb-2 pt-3">
+      <div className="shrink-0 space-y-3 px-4 pb-2 pt-3">
         <div className="relative">
           <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search chats"
-            className="h-11 rounded-full pl-10"
+            aria-label="Search chats"
+            className="h-10 rounded-full border-0 bg-muted pl-10 shadow-none focus-visible:ring-2"
           />
         </div>
 
         {active.length > 0 && (
-          <div className="-mx-3 flex gap-3 overflow-x-auto px-3 pb-1 no-scrollbar" aria-label="Your team">
-            <button onClick={onNewChat} className="flex w-16 shrink-0 flex-col items-center gap-1.5 text-center">
-              <span className="grid size-14 place-items-center rounded-[20px] border-2 border-dashed border-primary bg-accent text-primary">
-                <MessageSquarePlus className="size-5" />
-              </span>
-              <span className="w-full truncate text-[11px] font-bold">New</span>
-            </button>
+          <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 no-scrollbar" aria-label="Your team">
             {active.map(({ p, on }) => (
               <button
                 key={p._id}
                 onClick={() => onStartDirect?.(p._id)}
                 style={{ "--t": toneFor(p._id) } as CSSProperties}
                 className="flex w-16 shrink-0 flex-col items-center gap-1.5 text-center transition-transform active:scale-95"
-                title={displayName(p)}
+                title={[displayName(p), presenceMap[p._id]?.customStatus].filter(Boolean).join(" · ")}
               >
-                <span className={cn("rounded-full p-[3px]", on ? "bg-[var(--t)]" : "bg-transparent")}>
-                  <UserAvatar user={p} presence={presenceMap[p._id]} size="lg" showStatus />
+                {/* a ring, like WhatsApp's status ring, when they've written a status */}
+                <span className={cn("rounded-full p-[2.5px]", presenceMap[p._id]?.customStatus ? "bg-primary" : on ? "bg-[var(--t)]" : "bg-transparent")}>
+                  <span className="block rounded-full bg-background p-[2px]">
+                    <UserAvatar user={p} presence={presenceMap[p._id]} size="lg" showStatus />
+                  </span>
                 </span>
                 <span className="w-full truncate text-[11px] font-semibold">{displayName(p).split(" ")[0]}</span>
               </button>
@@ -142,7 +140,7 @@ export function ConversationList({
         )}
 
         {/* like Dejoiy Mail's "All messages · Unread · …" */}
-        <div className="-mx-3 flex gap-1.5 overflow-x-auto px-3 no-scrollbar" role="tablist" aria-label="Show">
+        <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 no-scrollbar" role="tablist" aria-label="Show">
           {FILTERS.map(([value, label]) => (
             <button
               key={value}
@@ -150,10 +148,8 @@ export function ConversationList({
               aria-selected={show === value}
               onClick={() => setShow(value)}
               className={cn(
-                "h-9 shrink-0 rounded-full border-[1.5px] px-4 text-sm font-semibold transition-colors",
-                show === value
-                  ? "border-[var(--sticker-border)] bg-foreground text-background"
-                  : "border-border bg-card text-muted-foreground hover:text-foreground",
+                "h-8 shrink-0 rounded-full px-3.5 text-[13px] font-semibold transition-colors",
+                show === value ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:text-foreground",
               )}
             >
               {label}
@@ -165,7 +161,7 @@ export function ConversationList({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
+      <div className="min-h-0 flex-1 overflow-y-auto pb-24 lg:pb-2">
         {loading && (
           <div className="space-y-2 p-2">
             {[0, 1, 2, 3].map((i) => (
@@ -218,32 +214,33 @@ export function ConversationList({
                 });
               }}
               style={{ "--t": toneFor(other?._id ?? item.conversation._id, item.conversation.kind) } as CSSProperties}
+              aria-current={active ? "true" : undefined}
               className={cn(
-                "tone-card mb-2 flex min-h-[76px] w-full items-center gap-3 px-3.5 py-3 text-left",
-                active && "is-active",
-                item.unread > 0 && "is-unread",
+                // a plain app row, like WhatsApp and Zoho Cliq: avatar, then name/time over the last message, hairline below
+                "group flex w-full items-center gap-3 pl-4 text-left transition-colors hover:bg-accent/50 active:bg-accent",
+                active && "bg-accent",
               )}
             >
               {isChannel ? (
                 item.conversation.image ? (
-                  <GroupAvatar image={item.conversation.image} name={item.conversation.name} isChannel size="md" />
+                  <GroupAvatar image={item.conversation.image} name={item.conversation.name} isChannel size="lg" />
                 ) : (
-                  <div className="tone-dot grid size-10 shrink-0 place-items-center rounded-2xl border-2 border-[var(--sticker-border)] text-[#121212]">
+                  <div className="tone-dot grid size-12 shrink-0 place-items-center rounded-2xl border-2 border-[var(--sticker-border)] text-[#121212]">
                     <Hash className="size-4" />
                   </div>
                 )
               ) : item.conversation.chatType === "group" ? (
-                <GroupAvatar image={item.conversation.image} name={item.conversation.name} size="md" />
+                <GroupAvatar image={item.conversation.image} name={item.conversation.name} size="lg" />
               ) : (
-                <UserAvatar user={other ?? undefined} presence={presence} size="md" showStatus />
+                <UserAvatar user={other ?? undefined} presence={presence} size="lg" showStatus />
               )}
 
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 border-b border-border/60 py-3 pr-4 group-last:border-b-0">
                 <div className="flex items-center justify-between gap-2">
                   <span className={cn("truncate text-[15px]", item.unread > 0 || active ? "font-extrabold" : "font-semibold")}>
                     {conversationTitle(item, myId)}
                   </span>
-                  <span className={cn("shrink-0 text-[11px]", item.unread > 0 ? "font-bold text-foreground" : "text-muted-foreground")}>
+                  <span className={cn("shrink-0 text-[11px]", item.unread > 0 ? "font-bold text-primary" : "text-muted-foreground")}>
                     {item.lastMessage ? formatTime(item.lastMessage.createdAt ?? 0) : ""}
                   </span>
                 </div>
@@ -258,7 +255,7 @@ export function ConversationList({
                     </span>
                   )}
                   {item.unread > 0 && (
-                    <span className="grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-foreground px-1.5 text-[11px] font-bold text-background">
+                    <span className="grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-primary px-1.5 text-[11px] font-bold text-primary-foreground">
                       {item.unread}
                     </span>
                   )}

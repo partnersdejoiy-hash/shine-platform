@@ -96,7 +96,9 @@ const schema = defineSchema(
         v.array(v.object({ platform: v.string(), url: v.string() })),
       ),
       availability: v.optional(availabilityValidator),
-      customStatus: v.optional(v.string()),
+      customStatus: v.optional(v.string()), // the written status everyone sees (like WhatsApp's)
+      // how the person wants to show up: "auto" = Active, or Away when idle (like Gmail)
+      presenceChoice: v.optional(v.union(v.literal("auto"), v.literal("away"), v.literal("busy"), v.literal("invisible"))),
       accentColor: v.optional(v.string()), // per-user app accent (see lib/accent.ts)
       source: v.optional(v.string()), // "dejoiy-mail" = this person is a Dejoiy Mail mailbox (kept in sync)
       lastSeen: v.optional(v.number()),

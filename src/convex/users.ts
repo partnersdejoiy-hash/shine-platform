@@ -2,6 +2,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { mutation, query, QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { presenceStatusValidator, availabilityValidator } from "./schema";
+import { beat, choiceValidator, setOwn } from "./presence";
 
 /**
  * Get the current signed in user. Returns null if the user is not signed in.
@@ -283,44 +284,52 @@ export const setSoundPrefs = mutation({
   },
 });
 
-/** Presence heartbeat. Call this every ~30s while the app is open. */
+/** Presence heartbeat. Call this every ~30s while the app is open; idle = no input for a while (shows Away). */
 export const heartbeat = mutation({
   args: {
-    status: presenceStatusValidator,
+    // older apps still send a status; it only matters for picking busy/away/invisible by hand
+    status: v.optional(presenceStatusValidator),
     customStatus: v.optional(v.string()),
+    idle: v.optional(v.boolean()),
   },
-  handler: async (ctx, { status, customStatus }) => {
+  handler: async (ctx, { status, idle }) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) return;
-    const existing = await ctx.db
-      .query("presence")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .unique();
-    const now = Date.now();
-    if (existing) {
-      await ctx.db.patch(existing._id, { status, updatedAt: now, customStatus });
-    } else {
-      await ctx.db.insert("presence", { userId, status, updatedAt: now, customStatus });
+    let me = await ctx.db.get(userId);
+    if (!me) return;
+    if (idle === undefined && status && status !== "online" && status !== "offline" && !me.presenceChoice) {
+      await ctx.db.patch(userId, { presenceChoice: status === "away" ? "away" : status === "busy" ? "busy" : "invisible" });
+      me = (await ctx.db.get(userId))!;
     }
-    await ctx.db.patch(userId, { lastSeen: now });
+    await beat(ctx, me, idle ?? false);
     // Lazy-assign a dedicated employee ID to any signed-in user who lacks one
     // (cheap, idempotent — the ID only changes when the role prefix changes).
-    const me = await ctx.db.get(userId);
-    if (me && !me.employeeId) {
+    if (!me.employeeId) {
       await ensureEmployeeId(ctx, userId);
-    }
-    // opportunistic cleanup of stale presence rows
-    const stale = await ctx.db
-      .query("presence")
-      .filter((q) => q.lt(q.field("updatedAt"), now - 1000 * 60 * 5))
-      .take(20);
-    for (const row of stale) {
-      await ctx.db.delete(row._id);
     }
   },
 });
 
-/** Go offline explicitly (used on tab close / sign out). */
+/** Pick how you show up: Automatic (Active / Away when idle), Away, Do not disturb, or Appear offline. */
+export const setPresence = mutation({
+  args: { choice: choiceValidator },
+  handler: async (ctx, { choice }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Sign in first.");
+    return await setOwn(ctx, userId, { choice });
+  },
+});
+
+/** Your written status (like WhatsApp's), shown to colleagues in Shine and Dejoiy Mail. Empty clears it. */
+export const setStatusText = mutation({
+  args: { text: v.string() },
+  handler: async (ctx, { text }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Sign in first.");
+    return await setOwn(ctx, userId, { text });
+  },
+});
+
 export const goOffline = mutation({
   args: {},
   handler: async (ctx) => {

@@ -88,6 +88,11 @@ const SLASH_COMMANDS = [
     hint: "Send as a code block with a one-click copy button",
     icon: <Code2 className="size-4" />,
   },
+  {
+    cmd: "/poll",
+    hint: "Ask the chat a question with options",
+    icon: <BarChart3 className="size-4" />,
+  },
 ];
 
 export function MessageComposer({
@@ -191,8 +196,13 @@ export function MessageComposer({
   };
 
   const insertSlash = (i: number) => {
-    setText(i === 0 ? "/md " : "/code ");
     closePopovers();
+    if (SLASH_COMMANDS[i].cmd === "/poll") {
+      setText("");
+      setPollOpen(true);
+      return;
+    }
+    setText(SLASH_COMMANDS[i].cmd + " ");
   };
 
   // voice recording
@@ -398,7 +408,7 @@ export function MessageComposer({
 
       <div
         className={cn(
-          "relative flex flex-wrap items-end gap-1 rounded-[22px] border-2 bg-card p-1.5 shadow-[3px_3px_0_var(--sticker-shadow)] transition-colors sm:flex-nowrap sm:gap-1.5 sm:p-2",
+          "relative flex items-end gap-0.5 rounded-[26px] border-[1.5px] bg-card p-1 transition-colors sm:gap-1.5 sm:rounded-[22px] sm:border-2 sm:p-2 sm:shadow-[3px_3px_0_var(--sticker-shadow)]",
           dragging ? "border-primary ring-2 ring-primary/25" : "border-[var(--sticker-border)]",
         )}
         onDragEnter={(e) => {
@@ -537,17 +547,21 @@ export function MessageComposer({
         <Button
           variant="ghost"
           size="icon"
-          className="size-9 shrink-0 text-muted-foreground hover:text-foreground"
+          className="order-2 size-9 shrink-0 text-muted-foreground hover:text-foreground sm:order-none"
           onClick={() => fileRef.current?.click()}
           title="Attach files"
+          aria-label="Attach files"
         >
           <Paperclip className="size-[18px]" />
         </Button>
-        <StickerButton onPick={(e) => setText((t) => (t + e).trimStart())} />
+        <span className="order-2 sm:order-none">
+          <StickerButton onPick={(e) => setText((t) => (t + e).trimStart())} />
+        </span>
+        {/* phones: polls live under "/" to keep the bar to one row */}
         <Button
           variant="ghost"
           size="icon"
-          className="size-9 shrink-0 text-muted-foreground hover:text-foreground"
+          className="hidden size-9 shrink-0 text-muted-foreground hover:text-foreground sm:inline-flex"
           onClick={() => setPollOpen(true)}
           title="Create poll"
         >
@@ -647,14 +661,15 @@ export function MessageComposer({
               ? "Edit message…"
               : "Message… @mention"
           }
-          className="order-first max-h-[96px] min-h-10 basis-full resize-none border-0 bg-transparent px-2.5 py-2 text-base shadow-none focus-visible:bg-transparent focus-visible:ring-0 sm:order-none sm:max-h-32 sm:flex-1 sm:basis-auto sm:text-sm"
+          className="order-1 max-h-[120px] min-h-9 min-w-0 flex-1 resize-none border-0 bg-transparent px-1.5 py-2 text-base shadow-none focus-visible:bg-transparent focus-visible:ring-0 sm:order-none sm:max-h-32 sm:px-2.5 sm:text-sm"
           rows={1}
         />
 
         {text.trim() || editTarget ? (
           <Button
             size="icon"
-            className="ml-auto size-10 shrink-0 sm:ml-0"
+            className="order-3 size-10 shrink-0 rounded-full sm:order-none"
+            aria-label="Send"
             onClick={() => handleSendText()}
             disabled={sending || uploading !== null}
           >
@@ -663,7 +678,8 @@ export function MessageComposer({
         ) : recording ? (
           <Button
             size="icon"
-            className="ml-auto size-10 shrink-0 bg-rose-500 text-white hover:bg-rose-500 sm:ml-0"
+            className="order-3 size-10 shrink-0 rounded-full bg-rose-500 text-white hover:bg-rose-500 sm:order-none"
+            aria-label="Stop recording"
             onClick={stopRecording}
           >
             <Square className="size-4" />
@@ -671,8 +687,8 @@ export function MessageComposer({
         ) : (
           <Button
             size="icon"
-            className="ml-auto size-10 shrink-0 text-muted-foreground sm:ml-0"
-            variant="ghost"
+            className="order-3 size-10 shrink-0 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 sm:order-none sm:bg-transparent sm:text-muted-foreground sm:hover:bg-accent"
+            aria-label="Record voice message"
             onClick={startRecording}
             title="Record voice message"
           >
