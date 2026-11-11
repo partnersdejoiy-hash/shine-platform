@@ -3,7 +3,7 @@ import { mutation, query, MutationCtx, QueryCtx } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { v } from "convex/values";
 import { getCurrentUser, isSuperAdmin, logAudit, safeStorageUrl } from "./users";
-import { userHasPermission } from "./permissions";
+import { canMentionEveryone, domainOf } from "./reach";
 import { maybeAskJoi } from "./joi";
 
 const PAGE_SIZE = 50;
@@ -253,7 +253,8 @@ async function handleSend(ctx: MutationCtx, args: SendArgs) {
     const hasAllS = /@allS\b/i.test(content);
     const hasAll = /@all\b/i.test(content);
     if (hasAllS || hasAll) {
-      const canUseAllS = await userHasPermission(ctx, me, "all_users_mention");
+      const canUseAllS = canMentionEveryone(me);
+      const isJoi = (u: { source?: string }) => u.source === "joi"; // @all never pings Joi (she'd answer every announcement)
       const myMemberships = await ctx.db
         .query("organizationMembers")
         .withIndex("by_user", (q) => q.eq("userId", me._id))
@@ -261,16 +262,18 @@ async function handleSend(ctx: MutationCtx, args: SendArgs) {
       let targets: Id<"users">[] = [];
       if (hasAllS && canUseAllS) {
         const allUsers = await ctx.db.query("users").collect();
-        targets = allUsers.filter((u) => u.isActive !== false).map((u) => u._id);
+        targets = allUsers.filter((u) => u.isActive !== false && !isJoi(u) && u._id !== me._id).map((u) => u._id);
       } else if (hasAllS && !canUseAllS) {
         // Denied: leave the literal text so the sender sees it did not expand.
         content = content;
-      } else if (hasAll && myMemberships.length > 0) {
+      } else if (hasAll) {
+        // everyone in your organization(s), and everyone on your email domain
         const orgIds = new Set(myMemberships.map((m) => m.orgId));
-        const allMemberships = await ctx.db.query("organizationMembers").collect();
-        targets = allMemberships
-          .filter((m) => orgIds.has(m.orgId) && String(m.userId) !== String(me._id))
-          .map((m) => m.userId);
+        const inOrg = new Set((await ctx.db.query("organizationMembers").collect()).filter((m) => orgIds.has(m.orgId)).map((m) => String(m.userId)));
+        const mine = domainOf(me.email);
+        targets = (await ctx.db.query("users").collect())
+          .filter((u) => u._id !== me._id && u.isActive !== false && !isJoi(u) && (inOrg.has(String(u._id)) || (!!mine && domainOf(u.email) === mine)))
+          .map((u) => u._id);
       }
       mentionIds = [...new Set([...mentionIds.map(String), ...targets.map(String)])] as Id<"users">[];
       if (canUseAllS) {

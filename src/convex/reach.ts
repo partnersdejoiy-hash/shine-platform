@@ -34,6 +34,18 @@ export async function mayReach(ctx: Ctx, me: Doc<"users">) {
 /** DEJOIY's platform admins and Joi may start a conversation with anyone, on any domain. */
 export const reachesEveryone = (me: Doc<"users">) => PLATFORM.has(me.role ?? "") || isSuperAdmin(me) || me.source === "joi";
 
+/**
+ * @allS (everyone on Shine and Dejoiy Mail, every domain): DEJOIY's super admins and IT,
+ * admins and IT on DEJOIY's own domains, or anyone granted the permission.
+ * Keep in step with src/lib/permissions.ts isHigherManagement.
+ */
+export function canMentionEveryone(me: Doc<"users">) {
+  if (PLATFORM.has(me.role ?? "") || isSuperAdmin(me)) return true;
+  const dejoiy = (process.env.JOI_INTERNAL_DOMAINS ?? "dejoiy.com,mail.dejoiy.com").split(",").map((d) => d.trim().toLowerCase());
+  if ((me.role === "admin" || me.role === "it") && dejoiy.includes(domainOf(me.email))) return true;
+  return me.approvedPermissions?.includes("all_users_mention") ?? false;
+}
+
 /** Can `me` start a chat with `target`? Same company always; Joi always; other companies only their supervisors. */
 export async function canContact(ctx: Ctx, me: Doc<"users">, target: Doc<"users">) {
   if (target.isActive === false) return false;

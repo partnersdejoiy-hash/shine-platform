@@ -132,14 +132,18 @@ export const ROLE_HIERARCHY: { role: string; label: string; rank: number; employ
 ];
 
 /**
- * Higher management = roles permitted to use the @allS god command:
- * Super Admin, DEJOIY Admin and Admin (or anyone with the granted permission).
+ * Who may use the @allS god command (everyone on Shine and Dejoiy Mail, every domain):
+ * DEJOIY's super admins and IT, plus admins and IT on DEJOIY's own domains,
+ * or anyone granted the permission. Keep in step with convex/reach.ts canMentionEveryone.
  */
-export function isHigherManagement(user: { role?: string | null; approvedPermissions?: string[] | null } | null | undefined): boolean {
+const DEJOIY_DOMAINS = ["dejoiy.com", "mail.dejoiy.com"];
+export function isHigherManagement(
+  user: { role?: string | null; email?: string | null; approvedPermissions?: string[] | null } | null | undefined,
+): boolean {
   if (!user) return false;
-  if (user.role === "super_admin" || user.role === "dejoiy_admin" || user.role === "admin") {
-    return true;
-  }
+  if (user.role === "super_admin" || user.role === "dejoiy_admin" || user.role === "super_it") return true;
+  const domain = (user.email ?? "").toLowerCase().split("@")[1] ?? "";
+  if ((user.role === "admin" || user.role === "it") && DEJOIY_DOMAINS.includes(domain)) return true;
   return user.approvedPermissions?.includes("all_users_mention") ?? false;
 }
 
@@ -193,14 +197,14 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, Record<string, PermValue>>
     manage_employees: true, view_analytics: true, system_settings: true, delete_chat: true,
   },
   admin: {
-    create_organization: false, manage_roles: true, all_users_mention: true,
+    create_organization: false, manage_roles: true, all_users_mention: false,
     company_announcement: true, department_groups: true, team_groups: true,
     private_chat: true, group_chat: true, one_to_one_call: true, group_call: true,
     start_meeting: true, join_meeting: true, invite_multiple_users: true,
     manage_employees: true, view_analytics: true, system_settings: "limited", delete_chat: false,
   },
   super_it: {
-    create_organization: false, manage_roles: false, all_users_mention: false,
+    create_organization: false, manage_roles: false, all_users_mention: true,
     company_announcement: false, department_groups: false, team_groups: false,
     private_chat: true, group_chat: true, one_to_one_call: true, group_call: true,
     start_meeting: true, join_meeting: true, invite_multiple_users: true,

@@ -1,3 +1,4 @@
+import { JOI_AVATAR } from "@/lib/joi";
 import { api } from "@/convex/_generated/api";
 import { EmojiPicker } from "@/components/chat/EmojiPicker";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -59,20 +60,27 @@ interface Props {
   members?: (MentionMember | null)[];
 }
 
-// God commands — "@all" tags every employee of your organization and "@allS"
-// tags every user of the app. They are resolved server-side at send time
-// (see convex/messages.ts), so they work in every chat, channel and meeting.
+// God commands — "@all" tags everyone in your organization and on your email domain,
+// "@allS" tags everyone on Shine and Dejoiy Mail, every domain (DEJOIY's super admins and IT),
+// and "@Joi" brings in Joi, DEJOIY's AI buddy (anyone, at any level, in any chat).
+// Resolved server-side at send time (see convex/messages.ts and convex/joi.ts).
 const GOD_COMMANDS = [
   {
+    token: "@Joi",
+    label: "Joi, your AI buddy",
+    hint: "Ask Joi anything, right in this chat",
+    icon: <img src={JOI_AVATAR} alt="" className="size-5 rounded-full object-cover" />,
+  },
+  {
     token: "@all",
-    label: "Everyone in my org",
-    hint: "Tag all employees of your organization",
+    label: "Everyone in my organization",
+    hint: "Tag everyone in your organization and on your domain",
     icon: <Users className="size-4" />,
   },
   {
     token: "@allS",
-    label: "Everyone in the app",
-    hint: "Tag every user of SHINE",
+    label: "Everyone, every domain",
+    hint: "Tag everyone on Shine and Dejoiy Mail (super admins and IT)",
     icon: <Globe className="size-4" />,
   },
 ];
@@ -151,10 +159,10 @@ export function MessageComposer({
     );
   }, [members, mentionSearch, mentionQuery, user?._id]);
 
-  // @allS is a higher-management god command — hidden for everyone else.
-  const godCommands = isHigherManagement(user)
-    ? GOD_COMMANDS
-    : GOD_COMMANDS.filter((c) => c.token !== "@allS");
+  // @allS is for DEJOIY's super admins and IT — hidden for everyone else; all of them narrow as you type
+  const godCommands = GOD_COMMANDS.filter(
+    (c) => (c.token !== "@allS" || isHigherManagement(user)) && c.token.toLowerCase().startsWith(`@${mentionQuery.toLowerCase().trim()}`),
+  );
   const mentionListLength = godCommands.length + filtered.length;
 
   const closePopovers = () => {
@@ -504,9 +512,9 @@ export function MessageComposer({
               </div>
               {filtered.length === 0 && (
                 <div className="px-3 py-4 text-center text-xs text-muted-foreground">
-                  {godCommands.length === 1
-                    ? "No people found — use @all to tag your whole team"
-                    : "No people found — use @all or @allS to tag a whole team"}
+                  {isHigherManagement(user)
+                    ? "No people found — use @all or @allS to tag a whole team"
+                    : "No people found — use @all to tag your whole team"}
                 </div>
               )}
               {filtered.map((m, i) => {

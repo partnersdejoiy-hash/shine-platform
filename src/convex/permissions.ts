@@ -70,9 +70,9 @@ export const PERMISSIONS: PermissionDef[] = [
     label: "@allS — Mention Every User",
     category: "Messaging",
     description:
-      "Use the @allS god command to tag every user of the app. Higher management only.",
+      "Use the @allS god command to tag every user of the app, every domain. DEJOIY's super admins and IT (a company's own IT and admins only on DEJOIY's domains).",
     defaults: {
-      super_admin: true, dejoiy_admin: true, admin: true, super_it: false,
+      super_admin: true, dejoiy_admin: true, admin: false, super_it: true,
       it: false, president: false, director: false, om: false, tl: false, user: false,
     },
   },
