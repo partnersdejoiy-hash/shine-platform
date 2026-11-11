@@ -234,6 +234,8 @@ const schema = defineSchema(
         }),
       ),
       lastMessageAt: v.optional(v.number()),
+      // #joi only: everyone Joi has added once, so people who leave aren't added back
+      joiAdded: v.optional(v.array(v.id("users"))),
       createdAt: v.number(),
     })
       .index("by_org", ["orgId"])

@@ -2,6 +2,7 @@ import { httpRouter } from "convex/server";
 import { internal } from "./_generated/api";
 import { httpAction } from "./_generated/server";
 import { auth } from "./auth";
+import { verifyJoiToken } from "./joi";
 
 const http = httpRouter();
 
@@ -49,6 +50,24 @@ http.route({
     } catch (e) {
       return json(400, { error: e instanceof Error ? e.message.replace(/^.*Uncaught Error:\s*/s, "").split("\n")[0] : "Could not create the meeting" });
     }
+  }),
+});
+
+// Joi posts in her own #joi channel by herself (mail that came in, news).
+// Signed by the Joi server with the Shine app secret (JOI_APP_SECRET here).
+http.route({
+  path: "/joi/post",
+  method: "POST",
+  handler: httpAction(async (ctx, req) => {
+    const header = req.headers.get("Authorization") ?? "";
+    if (!header.startsWith("Bearer ") || !(await verifyJoiToken(header.slice(7)))) return json(403, { error: "Not allowed" });
+    const body = (await req.json().catch(() => null)) as { text?: unknown } | null;
+    const text = String(body?.text ?? "").trim().slice(0, 4000);
+    if (!text) return json(400, { error: "Nothing to post" });
+    const ids = await ctx.runMutation(internal.joi.ensureJoi, {});
+    if (!ids) return json(409, { error: "Shine has no organization yet" });
+    await ctx.runMutation(internal.joi.post, { conversationId: ids.channelId, body: text });
+    return json(200, { ok: true });
   }),
 });
 

@@ -27,3 +27,10 @@ for (const [name, value] of Object.entries(vars)) {
   execFileSync("npx", ["convex", "env", "set", "--", name, value], { stdio: ["ignore", "ignore", "inherit"] });
   console.log("set", name);
 }
+// Joi in Shine (optional): from /etc/shine/joi.env, see deploy/contabo/README.md
+for (const name of ["JOI_API_URL", "JOI_APP_SECRET", "JOI_EMAIL", "JOI_SHINE_ORG"]) {
+  const value = process.env[name];
+  if (!value) continue;
+  execFileSync("npx", ["convex", "env", "set", "--", name, value], { stdio: ["ignore", "ignore", "inherit"] });
+  console.log("set", name);
+}

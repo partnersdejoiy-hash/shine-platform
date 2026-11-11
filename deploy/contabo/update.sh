@@ -18,7 +18,10 @@ fi
 git log --oneline -1
 
 # node runs in a throwaway container, so the server needs no Node install
-docker run --rm --network host -v "$DIR":/app -v /etc/shine:/etc/shine -w /app \
+# Joi in Shine (optional): JOI_API_URL and JOI_APP_SECRET in /etc/shine/joi.env
+JOI_ENV=()
+[ -f /etc/shine/joi.env ] && JOI_ENV=(--env-file /etc/shine/joi.env)
+docker run --rm --network host "${JOI_ENV[@]}" -v "$DIR":/app -v /etc/shine:/etc/shine -w /app \
   -e CONVEX_SELF_HOSTED_URL=http://127.0.0.1:3210 \
   -e CONVEX_SELF_HOSTED_ADMIN_KEY="$(cat /etc/shine/admin-key)" \
   -e SHINE_APP_URL="https://$APP_HOST" -e SHINE_SSO_SECRET="$SSO_SECRET" \

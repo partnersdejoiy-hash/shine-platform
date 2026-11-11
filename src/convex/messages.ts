@@ -4,6 +4,7 @@ import { Id } from "./_generated/dataModel";
 import { v } from "convex/values";
 import { getCurrentUser, isSuperAdmin, logAudit, safeStorageUrl } from "./users";
 import { userHasPermission } from "./permissions";
+import { maybeAskJoi } from "./joi";
 
 const PAGE_SIZE = 50;
 
@@ -29,7 +30,7 @@ const DEFAULT_PREFS: NotifyPrefs = {
   desktop: true,
 };
 
-async function notifyMembers(
+export async function notifyMembers(
   ctx: MutationCtx,
   conversation: any,
   senderId: string,
@@ -367,6 +368,9 @@ async function handleSend(ctx: MutationCtx, args: SendArgs) {
       nkind,
       mentionIds,
     );
+
+    // Joi answers in #joi, in DMs with her, and when @mentioned
+    await maybeAskJoi(ctx, conversation, me._id, msgId, content, mentionIds);
 
     return msgId;
 }
