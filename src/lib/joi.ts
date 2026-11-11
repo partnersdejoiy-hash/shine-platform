@@ -6,7 +6,7 @@
  */
 const JOI_URL = ((import.meta.env.VITE_JOI_URL as string | undefined) || "https://joi-ai.dejoiy.com").replace(/\/+$/, "");
 const JOI_API = ((import.meta.env.VITE_JOI_API_URL as string | undefined) || JOI_URL).replace(/\/+$/, "");
-export const JOI_AVATAR = `${JOI_URL}/joi-avatar.webp?v=2`;
+export const JOI_AVATAR = `${JOI_URL}/joi-avatar.webp?v=3`;
 
 type JoiApi = { open: () => void; setUser: (u: { name?: string; email?: string }) => void; setAppToken: (t: string) => void };
 declare global {
