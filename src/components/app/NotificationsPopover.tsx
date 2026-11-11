@@ -79,7 +79,7 @@ export function NotificationsPopover() {
                   key={n._id}
                   onClick={() => go(n.link, n._id)}
                   className={cn(
-                    "flex w-full items-start gap-3 border-b border-border/60 px-4 py-3 text-left transition-colors hover:bg-accent/50",
+                    "flex w-full items-start gap-3 border-b border-border/60 px-4 py-3 text-left transition-colors hover:bg-accent",
                     !n.read && "bg-primary/4",
                   )}
                 >

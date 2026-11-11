@@ -210,7 +210,7 @@ export function AppChangePassword() {
               </button>
 
               {showHelp && (
-                <div className="mt-3 grid gap-2 rounded-xl border border-border/70 bg-accent/30 p-3 text-left">
+                <div className="mt-3 grid gap-2 rounded-xl border border-border/70 bg-accent p-3 text-left">
                   <Button
                     type="button"
                     variant="outline"

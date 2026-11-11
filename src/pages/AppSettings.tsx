@@ -493,7 +493,7 @@ export function AppSettings() {
               </CardHeader>
               <CardContent className="grid gap-4 sm:grid-cols-2">
                 {/* Profile picture */}
-                <div className="sm:col-span-2 flex flex-col items-center gap-4 rounded-2xl border border-dashed border-border/80 bg-background/40 p-6 sm:flex-row sm:items-center">
+                <div className="sm:col-span-2 flex flex-col items-center gap-4 rounded-2xl border border-dashed border-border/80 bg-card p-6 sm:flex-row sm:items-center">
                   <div className="group relative shrink-0">
                     <UserAvatar user={user} size="xl" className="ring-2 ring-primary/25" />
                     <button
@@ -505,7 +505,7 @@ export function AppSettings() {
                       <Camera className="size-5 text-white" />
                     </button>
                     {uploadingAvatar && (
-                      <span className="absolute inset-0 grid place-items-center rounded-full bg-black/60 backdrop-blur-sm">
+                      <span className="absolute inset-0 grid place-items-center rounded-full bg-black/60">
                         <Loader2 className="size-5 animate-spin text-primary" />
                       </span>
                     )}
@@ -731,7 +731,7 @@ export function AppSettings() {
                       "group rounded-2xl border p-4 text-left transition-all",
                       theme === t.mode
                         ? "border-primary/60 bg-primary/10 ring-glow"
-                        : "border-border hover:border-primary/40 hover:bg-accent/60",
+                        : "border-border hover:border-primary/40 hover:bg-accent",
                     )}
                   >
                     <div className="flex items-center justify-between">
@@ -913,7 +913,7 @@ export function AppSettings() {
                 {SOUND_EVENTS.map((ev) => (
                   <div
                     key={ev.key}
-                    className="flex items-center justify-between gap-3 rounded-lg px-1 py-2 transition-colors hover:bg-muted/40"
+                    className="flex items-center justify-between gap-3 rounded-lg px-1 py-2 transition-colors hover:bg-muted"
                   >
                     <div className="min-w-0">
                       <div className="text-sm font-medium">{ev.label}</div>
@@ -982,7 +982,7 @@ export function AppSettings() {
                         </>
                       )}
                     </Button>
-                    <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium shadow-sm transition-colors hover:bg-muted/60">
+                    <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium shadow-sm transition-colors hover:bg-muted">
                       <Upload className="size-3.5" />
                       {soundBusy ? "Uploading…" : "Upload audio"}
                       <input
@@ -1424,7 +1424,7 @@ export function AppSettings() {
                     key={p._id}
                     className="flex flex-wrap items-center gap-3 rounded-xl border border-border/70 px-3 py-2.5"
                   >
-                    <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-accent/80 text-muted-foreground">
+                    <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-accent text-muted-foreground">
                       <ReceiptText className="size-3.5" />
                     </div>
                     <div className="min-w-0 flex-1">
@@ -1470,7 +1470,7 @@ export function AppSettings() {
                       {s.keys.map((k) => (
                         <kbd
                           key={k}
-                          className="rounded-md border border-border bg-accent/70 px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground"
+                          className="rounded-md border border-border bg-accent px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground"
                         >
                           {k}
                         </kbd>
@@ -1537,7 +1537,7 @@ function SettingRow({
   return (
     <div className="flex items-center justify-between gap-4 py-3">
       <div className="flex min-w-0 items-start gap-3">
-        <div className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg bg-accent/80 text-muted-foreground">
+        <div className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg bg-accent text-muted-foreground">
           <Icon className="size-4" />
         </div>
         <div className="min-w-0">

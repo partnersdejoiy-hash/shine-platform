@@ -351,7 +351,7 @@ export function MessageComposer({
     <div className="shrink-0 px-4 pb-4">
       {/* reply / edit banner */}
       {(replyTo || editTarget) && (
-        <div className="mb-2 flex items-center gap-2 rounded-t-xl border border-b-0 border-border/80 bg-accent/60 px-3 py-2">
+        <div className="mb-2 flex items-center gap-2 rounded-t-xl border border-b-0 border-border/80 bg-accent px-3 py-2">
           <span className="text-primary">
             {editTarget ? <X className="size-4" /> : <CornerUpRightIcon />}
           </span>
@@ -375,7 +375,7 @@ export function MessageComposer({
 
       {/* upload progress */}
       {uploading && (
-        <div className="mb-2 flex items-center gap-3 rounded-xl border border-border/80 bg-background/50 px-3 py-2">
+        <div className="mb-2 flex items-center gap-3 rounded-xl border border-border/80 bg-card px-3 py-2">
           <Loader2 className="size-4 animate-spin text-primary" />
           <div className="min-w-0 flex-1">
             <div className="truncate text-xs">{uploading.name}</div>
@@ -452,7 +452,7 @@ export function MessageComposer({
                 onClick={() => insertSlash(i)}
                 className={cn(
                   "flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left transition-colors",
-                  slashIndex === i ? "bg-accent" : "hover:bg-accent/60",
+                  slashIndex === i ? "bg-accent" : "hover:bg-accent",
                 )}
               >
                 <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/12 text-primary">
@@ -486,7 +486,7 @@ export function MessageComposer({
                   onClick={() => insertGodCommand(c.token)}
                   className={cn(
                     "flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left transition-colors",
-                    mentionIndex === i ? "bg-accent" : "hover:bg-accent/60",
+                    mentionIndex === i ? "bg-accent" : "hover:bg-accent",
                   )}
                 >
                   <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/12 text-primary">
@@ -518,7 +518,7 @@ export function MessageComposer({
                     onClick={() => insertMention(m)}
                     className={cn(
                       "flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left transition-colors",
-                      mentionIndex === idx ? "bg-accent" : "hover:bg-accent/60",
+                      mentionIndex === idx ? "bg-accent" : "hover:bg-accent",
                     )}
                   >
                     <UserAvatar user={m} size="sm" />

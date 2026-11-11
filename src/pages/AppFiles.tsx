@@ -245,7 +245,7 @@ export function AppFiles() {
                         <img src={f.url} alt={f.name} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy" />
                       </div>
                     ) : (
-                      <div className="grid aspect-video place-items-center bg-accent/40 text-muted-foreground">
+                      <div className="grid aspect-video place-items-center bg-accent text-muted-foreground">
                         <div className="text-center">
                           <div className="mx-auto grid size-12 place-items-center rounded-xl bg-primary/12 text-primary">
                             {fileIcon(f.kind)}
@@ -400,7 +400,7 @@ function ActionIcon({
       title={title}
       onClick={onClick}
       className={cn(
-        "grid size-7 place-items-center rounded-lg bg-black/60 text-white backdrop-blur transition-colors",
+        "grid size-7 place-items-center rounded-lg bg-black/60 text-white transition-colors",
         danger ? "hover:bg-rose-500" : "hover:bg-white/20",
       )}
     >

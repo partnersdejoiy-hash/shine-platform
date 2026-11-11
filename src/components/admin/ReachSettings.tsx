@@ -53,7 +53,7 @@ export function ReachSettings() {
           </label>
         )}
 
-        <div className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-accent/40 p-4">
+        <div className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-accent p-4">
           <div>
             <div className="font-bold">Employees of @{data.domain} can reach other companies' supervisors</div>
             <div className="text-sm text-muted-foreground">The default for everyone below.</div>

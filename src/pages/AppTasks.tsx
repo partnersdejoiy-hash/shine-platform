@@ -161,7 +161,7 @@ export function AppTasks() {
         {COLUMNS.map((col) => {
           const colTasks = tasks.filter((t) => t.status === col.key);
           return (
-            <div key={col.key} className="flex min-h-0 flex-col rounded-2xl border border-border/70 bg-card/40">
+            <div key={col.key} className="flex min-h-0 flex-col rounded-2xl border border-border/70 bg-card">
               <div className="flex items-center justify-between border-b border-border/70 px-4 py-2.5">
                 <div className="flex items-center gap-2 text-sm font-semibold">
                   <span className={cn("size-2 rounded-full", col.dot)} />

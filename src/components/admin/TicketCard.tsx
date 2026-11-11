@@ -241,7 +241,7 @@ export function TicketCard({
                     acted?.action === "rejected" && "border-rose-500/40 bg-rose-500/10 text-rose-400",
                     isCurrent && "border-primary/60 bg-primary/15 font-semibold text-primary",
                     isWaiting && "border-amber-500/40 bg-amber-500/10 text-amber-400",
-                    !acted && !isWaiting && "border-border/70 bg-background/40 text-muted-foreground",
+                    !acted && !isWaiting && "border-border/70 bg-card text-muted-foreground",
                   )}
                 >
                   {approver?.name ?? "?"}

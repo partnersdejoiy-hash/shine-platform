@@ -572,7 +572,7 @@ export function AppAdmin() {
               {CAPABILITY_CHIPS.filter((c) => c.roles.includes(user?.role as string)).map((c) => (
                 <span
                   key={c.label}
-                  className="flex items-center gap-1 rounded-full border border-white/10 bg-background/50 px-2.5 py-1 text-[10px] font-medium text-muted-foreground"
+                  className="flex items-center gap-1 rounded-full border border-white/10 bg-card px-2.5 py-1 text-[10px] font-medium text-muted-foreground"
                 >
                   <c.icon className="size-3 text-primary" /> {c.label}
                 </span>
@@ -614,7 +614,7 @@ export function AppAdmin() {
 
         {/* expanded tile detail */}
         {openCard && (
-          <div className="mt-3 overflow-hidden rounded-2xl border border-border/70 bg-background/40">
+          <div className="mt-3 overflow-hidden rounded-2xl border border-border/70 bg-card">
             <div className="flex items-center justify-between border-b border-border/60 px-4 py-2.5">
               <span className="text-sm font-semibold">
                 {openCard}{" "}
@@ -1524,7 +1524,7 @@ export function AppAdmin() {
                               "flex w-full items-center justify-between rounded-xl border px-4 py-2.5 transition-colors",
                               isTop
                                 ? "border-primary/40 bg-primary/10"
-                                : "border-border/70 bg-background/50 hover:border-primary/30",
+                                : "border-border/70 bg-card hover:border-primary/30",
                             )}
                           >
                             <div className="flex items-center gap-2.5">
@@ -1739,7 +1739,7 @@ export function AppAdmin() {
                   </div>
                   <div className="mt-3 max-h-72 overflow-auto rounded-xl border border-border/70">
                     <table className="w-full text-left text-xs">
-                      <thead className="sticky top-0 bg-background/95 backdrop-blur">
+                      <thead className="sticky top-0 bg-card">
                         <tr className="border-b border-border/70 text-muted-foreground">
                           <th className="px-3 py-2 font-medium">Row</th>
                           <th className="px-3 py-2 font-medium">Email</th>
@@ -2115,7 +2115,7 @@ function PermissionMatrix({
 
       <div className="overflow-x-auto">
         <table className="w-full min-w-[880px] text-left text-xs">
-          <thead className="sticky top-0 z-10 bg-background/95 backdrop-blur">
+          <thead className="sticky top-0 z-10 bg-card">
             <tr className="border-b border-border/70">
               <th className="w-56 px-3 py-2.5 font-medium text-muted-foreground">Permission</th>
               {roleCols.map((role) => {
@@ -2147,7 +2147,7 @@ function PermissionMatrix({
               const perms = data.permissions.filter((p) => p.category === cat);
               return (
                 <Fragment key={cat}>
-                  <tr className="bg-accent/30">
+                  <tr className="bg-accent">
                     <td
                       colSpan={roleCols.length + 1}
                       className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground"
@@ -2156,7 +2156,7 @@ function PermissionMatrix({
                     </td>
                   </tr>
                   {perms.map((p) => (
-                    <tr key={p.id} className="transition-colors hover:bg-accent/30">
+                    <tr key={p.id} className="transition-colors hover:bg-accent">
                       <td className="px-3 py-2">
                         <div className="font-medium">{p.label}</div>
                         <div className="mt-0.5 max-w-[240px] text-[10px] leading-4 text-muted-foreground">
@@ -2187,7 +2187,7 @@ function PermissionMatrix({
                 </Fragment>
               );
             })}
-            <tr className="border-t border-border/70 bg-accent/20">
+            <tr className="border-t border-border/70 bg-accent">
               <td className="px-3 py-2 font-medium text-muted-foreground">
                 Reset role to defaults
               </td>
@@ -2335,7 +2335,7 @@ function DetailRow({
   tone: string;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-xl px-2 py-2.5 transition-colors hover:bg-accent/40">
+    <div className="flex items-center gap-3 rounded-xl px-2 py-2.5 transition-colors hover:bg-accent">
       <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">{icon}</div>
       <div className="min-w-0 flex-1">
         <div className="truncate text-xs font-medium">{title}</div>
@@ -2436,7 +2436,7 @@ function UserPermissionsDialog({
                       <div
                         key={p.id}
                         className={cn(
-                          "flex items-center justify-between gap-3 bg-background/40 px-3 py-2.5 transition-colors hover:bg-accent/30",
+                          "flex items-center justify-between gap-3 bg-card px-3 py-2.5 transition-colors hover:bg-accent",
                           i < arr.length - 1 && "border-b border-border/50",
                         )}
                       >

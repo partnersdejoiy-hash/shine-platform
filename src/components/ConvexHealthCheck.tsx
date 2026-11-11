@@ -109,7 +109,7 @@ export function ConvexHealthCheck({ children }: { children: React.ReactNode }) {
             </p>
           </div>
 
-          <div className="rounded-xl border border-border/50 bg-card/50 p-4 text-left text-xs text-muted-foreground space-y-1">
+          <div className="rounded-xl border border-border/50 bg-card p-4 text-left text-xs text-muted-foreground space-y-1">
             <p className="font-medium text-foreground/80">What happened?</p>
             <p>
               The communication backend has reached its usage limit. Our team has been

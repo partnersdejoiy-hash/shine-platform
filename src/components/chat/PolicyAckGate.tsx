@@ -118,7 +118,7 @@ export function PolicyAckGate() {
       {/* Policy reader dialog */}
       {current && (
         <div
-          className="fixed inset-0 z-[130] grid place-items-center bg-black/70 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-[130] grid place-items-center bg-black/70 p-4"
           onClick={() => setOpen(null)}
         >
           <div
@@ -135,7 +135,7 @@ export function PolicyAckGate() {
                 {current.version.summary}
               </p>
             )}
-            <ScrollArea className="mt-4 max-h-[40vh] rounded-2xl border border-border/70 bg-background/50 p-4">
+            <ScrollArea className="mt-4 max-h-[40vh] rounded-2xl border border-border/70 bg-card p-4">
               <div className="space-y-3 text-sm leading-6 text-foreground/90">
                 {(current.version?.content ?? "").split("\n\n").filter(Boolean).map((para, i) => (
                   <p key={i}>{para}</p>

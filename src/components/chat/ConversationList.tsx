@@ -169,7 +169,7 @@ export function ConversationList({
                 <div className="size-10 animate-pulse rounded-full bg-accent" />
                 <div className="flex-1 space-y-2">
                   <div className="h-3 w-2/3 animate-pulse rounded bg-accent" />
-                  <div className="h-2.5 w-full animate-pulse rounded bg-accent/70" />
+                  <div className="h-2.5 w-full animate-pulse rounded bg-accent" />
                 </div>
               </div>
             ))}
@@ -217,7 +217,7 @@ export function ConversationList({
               aria-current={active ? "true" : undefined}
               className={cn(
                 // a plain app row, like WhatsApp and Zoho Cliq: avatar, then name/time over the last message, hairline below
-                "group flex w-full items-center gap-3 pl-4 text-left transition-colors hover:bg-accent/50 active:bg-accent",
+                "group flex w-full items-center gap-3 pl-4 text-left transition-colors hover:bg-accent active:bg-accent",
                 active && "bg-accent",
               )}
             >
@@ -285,7 +285,7 @@ export function ConversationList({
             style={{ left: ctxMenu.x, top: ctxMenu.y }}
           >
             <button
-              className="flex w-full items-center gap-2.5 px-3 py-2.5 text-xs transition-colors hover:bg-accent/60"
+              className="flex w-full items-center gap-2.5 px-3 py-2.5 text-xs transition-colors hover:bg-accent"
               onClick={async () => {
                 try {
                   await togglePin({ conversationId: ctxMenu.id as any, pinned: !ctxMenu.pinned });
@@ -298,7 +298,7 @@ export function ConversationList({
               {ctxMenu.pinned ? "Unpin" : "Pin to top"}
             </button>
             <button
-              className="flex w-full items-center gap-2.5 px-3 py-2.5 text-xs transition-colors hover:bg-accent/60"
+              className="flex w-full items-center gap-2.5 px-3 py-2.5 text-xs transition-colors hover:bg-accent"
               onClick={async () => {
                 try {
                   await setMuted({ conversationId: ctxMenu.id as any, muted: !ctxMenu.muted });
@@ -311,7 +311,7 @@ export function ConversationList({
               {ctxMenu.muted ? "Unmute" : "Mute"}
             </button>
             <button
-              className="flex w-full items-center gap-2.5 px-3 py-2.5 text-xs transition-colors hover:bg-accent/60"
+              className="flex w-full items-center gap-2.5 px-3 py-2.5 text-xs transition-colors hover:bg-accent"
               onClick={async () => {
                 try {
                   await archiveConv({ conversationId: ctxMenu.id as any, archived: true });

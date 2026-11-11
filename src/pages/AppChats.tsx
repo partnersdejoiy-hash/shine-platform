@@ -84,8 +84,8 @@ export function AppChats() {
         <div
           className={
             selectedId
-              ? "hidden w-80 shrink-0 border-r border-border/70 bg-background/30 lg:flex lg:flex-col"
-              : "flex w-full shrink-0 flex-col border-r border-border/70 bg-background/30 lg:w-80"
+              ? "hidden w-80 shrink-0 border-r border-border/70 bg-card lg:flex lg:flex-col"
+              : "flex w-full shrink-0 flex-col border-r border-border/70 bg-card lg:w-80"
           }
         >
           <ConversationList

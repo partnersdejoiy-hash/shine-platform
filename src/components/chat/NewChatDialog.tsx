@@ -461,7 +461,7 @@ function PolicySelector({
   setWhoCanEditInfo: (v: "everyone" | "admins") => void;
 }) {
   return (
-    <div className="rounded-xl border border-border/80 bg-accent/30 p-3 space-y-2">
+    <div className="rounded-xl border border-border/80 bg-accent p-3 space-y-2">
       <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
         <Shield className="size-3" /> Group policies
       </div>

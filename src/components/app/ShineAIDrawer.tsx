@@ -205,7 +205,7 @@ export function ShineAIDrawer({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[80] bg-black/40 backdrop-blur-[2px]"
+          className="fixed inset-0 z-[80] bg-black/40-[2px]"
           onClick={() => onOpenChange(false)}
         />
       )}
@@ -263,7 +263,7 @@ export function ShineAIDrawer({
               key={a.label}
               disabled={busy}
               onClick={a.run}
-              className="group flex items-start gap-2.5 rounded-xl border border-border/80 bg-background/50 p-3 text-left transition-all hover:border-primary/40 hover:bg-primary/5 disabled:opacity-50"
+              className="group flex items-start gap-2.5 rounded-xl border border-border/80 bg-card p-3 text-left transition-all hover:border-primary/40 hover:bg-primary/5 disabled:opacity-50"
             >
               <a.icon className="mt-0.5 size-4 shrink-0 text-primary" />
               <span>
@@ -295,7 +295,7 @@ export function ShineAIDrawer({
                 <Wand2 className="size-3.5" /> Action items
               </div>
               {extracted.map((e, i) => (
-                <div key={i} className="rounded-lg bg-background/60 p-2 text-xs">
+                <div key={i} className="rounded-lg bg-card p-2 text-xs">
                   <div className="font-medium">{e.task}</div>
                   {e.owner && <div className="text-muted-foreground">Owner: {e.owner}</div>}
                 </div>

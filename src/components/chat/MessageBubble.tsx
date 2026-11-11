@@ -144,7 +144,7 @@ function renderInline(text: string): React.ReactNode[] {
     }
     if (part.startsWith("`") && part.endsWith("`")) {
       return (
-        <code key={i} className="rounded bg-background/60 px-1.5 py-0.5 font-mono text-[0.85em]">
+        <code key={i} className="rounded bg-card px-1.5 py-0.5 font-mono text-[0.85em]">
           {part.slice(1, -1)}
         </code>
       );
@@ -228,7 +228,7 @@ export function MessageBubble({
   if (message.kind === "system") {
     return (
       <div className="my-3 flex justify-center">
-        <span className="rounded-full bg-accent/70 px-3 py-1 text-[11px] text-muted-foreground">
+        <span className="rounded-full bg-accent px-3 py-1 text-[11px] text-muted-foreground">
           {message.body}
         </span>
       </div>
@@ -334,7 +334,7 @@ export function MessageBubble({
   if (message.deleted) {
     return (
       <div className={cn("group my-0.5 flex px-4", isOwn ? "justify-end" : "justify-start")}>
-        <div className="rounded-2xl border border-border/60 bg-accent/40 px-4 py-2 text-xs italic text-muted-foreground">
+        <div className="rounded-2xl border border-border/60 bg-accent px-4 py-2 text-xs italic text-muted-foreground">
           🗑️ This message was deleted
         </div>
       </div>
@@ -365,7 +365,7 @@ export function MessageBubble({
         {message.parentId && (
           <div
             className={cn(
-              "mb-1 rounded-lg border-l-2 border-primary/60 bg-background/40 px-2.5 py-1 text-[11px] text-muted-foreground",
+              "mb-1 rounded-lg border-l-2 border-primary/60 bg-card px-2.5 py-1 text-[11px] text-muted-foreground",
               isOwn ? "mr-2" : "ml-2",
             )}
           >
@@ -418,7 +418,7 @@ export function MessageBubble({
                   href={a.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2.5 rounded-lg border border-border/70 bg-background/50 p-2 transition-colors hover:border-primary/40"
+                  className="flex items-center gap-2.5 rounded-lg border border-border/70 bg-card p-2 transition-colors hover:border-primary/40"
                 >
                   <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/12 text-primary">
                     <FileText className="size-4" />
@@ -472,7 +472,7 @@ export function MessageBubble({
                   "flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-all hover:scale-105",
                   r.mine
                     ? "border-primary/50 bg-primary/15 text-primary"
-                    : "border-border bg-background/60 text-muted-foreground",
+                    : "border-border bg-card text-muted-foreground",
                 )}
               >
                 {r.emoji} <span className="text-[10px]">{r.count}</span>
@@ -518,7 +518,7 @@ function PollBody({
   const myVote = poll.options.find((o) => o.votes.includes(myId))?.id;
 
   return (
-    <div className="mb-1.5 min-w-56 rounded-xl border border-border/70 bg-background/40 p-2.5">
+    <div className="mb-1.5 min-w-56 rounded-xl border border-border/70 bg-card p-2.5">
       <div className="mb-2 flex items-center gap-2 text-xs font-semibold">
         📊 {poll.question}
       </div>
@@ -536,8 +536,8 @@ function PollBody({
                 voted
                   ? "border-primary/50 bg-primary/10"
                   : myVote
-                    ? "border-border/60 bg-background/40 opacity-60"
-                    : "border-border/70 bg-background/40 hover:border-primary/40",
+                    ? "border-border/60 bg-card opacity-60"
+                    : "border-border/70 bg-card hover:border-primary/40",
               )}
             >
               <div

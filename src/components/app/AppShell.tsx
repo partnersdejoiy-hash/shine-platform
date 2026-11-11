@@ -180,7 +180,7 @@ export function AppShell() {
       <PolicyAckGate />
 
       {/* ===== DESKTOP NAV RAIL (hidden on mobile & tablet) ===== */}
-      <nav className={embed ? "hidden" : "hidden md:flex h-full w-[68px] lg:w-[252px] shrink-0 flex-col items-center lg:items-stretch border-r border-border/70 bg-sidebar"}>
+      <nav className={embed ? "hidden" : "hidden md:flex h-full w-[68px] lg:w-[252px] shrink-0 flex-col items-center lg:items-stretch border-r border-border shine-rail"}>
         <div className="flex shrink-0 items-center py-3 lg:px-5 lg:py-4">
           <button onClick={() => navigate("/app")} className="transition-transform hover:scale-105" title="Shine">
             <ShineLogo size={38} showWordmark={false} className="lg:hidden" />
@@ -205,14 +205,14 @@ export function AppShell() {
                     "relative grid size-11 shrink-0 place-items-center rounded-2xl border-2 transition-[transform,background-color,box-shadow,color] duration-150 active:translate-x-px active:translate-y-px",
                     "lg:flex lg:h-11 lg:w-full lg:items-center lg:justify-start lg:gap-3.5 lg:rounded-full lg:border-0 lg:px-4 lg:shadow-none",
                     n.match(location.pathname)
-                      ? "border-[var(--sticker-border)] bg-primary text-primary-foreground shadow-[3px_3px_0_var(--sticker-shadow)] lg:bg-accent lg:font-bold lg:text-foreground lg:[&_svg]:text-primary"
+                      ? "border-[var(--sticker-border)] bg-primary text-primary-foreground shadow-[3px_3px_0_var(--sticker-shadow)] lg:font-bold"
                       : "border-transparent text-muted-foreground hover:bg-accent hover:text-foreground",
                   )}
                 >
                   <n.icon className="size-5" />
                   <span className="hidden text-[15px] lg:inline">{n.label}</span>
                   {n.to === "/app/chats" && (unread ?? 0) > 0 && (
-                    <span className="absolute -right-1.5 -top-1.5 grid h-[18px] min-w-[18px] place-items-center rounded-full border-2 border-sidebar bg-foreground px-1 text-[10px] font-bold text-background lg:static lg:ml-auto lg:h-auto lg:min-w-0 lg:border-0 lg:bg-transparent lg:text-[13px] lg:text-foreground">
+                    <span className="absolute -right-1.5 -top-1.5 grid h-[18px] min-w-[18px] place-items-center rounded-full border-2 border-sidebar bg-foreground px-1 text-[10px] font-bold text-background lg:static lg:ml-auto lg:h-auto lg:min-w-0 lg:border-0 lg:bg-transparent lg:text-[13px] lg:text-current">
                       {unread}
                     </span>
                   )}
@@ -291,7 +291,7 @@ export function AppShell() {
       {/* MAIN — pb-14 on mobile for bottom nav, pb-0 on desktop */}
       <div className={cn("flex min-w-0 flex-1 flex-col", !embed && !fullChat && "pb-[calc(4.25rem+env(safe-area-inset-bottom))] md:pb-0")}>
         {/* TOPBAR */}
-        <header className={cn("glass flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border/70 px-4", embed && "hidden", fullChat && "max-md:hidden")}>
+        <header className={cn("flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border bg-card px-4", embed && "hidden", fullChat && "max-md:hidden")}>
           <div className="flex items-center gap-3">
             {/* Phones: your picture opens your status and profile sheet (like Zoho Cliq, WhatsApp) */}
             <button
@@ -350,7 +350,7 @@ export function AppShell() {
       {/* ===== MOBILE BOTTOM NAV (visible only on mobile/tablet) ===== */}
       {/* docked like a phone app's tab bar (Zoho Cliq, WhatsApp): the active tab gets a pill behind its icon */}
       <nav
-        className={cn("md:hidden fixed inset-x-0 bottom-0 z-50 border-t border-border/80 bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl", (embed || fullChat) && "hidden")}
+        className={cn("md:hidden fixed inset-x-0 bottom-0 z-50 border-t border-border/80 bg-card pb-[env(safe-area-inset-bottom)]", (embed || fullChat) && "hidden")}
         aria-label="Shine"
       >
         <div className="flex h-[4.25rem] items-stretch justify-around px-1">
@@ -367,7 +367,7 @@ export function AppShell() {
               <span
                 className={cn(
                   "relative grid h-8 w-14 place-items-center rounded-full transition-colors",
-                  n.match(location.pathname) ? "bg-accent [&_svg]:text-primary" : "group-hover:bg-accent/60",
+                  n.match(location.pathname) ? "bg-accent [&_svg]:text-primary" : "group-hover:bg-accent",
                 )}
               >
                 <n.icon className="size-[22px]" strokeWidth={n.match(location.pathname) ? 2.4 : 1.9} />
@@ -392,7 +392,7 @@ export function AppShell() {
                   <span
                     className={cn(
                       "grid h-8 w-14 place-items-center rounded-full transition-colors",
-                      mobileFilteredMore.some((n) => n.match(location.pathname)) ? "bg-accent [&_svg]:text-primary" : "group-hover:bg-accent/60",
+                      mobileFilteredMore.some((n) => n.match(location.pathname)) ? "bg-accent [&_svg]:text-primary" : "group-hover:bg-accent",
                     )}
                   >
                     <MoreHorizontal className="size-[22px]" />

@@ -260,7 +260,7 @@ export function AppDashboard() {
                       <button
                         key={m._id}
                         onClick={() => navigate(`/app/meetings/${m._id}`)}
-                        className="flex w-full items-center gap-3 rounded-xl p-2 text-left transition-colors hover:bg-accent/60"
+                        className="flex w-full items-center gap-3 rounded-xl p-2 text-left transition-colors hover:bg-accent"
                       >
                         <div className="min-w-0 flex-1">
                           <div className="truncate text-xs font-semibold">{m.title}</div>
@@ -287,7 +287,7 @@ export function AppDashboard() {
                   <button
                     key={c._id}
                     onClick={() => navigate(`/app/chats/${c.conversationId}`)}
-                    className="flex w-full items-center gap-3 rounded-xl p-2 text-left transition-colors hover:bg-accent/60"
+                    className="flex w-full items-center gap-3 rounded-xl p-2 text-left transition-colors hover:bg-accent"
                   >
                     <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-rose-500/12 text-rose-400">
                       <PhoneMissed className="size-4" />

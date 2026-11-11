@@ -447,7 +447,7 @@ export function ChatView({
 
         {/* search banner */}
         {searchQ.trim().length >= 2 && (
-          <div className="flex items-center gap-2 border-b border-border/70 bg-accent/40 px-4 py-2 text-xs">
+          <div className="flex items-center gap-2 border-b border-border/70 bg-accent px-4 py-2 text-xs">
             <span className="text-muted-foreground">
               {searchHits ? `${searchHits.length} results` : "Searching…"}
             </span>
@@ -481,7 +481,7 @@ export function ChatView({
               <div key={msg._id}>
                 {showDay && (
                   <div className="my-4 flex justify-center">
-                    <span className="rounded-full bg-accent/70 px-3 py-1 text-[10px] font-medium text-muted-foreground">
+                    <span className="rounded-full bg-accent px-3 py-1 text-[10px] font-medium text-muted-foreground">
                       {formatDayLabel(msg.createdAt)}
                     </span>
                   </div>
@@ -522,7 +522,7 @@ export function ChatView({
           initial={{ x: 320 }}
           animate={{ x: 0 }}
           transition={{ type: "spring", damping: 30, stiffness: 300 }}
-          className="hidden w-80 shrink-0 flex-col border-l border-border/70 bg-background/40 md:flex"
+          className="hidden w-80 shrink-0 flex-col border-l border-border/70 bg-card md:flex"
         >
           <div className="flex items-center justify-between border-b border-border/70 px-4 py-3">
             <span className="text-sm font-semibold">Thread</span>
@@ -571,7 +571,7 @@ export function ChatView({
           initial={{ x: 320 }}
           animate={{ x: 0 }}
           transition={{ type: "spring", damping: 30, stiffness: 300 }}
-          className="hidden w-80 shrink-0 flex-col overflow-y-auto border-l border-border/70 bg-background/40 lg:flex"
+          className="hidden w-80 shrink-0 flex-col overflow-y-auto border-l border-border/70 bg-card lg:flex"
         >
           <div className="flex items-center justify-between border-b border-border/70 px-4 py-3">
             <span className="text-sm font-semibold">Details</span>
@@ -595,7 +595,7 @@ export function ChatView({
                   />
                   <div className="flex flex-col gap-1.5">
                     <button
-                      className="flex items-center gap-1.5 rounded-lg bg-accent/70 px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50"
+                      className="flex items-center gap-1.5 rounded-lg bg-accent px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50"
                       disabled={avatarBusy}
                       onClick={() => avatarInputRef.current?.click()}
                     >
@@ -646,7 +646,7 @@ export function ChatView({
                   ) : (
                     <button
                       onClick={() => { setRenameValue(conversation.name); setRenaming(true); }}
-                      className="w-full rounded-lg bg-accent/70 px-2.5 py-2 text-left text-xs font-medium text-foreground transition-colors hover:bg-accent"
+                      className="w-full rounded-lg bg-accent px-2.5 py-2 text-left text-xs font-medium text-foreground transition-colors hover:bg-accent"
                     >
                       {conversation.name}
                     </button>
@@ -671,7 +671,7 @@ export function ChatView({
                   return (
                     <div
                       key={m._id}
-                      className="group flex w-full items-center gap-2.5 rounded-xl p-1.5 text-left transition-colors hover:bg-accent/60"
+                      className="group flex w-full items-center gap-2.5 rounded-xl p-1.5 text-left transition-colors hover:bg-accent"
                     >
                       <button
                         className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
@@ -778,7 +778,7 @@ export function ChatView({
                 {(detail?.pinnedMessages ?? [])
                   .filter((p): p is NonNullable<typeof p> => !!p)
                   .map((p) => (
-                    <div key={p._id} className="rounded-xl border border-border/70 bg-background/50 p-2.5">
+                    <div key={p._id} className="rounded-xl border border-border/70 bg-card p-2.5">
                       <p className="line-clamp-2 text-xs">{p.body || "📎 Attachment"}</p>
                       <div className="mt-1 text-[10px] text-muted-foreground">
                         {p.sender ? displayName(p.sender) : "Unknown"} · pinned
@@ -799,7 +799,7 @@ export function ChatView({
                     href={f.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2.5 rounded-xl border border-border/70 bg-background/50 p-2 transition-colors hover:border-primary/40"
+                    className="flex items-center gap-2.5 rounded-xl border border-border/70 bg-card p-2 transition-colors hover:border-primary/40"
                   >
                     <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/12 text-primary">
                       <FileText className="size-3.5" />
@@ -831,7 +831,7 @@ export function ChatView({
                   {searchHits.slice(0, 6).map((h) => (
                     <button
                       key={h._id}
-                      className="w-full rounded-lg bg-accent/60 p-2 text-left text-xs transition-colors hover:bg-accent"
+                      className="w-full rounded-lg bg-accent p-2 text-left text-xs transition-colors hover:bg-accent"
                       onClick={() => setSearchQ("")}
                     >
                       <span className="font-medium">{h.sender ? displayName(h.sender) : "Unknown"}: </span>
@@ -867,7 +867,7 @@ export function ChatView({
               .map((c) => (
                 <button
                   key={c.conversation._id}
-                  className="flex w-full items-center gap-3 rounded-xl p-2 text-left transition-colors hover:bg-accent/60"
+                  className="flex w-full items-center gap-3 rounded-xl p-2 text-left transition-colors hover:bg-accent"
                   onClick={async () => {
                     if (forwardTarget) {
                       await forward({
@@ -962,7 +962,7 @@ function PolicyRow({
   onChange: (val: string) => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-2 rounded-xl border border-border/70 bg-background/50 px-3 py-2">
+    <div className="flex items-center justify-between gap-2 rounded-xl border border-border/70 bg-card px-3 py-2">
       <span className="text-xs text-muted-foreground">{label}</span>
       <div className="flex overflow-hidden rounded-lg border border-border/70">
         {["everyone", "admins"].map((opt) => (

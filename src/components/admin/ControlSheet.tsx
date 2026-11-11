@@ -115,7 +115,7 @@ function InlineEditCell({
   if (type === "select" && options) {
     return (
       <Select value={String(value ?? "")} onValueChange={(v) => onSave(v)}>
-        <SelectTrigger className="h-7 w-full text-xs border-primary/30 bg-background/50" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+        <SelectTrigger className="h-7 w-full text-xs border-primary/30 bg-card" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -315,7 +315,7 @@ function UsersTab({ currentUserRole }: { currentUserRole?: string }) {
       {/* Table */}
       <div className="flex-1 overflow-auto">
         <table className="w-full text-xs">
-          <thead className="sticky top-0 z-10 bg-sidebar/95 backdrop-blur">
+          <thead className="sticky top-0 z-10 bg-sidebar">
             <tr>
               <SortHeader field="name" label="Name" width="180px" />
               <SortHeader field="email" label="Email" width="200px" />
@@ -332,7 +332,7 @@ function UsersTab({ currentUserRole }: { currentUserRole?: string }) {
             {data.map((user: any) => (
               <tr
                 key={user._id}
-                className="border-b border-border/40 transition-colors hover:bg-accent/30"
+                className="border-b border-border/40 transition-colors hover:bg-accent"
               >
                 {/* Name */}
                 <td className="px-3 py-2">
@@ -486,9 +486,9 @@ function RolesTab() {
       </div>
       <div className="flex-1 overflow-auto">
         <table className="w-full text-xs">
-          <thead className="sticky top-0 z-10 bg-sidebar/95 backdrop-blur">
+          <thead className="sticky top-0 z-10 bg-sidebar">
             <tr className="border-b border-border/70">
-              <th className="sticky left-0 z-10 bg-sidebar/95 px-3 py-2 text-left font-semibold min-w-[120px]">Role</th>
+              <th className="sticky left-0 z-10 bg-sidebar px-3 py-2 text-left font-semibold min-w-[120px]">Role</th>
               {displayPerms.map((p: any) => (
                 <th key={p.id} className="whitespace-nowrap px-2 py-2 text-center text-[9px] font-medium text-muted-foreground min-w-[60px]" title={p.label ?? p.id}>
                   {(p.label ?? p.id ?? "").replace(/_/g, " ").slice(0, 18)}
@@ -500,8 +500,8 @@ function RolesTab() {
             {roles.map((role: string) => {
               const roleMatrix = matrix[role]?.current ?? {};
               return (
-                <tr key={role} className="border-b border-border/40 transition-colors hover:bg-accent/20">
-                  <td className="sticky left-0 z-10 bg-background/95 px-3 py-1.5">
+                <tr key={role} className="border-b border-border/40 transition-colors hover:bg-accent">
+                  <td className="sticky left-0 z-10 bg-card px-3 py-1.5">
                     <Badge variant="outline" className={cn("text-[10px] font-medium whitespace-nowrap", ROLE_BADGE_COLORS[role])}>
                       {ROLE_LABELS[role] ?? role}
                     </Badge>

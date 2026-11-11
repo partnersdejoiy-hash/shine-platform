@@ -72,7 +72,7 @@
   --sticker-border: #121212;
   --sticker-shadow: #121212;
 
-  --background: #fffbf7;
+  --background: #f3f0ec;
   --foreground: #121212;
   --card: #ffffff;
   --card-foreground: #121212;
@@ -80,15 +80,15 @@
   --popover-foreground: #121212;
   --primary: #ff4fa3;
   --primary-foreground: #121212;
-  --secondary: #f6eef2;
+  --secondary: #efe9ec;
   --secondary-foreground: #121212;
-  --muted: #f6eef2;
-  --muted-foreground: #6b6570;
-  --accent: #ffe3f1;
+  --muted: #efe9ec;
+  --muted-foreground: #514b56;
+  --accent: #ffd3e9;
   --accent-foreground: #121212;
   --destructive: #d4183d;
-  --border: #eae3e7;
-  --input: #e2d9de;
+  --border: #e1dadf;
+  --input: #d6ccd2;
   --ring: #ff4fa3;
   --chart-1: #ff4fa3;
   --chart-2: #4da3ff;
@@ -104,9 +104,9 @@
   --sidebar-border: #eae3e7;
   --sidebar-ring: #ff4fa3;
 
-  /* own-message bubble: soft accent tint, ink text stays readable */
-  --bubble-out: color-mix(in oklch, var(--gold) 22%, #fff);
-  --bubble-out-2: color-mix(in oklch, var(--gold) 30%, #fff);
+  /* own-message bubble: a clear pink, ink text stays readable */
+  --bubble-out: #ffbfdd;
+  --bubble-out-2: #ffa9d2;
 }
 
 .dark {
@@ -127,8 +127,8 @@
   --secondary: #26222a;
   --secondary-foreground: #f4f1f5;
   --muted: #26222a;
-  --muted-foreground: #a39cab;
-  --accent: #3a1a2c;
+  --muted-foreground: #b6aebd;
+  --accent: #4a1f37;
   --accent-foreground: #f4f1f5;
   --destructive: #ff5a5f;
   --border: #2f2a33;
@@ -148,8 +148,8 @@
   --sidebar-border: #2a252e;
   --sidebar-ring: #ff5cab;
 
-  --bubble-out: color-mix(in oklch, var(--gold) 30%, #1d1a20);
-  --bubble-out-2: color-mix(in oklch, var(--gold) 22%, #1d1a20);
+  --bubble-out: #6a2a4b;
+  --bubble-out-2: #5a2340;
 }
 
 @layer base {
@@ -196,15 +196,25 @@
 
 /* ---- SHINE utility layer ------------------------------------------------ */
 @layer components {
-  .glass {
-    background: color-mix(in oklch, var(--card) 72%, transparent);
-    backdrop-filter: blur(18px) saturate(1.4);
-    -webkit-backdrop-filter: blur(18px) saturate(1.4);
-  }
+  /* solid panels, like Zoho Cliq and the Claude apps: no see-through glass anywhere */
+  .glass,
   .glass-strong {
-    background: color-mix(in oklch, var(--card) 86%, transparent);
-    backdrop-filter: blur(26px) saturate(1.6);
-    -webkit-backdrop-filter: blur(26px) saturate(1.6);
+    background: var(--card);
+  }
+  /* the desktop rail: a solid dark plum bar, so the app reads at a glance (Cliq-style) */
+  .shine-rail {
+    --background: #1d1420;
+    --foreground: #fbf3f8;
+    --card: #2a1e2e;
+    --muted: #2a1e2e;
+    --muted-foreground: #c9b8c6;
+    --accent: #3a2840;
+    --accent-foreground: #fbf3f8;
+    --border: #35283a;
+    --sticker-border: #000000;
+    --sticker-shadow: #000000;
+    background: #1d1420;
+    color: #fbf3f8;
   }
   /* accent words in headlines: a marker swipe instead of the old gold gradient */
   .gold-text {
@@ -243,22 +253,22 @@
   }
   /* own messages take the chat's colour (--t), like an opened Dejoiy Mail card */
   .bubble-out {
-    background: color-mix(in oklch, var(--t, var(--gold)) 30%, var(--card));
+    background: color-mix(in oklch, var(--t, var(--gold)) 46%, var(--card));
     border: 1.5px solid color-mix(in oklch, var(--t, var(--gold)) 70%, var(--sticker-border));
     box-shadow: 3px 3px 0 color-mix(in oklch, var(--t, var(--gold)) 75%, var(--sticker-shadow));
   }
   .bubble-in {
-    background: color-mix(in oklch, var(--t, var(--gold)) 6%, var(--card));
-    border: 1.5px solid color-mix(in oklch, var(--t, var(--gold)) 28%, var(--border));
-    box-shadow: 2px 2px 0 color-mix(in oklch, var(--t, var(--gold)) 22%, transparent);
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    box-shadow: 0 1px 0 var(--border);
   }
   @media (prefers-reduced-motion: reduce) {
     .card-hover, .card-hover:hover { transition: none; transform: none; }
   }
   /* chat cards, coloured like Dejoiy Mail's mail cards (--t comes from lib/tone.ts) */
   .tone-card {
-    background: color-mix(in oklch, var(--t) 13%, var(--card));
-    border: 1.5px solid color-mix(in oklch, var(--t) 38%, transparent);
+    background: color-mix(in oklch, var(--t) 16%, var(--card));
+    border: 1.5px solid color-mix(in oklch, var(--t) 45%, var(--border));
     border-radius: 22px;
     transition: background-color 0.18s, box-shadow 0.18s, transform 0.18s, border-color 0.18s;
   }
