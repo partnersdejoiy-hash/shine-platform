@@ -6,7 +6,7 @@ import { displayName, formatBytes, formatTime } from "@/lib/format";
 import { QUICK_REACTIONS } from "@/lib/emoji";
 import { cn } from "@/lib/utils";
 import { useMutation } from "convex/react";
-import { motion } from "framer-motion";
+import { motion, useMotionValue, useTransform } from "framer-motion";
 import {
   Bookmark,
   Check,
@@ -208,6 +208,9 @@ function CodeBlock({ code }: { code: string }) {
   );
 }
 
+const SWIPE_REPLY = 56; // px dragged right before letting go starts a reply
+const touchScreen = typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches;
+
 export function MessageBubble({
   message,
   isOwn,
@@ -224,6 +227,10 @@ export function MessageBubble({
   const toggleBookmark = useMutation(api.messages.toggleBookmark);
   const votePoll = useMutation(api.messages.votePoll);
   const [menuOpen, setMenuOpen] = useState(false);
+  // swipe right to reply, like WhatsApp (touch screens only, so desktop text selection still works)
+  const swipeX = useMotionValue(0);
+  const replyHint = useTransform(swipeX, [0, SWIPE_REPLY], [0, 1]);
+  const replyHintScale = useTransform(swipeX, [0, SWIPE_REPLY], [0.5, 1]);
 
   if (message.kind === "system") {
     return (
@@ -351,7 +358,30 @@ export function MessageBubble({
       onMouseLeave={() => setMenuOpen(false)}
     >
       {menu}
-      <div className={cn("flex max-w-[78%] flex-col sm:max-w-[62%]", isOwn && "items-end")}>
+      {touchScreen && (
+        <motion.span
+          aria-hidden
+          style={{ opacity: replyHint, scale: replyHintScale }}
+          className="pointer-events-none absolute left-3 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-full bg-accent text-foreground"
+        >
+          <CornerUpLeft className="size-4" />
+        </motion.span>
+      )}
+      <motion.div
+        className={cn("flex max-w-[78%] flex-col sm:max-w-[62%]", isOwn && "items-end")}
+        style={{ x: swipeX }}
+        drag={touchScreen ? "x" : false}
+        dragDirectionLock
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={{ left: 0, right: 0.6 }}
+        dragSnapToOrigin
+        onDragEnd={() => {
+          if (swipeX.get() >= SWIPE_REPLY) {
+            navigator.vibrate?.(12);
+            onReply(message);
+          }
+        }}
+      >
         {/* header for group/channel */}
         {showHeader && !isOwn && (
           <div className="mb-0.5 flex items-center gap-2 pl-1">
@@ -499,7 +529,7 @@ export function MessageBubble({
             Seen by {othersRead.length}
           </div>
         )}
-      </div>
+      </motion.div>
     </motion.div>
   );
 }
