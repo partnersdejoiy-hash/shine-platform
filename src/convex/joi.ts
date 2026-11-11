@@ -13,7 +13,9 @@ import { notifyMembers } from "./messages";
  */
 
 export const joiEmail = () => (process.env.JOI_EMAIL ?? "joi-ai@mail.dejoiy.com").trim().toLowerCase();
-const JOI_PHOTO = "https://joi-ai.dejoiy.com/joi-portrait-192.jpg";
+// her animated profile picture (Joi bobbing, waving and winking on DEJOIY pink)
+const JOI_PHOTO = "https://joi-ai.dejoiy.com/joi-avatar.webp";
+export const JOI_STATUS = "Joi is an AI. It can make mistakes.";
 const CHANNEL = "joi";
 
 async function findJoi(ctx: QueryCtx | MutationCtx): Promise<Doc<"users"> | null> {
@@ -37,16 +39,22 @@ export const ensureJoi = internalMutation({
         email: joiEmail(),
         image: JOI_PHOTO,
         designation: "DEJOIY's AI buddy",
-        bio: "I'm Joi! Ask me anything in #joi, message me, or @Joi me in any chat.",
+        bio: `I'm Joi, DEJOIY's AI buddy! Ask me anything in #joi, message me, or @Joi me in any chat. ${JOI_STATUS}`,
+        customStatus: JOI_STATUS,
         source: "joi",
         isActive: true,
       });
       joi = (await ctx.db.get(id))!;
     } else {
+      // her picture and the "she's an AI" note always come back, whatever a sync changed
       await ctx.db.patch(joi._id, {
         name: joi.name || "Joi",
-        image: joi.image || JOI_PHOTO,
-        designation: joi.designation || "DEJOIY's AI buddy",
+        image: JOI_PHOTO,
+        avatarStorageId: undefined,
+        designation: "DEJOIY's AI buddy",
+        customStatus: JOI_STATUS,
+        bio: `I'm Joi, DEJOIY's AI buddy! Ask me anything in #joi, message me, or @Joi me in any chat. ${JOI_STATUS}`,
+        source: "joi",
         isActive: true,
       });
     }

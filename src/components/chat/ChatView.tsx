@@ -278,7 +278,9 @@ export function ChatView({
   const typingNames = (typing ?? []).filter((t) => t._id !== myId).map((t) => t.name ?? "Someone");
   const statusLine = typingNames.length
     ? `${typingNames.join(", ")} typing…`
-    : other
+    : other?.source === "joi"
+      ? `AI · ${other.customStatus || "Joi is an AI. It can make mistakes."}`
+      : other
       ? isOnline(otherPresence)
         ? effectiveStatus(otherPresence) === "away"
           ? "Away"
