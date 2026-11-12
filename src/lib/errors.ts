@@ -62,7 +62,9 @@ const ERROR_MAP: Record<string, string> = {
 export function getFriendlyError(error: unknown): string {
   if (!error) return "Something went wrong. Please try again.";
 
-  const raw = error instanceof Error ? error.message : String(error);
+  // the server's own words (thrown as ConvexError), without Convex's wrapper
+  const data = (error as { data?: unknown })?.data;
+  const raw = typeof data === "string" && data ? data : error instanceof Error ? error.message : String(error);
 
   // Direct match
   if (ERROR_MAP[raw]) return ERROR_MAP[raw];
@@ -98,4 +100,19 @@ export function getFriendlyError(error: unknown): string {
  */
 export function toastFriendlyError(error: unknown, fallback?: string): string {
   return getFriendlyError(error) ?? fallback ?? "Something went wrong. Please try again.";
+}
+
+/** A short, human error for toasts: the server's own words (ConvexError), never Convex's "[CONVEX M(x)] [Request ID …] Server Error" wrapper. */
+export function errorMessage(e: unknown): string {
+  const data = (e as { data?: unknown })?.data;
+  if (typeof data === "string" && data) return data;
+  const msg = String((e as Error)?.message ?? e ?? "");
+  const clean = msg
+    .split("\n")[0]
+    .replace(/^\[CONVEX [^\]]*\]\s*/, "")
+    .replace(/^\[Request ID: [^\]]*\]\s*/, "")
+    .replace(/^Server Error\s*/, "")
+    .replace(/^Uncaught (Convex)?Error:\s*/, "")
+    .trim();
+  return clean && clean !== "Server Error" ? clean.slice(0, 200) : "Shine hit a problem on the server. Try again in a moment.";
 }

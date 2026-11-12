@@ -50,6 +50,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { errorMessage } from "@/lib/errors";
 
 type ThemeMode = "dark" | "light" | "system";
 
@@ -396,6 +397,7 @@ export function AppSettings() {
     }
   };
 
+  const thisDeviceId = (() => { try { return localStorage.getItem("shine-device-id"); } catch { return null; } })();
   const currentDeviceName =
     typeof navigator !== "undefined"
       ? `${navigator.platform ?? "Device"} · ${navigator.userAgent.includes("Mobile") ? "Mobile" : "Desktop"}`
@@ -696,7 +698,7 @@ export function AppSettings() {
             <Card className="border-border/70 shadow-none">
               <CardHeader>
                 <CardTitle className="text-sm font-semibold">Theme</CardTitle>
-                <CardDescription>SHINE ships with a premium gold-on-black theme and a light alternative.</CardDescription>
+                <CardDescription>Pick light, dark, or follow your device.</CardDescription>
               </CardHeader>
               <CardContent className="grid gap-3 sm:grid-cols-2">
                 {(
@@ -780,7 +782,7 @@ export function AppSettings() {
                               await setAccentColor({ accentColor: accent.id });
                               toast.success(`App color set to ${accent.label}`);
                             } catch (e) {
-                              toast.error(e instanceof Error ? e.message : "Failed to save color");
+                              toast.error(e instanceof Error ? errorMessage(e) : "Failed to save color");
                             }
                           }}
                           className={cn(
@@ -1042,7 +1044,7 @@ export function AppSettings() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 text-sm font-medium">
                         <span className="truncate">{d.name}</span>
-                        {d.isCurrent === true && (
+                        {d._id === thisDeviceId && (
                           <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-medium text-primary">
                             This device
                           </span>
@@ -1097,10 +1099,10 @@ export function AppSettings() {
                 <SettingRow
                   icon={ShieldCheck}
                   title="Two-factor authentication"
-                  desc="One-time codes via email OTP are already enabled for your account."
+                  desc="Signing in with an emailed one-time code is on. An authenticator app or passkey (true two-factor) isn't available yet."
                   control={
-                    <span className="rounded-full bg-emerald-500/12 px-2.5 py-1 text-[11px] font-medium text-emerald-400">
-                      Enabled
+                    <span className="rounded-full bg-amber-500/12 px-2.5 py-1 text-[11px] font-medium text-amber-500">
+                      Email code
                     </span>
                   }
                 />
@@ -1253,7 +1255,7 @@ export function AppSettings() {
                       setPermDays("");
                       toast.success("Request submitted — an admin or the IT team will review it");
                     } catch (e) {
-                      toast.error(e instanceof Error ? e.message : "Failed to submit request");
+                      toast.error(e instanceof Error ? errorMessage(e) : "Failed to submit request");
                     } finally {
                       setRequesting(false);
                     }

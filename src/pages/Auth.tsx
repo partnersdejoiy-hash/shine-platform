@@ -6,6 +6,7 @@ import { dejoiyMailSignInUrl } from "@/lib/embed";
 import { Eye, EyeOff, Loader2, Lock, Mail, MessageSquareText, ShieldCheck, Video } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
+import { errorMessage } from "@/lib/errors";
 
 interface AuthProps {
   redirectAfterAuth?: string;
@@ -40,7 +41,7 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
       await signIn("dejoiy-mail-password", { email: email.trim(), password });
       navigate(redirect);
     } catch (err) {
-      const raw = err instanceof Error ? err.message : "";
+      const raw = err instanceof Error ? errorMessage(err) : "";
       setError(raw.replace(/^.*Uncaught Error:\s*/s, "").split("\n")[0].replace(/\s*at .*$/, "") || "Could not sign you in. Try again.");
       setBusy(false);
     }

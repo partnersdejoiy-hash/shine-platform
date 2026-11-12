@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
+import { errorMessage } from "@/lib/errors";
 
 function fileIcon(kind?: string) {
   switch (kind) {
@@ -94,7 +95,7 @@ export function AppFiles() {
       }
       toast(`Uploaded ${arr.length} file${arr.length > 1 ? "s" : ""}`);
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Upload failed");
+      toast(e instanceof Error ? errorMessage(e) : "Upload failed");
     } finally {
       setUploading(null);
     }

@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { errorMessage } from "@/lib/errors";
 
 const PERMISSION_OPTIONS = [
   { id: "start_meeting", label: "Start / schedule meetings" },
@@ -88,7 +89,7 @@ export function AppTickets() {
       setCreateOpen(false);
       setForm({ kind: "permission", target: "", title: "", description: "", priority: "normal", category: "" });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not create ticket");
+      toast.error(e instanceof Error ? errorMessage(e) : "Could not create ticket");
     } finally {
       setBusy(false);
     }
@@ -188,7 +189,7 @@ export function AppTickets() {
                       await addTicketNote({ ticketId: t._id as any, text });
                       toast.success("Note added");
                     } catch (e) {
-                      toast.error(e instanceof Error ? e.message : "Failed");
+                      toast.error(e instanceof Error ? errorMessage(e) : "Failed");
                     }
                   }}
                   onCancel={
@@ -196,7 +197,7 @@ export function AppTickets() {
                       ? () =>
                           cancelTicket({ ticketId: t._id as any })
                             .then(() => toast.success(`Ticket ${t.ticketNumber} cancelled`))
-                            .catch((e) => toast.error(e instanceof Error ? e.message : "Failed"))
+                            .catch((e) => toast.error(e instanceof Error ? errorMessage(e) : "Failed"))
                       : undefined
                   }
                 />
@@ -239,7 +240,7 @@ export function AppTickets() {
                               : `Forwarded to level ${(res.level ?? 0) + 1} of ${(t.approverChain ?? []).length}`,
                         );
                       } catch (e) {
-                        toast.error(e instanceof Error ? e.message : "Failed");
+                        toast.error(e instanceof Error ? errorMessage(e) : "Failed");
                       }
                     }}
                     onAddNote={async (text) => {
@@ -247,7 +248,7 @@ export function AppTickets() {
                         await addTicketNote({ ticketId: t._id as any, text });
                         toast.success("Note added");
                       } catch (e) {
-                        toast.error(e instanceof Error ? e.message : "Failed");
+                        toast.error(e instanceof Error ? errorMessage(e) : "Failed");
                       }
                     }}
                     onPickup={async () => {
@@ -255,7 +256,7 @@ export function AppTickets() {
                         await pickupTicket({ ticketId: t._id as any });
                         toast.success(`Ticket ${t.ticketNumber} picked up`);
                       } catch (e) {
-                        toast.error(e instanceof Error ? e.message : "Failed");
+                        toast.error(e instanceof Error ? errorMessage(e) : "Failed");
                       }
                     }}
                     onSendTemp={async () => {
@@ -263,7 +264,7 @@ export function AppTickets() {
                         await sendTempPasswordForTicket({ ticketId: t._id as any });
                         toast.success(`Temp password emailed — ticket resolved`);
                       } catch (e) {
-                        toast.error(e instanceof Error ? e.message : "Failed");
+                        toast.error(e instanceof Error ? errorMessage(e) : "Failed");
                       }
                     }}
                   />

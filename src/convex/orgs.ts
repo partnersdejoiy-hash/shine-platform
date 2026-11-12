@@ -1,6 +1,6 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { mutation, query } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { getCurrentUser, logAudit } from "./users";
 
 // ---- Organizations ----------------------------------------------------------
@@ -23,16 +23,16 @@ export const create = mutation({
   },
   handler: async (ctx, { name, description, logo, domain }) => {
     const user = await getCurrentUser(ctx);
-    if (!user) throw new Error("Not authenticated");
+    if (!user) throw new ConvexError("Not authenticated");
     const now = Date.now();
     const normalizedDomain = normalizeDomain(domain);
-    if (domain && !normalizedDomain) throw new Error("Invalid domain — use the form company.com");
+    if (domain && !normalizedDomain) throw new ConvexError("Invalid domain — use the form company.com");
     if (normalizedDomain) {
       const dup = await ctx.db
         .query("organizations")
         .withIndex("by_domain", (q) => q.eq("domain", normalizedDomain))
         .collect();
-      if (dup.length > 0) throw new Error(`Domain ${normalizedDomain} is already registered by another organization`);
+      if (dup.length > 0) throw new ConvexError(`Domain ${normalizedDomain} is already registered by another organization`);
     }
     const orgId = await ctx.db.insert("organizations", {
       name,
@@ -135,26 +135,26 @@ export const update = mutation({
   },
   handler: async (ctx, { orgId, ...patch }) => {
     const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("Not authenticated");
+    if (userId === null) throw new ConvexError("Not authenticated");
     const membership = await ctx.db
       .query("organizationMembers")
       .withIndex("by_org", (q) => q.eq("orgId", orgId))
       .filter((q) => q.eq(q.field("userId"), userId))
       .unique();
     if (!membership || (membership.role !== "owner" && membership.role !== "admin")) {
-      throw new Error("Only owners/admins can update the organization");
+      throw new ConvexError("Only owners/admins can update the organization");
     }
     const clean = Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined));
     if (typeof patch.domain === "string") {
       const normalized = normalizeDomain(patch.domain);
-      if (!normalized) throw new Error("Invalid domain — use the form company.com");
+      if (!normalized) throw new ConvexError("Invalid domain — use the form company.com");
       clean.domain = normalized;
       const dup = await ctx.db
         .query("organizations")
         .withIndex("by_domain", (q) => q.eq("domain", normalized))
         .collect();
       if (dup.some((o) => o._id !== orgId)) {
-        throw new Error(`Domain ${normalized} is already registered by another organization`);
+        throw new ConvexError(`Domain ${normalized} is already registered by another organization`);
       }
     }
     if (Object.keys(clean).length) await ctx.db.patch(orgId, clean);
@@ -230,26 +230,26 @@ export const invite = mutation({
   },
   handler: async (ctx, { orgId, email, role = "member", department, designation }) => {
     const actor = await getCurrentUser(ctx);
-    if (!actor) throw new Error("Not authenticated");
+    if (!actor) throw new ConvexError("Not authenticated");
     const membership = await ctx.db
       .query("organizationMembers")
       .withIndex("by_org", (q) => q.eq("orgId", orgId))
       .filter((q) => q.eq(q.field("userId"), actor._id))
       .unique();
     if (!membership || (membership.role !== "owner" && membership.role !== "admin")) {
-      throw new Error("Only owners/admins can invite members");
+      throw new ConvexError("Only owners/admins can invite members");
     }
     const target = await ctx.db
       .query("users")
       .withIndex("email", (q) => q.eq("email", email.toLowerCase().trim()))
       .unique();
-    if (!target) throw new Error("No SHINE account found for that email");
+    if (!target) throw new ConvexError("No SHINE account found for that email");
     const existing = await ctx.db
       .query("organizationMembers")
       .withIndex("by_org", (q) => q.eq("orgId", orgId))
       .filter((q) => q.eq(q.field("userId"), target._id))
       .unique();
-    if (existing) throw new Error("That user is already a member");
+    if (existing) throw new ConvexError("That user is already a member");
     await ctx.db.insert("organizationMembers", {
       orgId,
       userId: target._id,
@@ -279,19 +279,19 @@ export const setMemberRole = mutation({
   },
   handler: async (ctx, { orgId, userId, role }) => {
     const actor = await getCurrentUser(ctx);
-    if (!actor) throw new Error("Not authenticated");
+    if (!actor) throw new ConvexError("Not authenticated");
     const membership = await ctx.db
       .query("organizationMembers")
       .withIndex("by_org", (q) => q.eq("orgId", orgId))
       .filter((q) => q.eq(q.field("userId"), actor._id))
       .unique();
-    if (!membership || membership.role !== "owner") throw new Error("Only the owner can change roles");
+    if (!membership || membership.role !== "owner") throw new ConvexError("Only the owner can change roles");
     const target = await ctx.db
       .query("organizationMembers")
       .withIndex("by_org", (q) => q.eq("orgId", orgId))
       .filter((q) => q.eq(q.field("userId"), userId))
       .unique();
-    if (!target) throw new Error("Not a member");
+    if (!target) throw new ConvexError("Not a member");
     await ctx.db.patch(target._id, { role });
     await logAudit(ctx, actor._id, "org.member_role_changed", "organizations", String(orgId), `${userId} -> ${role}`, String(orgId));
   },
@@ -301,19 +301,19 @@ export const removeMember = mutation({
   args: { orgId: v.id("organizations"), userId: v.id("users") },
   handler: async (ctx, { orgId, userId }) => {
     const actor = await getCurrentUser(ctx);
-    if (!actor) throw new Error("Not authenticated");
+    if (!actor) throw new ConvexError("Not authenticated");
     const membership = await ctx.db
       .query("organizationMembers")
       .withIndex("by_org", (q) => q.eq("orgId", orgId))
       .filter((q) => q.eq(q.field("userId"), actor._id))
       .unique();
-    if (!membership || membership.role !== "owner") throw new Error("Only the owner can remove members");
+    if (!membership || membership.role !== "owner") throw new ConvexError("Only the owner can remove members");
     const target = await ctx.db
       .query("organizationMembers")
       .withIndex("by_org", (q) => q.eq("orgId", orgId))
       .filter((q) => q.eq(q.field("userId"), userId))
       .unique();
-    if (!target) throw new Error("Not a member");
+    if (!target) throw new ConvexError("Not a member");
     await ctx.db.delete(target._id);
     await logAudit(ctx, actor._id, "org.member_removed", "organizations", String(orgId), String(userId), String(orgId));
   },
@@ -329,7 +329,7 @@ export const createTeam = mutation({
   },
   handler: async (ctx, { orgId, name, description }) => {
     const user = await getCurrentUser(ctx);
-    if (!user) throw new Error("Not authenticated");
+    if (!user) throw new ConvexError("Not authenticated");
     const teamId = await ctx.db.insert("teams", {
       orgId,
       name,
@@ -372,9 +372,9 @@ export const addTeamMember = mutation({
   args: { teamId: v.id("teams"), userId: v.id("users"), role: v.optional(v.union(v.literal("lead"), v.literal("member"))) },
   handler: async (ctx, { teamId, userId, role = "member" }) => {
     const actor = await getCurrentUser(ctx);
-    if (!actor) throw new Error("Not authenticated");
+    if (!actor) throw new ConvexError("Not authenticated");
     const existing = await ctx.db.query("teamMembers").withIndex("by_team", (q) => q.eq("teamId", teamId)).filter((q) => q.eq(q.field("userId"), userId)).unique();
-    if (existing) throw new Error("Already on the team");
+    if (existing) throw new ConvexError("Already on the team");
     await ctx.db.insert("teamMembers", { teamId, userId, role, joinedAt: Date.now() });
   },
 });
@@ -383,7 +383,7 @@ export const removeTeamMember = mutation({
   args: { teamId: v.id("teams"), userId: v.id("users") },
   handler: async (ctx, { teamId, userId }) => {
     const actor = await getCurrentUser(ctx);
-    if (!actor) throw new Error("Not authenticated");
+    if (!actor) throw new ConvexError("Not authenticated");
     const existing = await ctx.db.query("teamMembers").withIndex("by_team", (q) => q.eq("teamId", teamId)).filter((q) => q.eq(q.field("userId"), userId)).unique();
     if (existing) await ctx.db.delete(existing._id);
   },

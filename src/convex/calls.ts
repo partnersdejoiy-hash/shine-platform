@@ -1,7 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { getCurrentUser, isSuperAdmin } from "./users";
 import { roleHasPermission } from "./permissions";
 
@@ -10,20 +10,20 @@ export const start = mutation({
   args: { conversationId: v.id("conversations"), kind: v.union(v.literal("audio"), v.literal("video")) },
   handler: async (ctx, { conversationId, kind }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     if (!isSuperAdmin(me) && !(await roleHasPermission(ctx, me.role, "one_to_one_call", me.approvedPermissions))) {
-      throw new Error("Your role does not include 1:1 calls — request it from Settings → Security");
+      throw new ConvexError("Your role does not include 1:1 calls — request it from Settings → Security");
     }
     const conversation = await ctx.db.get(conversationId);
     if (!conversation || conversation.kind !== "chat" || conversation.chatType !== "direct") {
-      throw new Error("Calls are available in direct conversations");
+      throw new ConvexError("Calls are available in direct conversations");
     }
     const members = await ctx.db
       .query("conversationMembers")
       .withIndex("by_conversation", (q) => q.eq("conversationId", conversationId))
       .collect();
     const recipient = members.find((m) => m.userId !== me._id);
-    if (!recipient) throw new Error("No recipient for this call");
+    if (!recipient) throw new ConvexError("No recipient for this call");
 
     const now = Date.now();
     const callId = await ctx.db.insert("calls", {
@@ -56,10 +56,10 @@ export const accept = mutation({
   args: { callId: v.id("calls") },
   handler: async (ctx, { callId }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const call = await ctx.db.get(callId);
-    if (!call) throw new Error("Call not found");
-    if (call.recipientId !== me._id && call.initiatorId !== me._id) throw new Error("Not your call");
+    if (!call) throw new ConvexError("Call not found");
+    if (call.recipientId !== me._id && call.initiatorId !== me._id) throw new ConvexError("Not your call");
     await ctx.db.patch(callId, { status: "active" });
   },
 });
@@ -68,10 +68,10 @@ export const decline = mutation({
   args: { callId: v.id("calls") },
   handler: async (ctx, { callId }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const call = await ctx.db.get(callId);
-    if (!call) throw new Error("Call not found");
-    if (call.recipientId !== me._id) throw new Error("Not your call");
+    if (!call) throw new ConvexError("Call not found");
+    if (call.recipientId !== me._id) throw new ConvexError("Not your call");
     await ctx.db.patch(callId, { status: "declined", endedAt: Date.now() });
   },
 });
@@ -197,7 +197,7 @@ export const sendSignal = mutation({
   },
   handler: async (ctx, { callId, toId, kind, payload }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     await ctx.db.insert("callSignals", {
       callId,
       fromId: me._id,
@@ -240,7 +240,7 @@ export const sendMeetingSignal = mutation({
   },
   handler: async (ctx, { meetingId, toId, kind, payload }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     await ctx.db.insert("meetingSignals", {
       meetingId,
       fromId: me._id,

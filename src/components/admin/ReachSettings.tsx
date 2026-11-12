@@ -6,6 +6,7 @@ import { useMutation, useQuery } from "convex/react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import type { Id } from "@/convex/_generated/dataModel";
+import { errorMessage } from "@/lib/errors";
 
 /**
  * Admin console: can this company's employees message and email supervisors
@@ -22,7 +23,7 @@ export function ReachSettings() {
     () => (data?.people ?? []).filter((p) => `${p.name ?? ""} ${p.email ?? ""}`.toLowerCase().includes(q.toLowerCase())),
     [data?.people, q],
   );
-  const fail = (e: unknown) => toast.error(e instanceof Error ? e.message.replace(/^.*Uncaught Error:\s*/s, "").split("\n")[0] : "Couldn't save");
+  const fail = (e: unknown) => toast.error(e instanceof Error ? errorMessage(e).replace(/^.*Uncaught Error:\s*/s, "").split("\n")[0] : "Couldn't save");
 
   if (data === undefined) return <p className="p-4 text-sm text-muted-foreground">Loading…</p>;
 

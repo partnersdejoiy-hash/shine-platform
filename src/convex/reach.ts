@@ -1,5 +1,5 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { internalQuery, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { isSuperAdmin, logAudit } from "./users";
@@ -99,11 +99,11 @@ export const supervisorsForMail = internalQuery({
 async function adminOf(ctx: MutationCtx | QueryCtx, domain?: string) {
   const userId = await getAuthUserId(ctx);
   const me = userId ? await ctx.db.get(userId) : null;
-  if (!me) throw new Error("Sign in first.");
+  if (!me) throw new ConvexError("Sign in first.");
   const role = me.role ?? "";
   const target = (domain ?? domainOf(me.email)).toLowerCase();
   if (PLATFORM.has(role) || (COMPANY.has(role) && target === domainOf(me.email))) return { me, domain: target, platform: PLATFORM.has(role) };
-  throw new Error("Only admins and IT admins can change this.");
+  throw new ConvexError("Only admins and IT admins can change this.");
 }
 
 /** For the admin console: the company switch and everyone's own setting. */
@@ -139,7 +139,7 @@ export const setPerson = mutation({
   args: { userId: v.id("users"), enabled: v.union(v.boolean(), v.null()) },
   handler: async (ctx, { userId, enabled }) => {
     const target = await ctx.db.get(userId);
-    if (!target) throw new Error("No such person.");
+    if (!target) throw new ConvexError("No such person.");
     const { me } = await adminOf(ctx, domainOf(target.email));
     await ctx.db.patch(userId as Id<"users">, { reachSupervisors: enabled ?? undefined });
     await logAudit(ctx, me._id, "reach.person", "users", String(userId), enabled === null ? "company default" : enabled ? "on" : "off");

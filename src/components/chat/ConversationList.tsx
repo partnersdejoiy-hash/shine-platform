@@ -13,6 +13,7 @@ import { Hash, MessageSquarePlus, Mic, Pin, PinOff, Search, Volume2, VolumeX, Ar
 import { useMutation } from "convex/react";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { errorMessage } from "@/lib/errors";
 
 export interface ConversationItem {
   conversation: {
@@ -290,7 +291,7 @@ export function ConversationList({
                 try {
                   await togglePin({ conversationId: ctxMenu.id as any, pinned: !ctxMenu.pinned });
                   toast.success(ctxMenu.pinned ? "Unpinned" : "Pinned to top");
-                } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+                } catch (e) { toast.error(e instanceof Error ? errorMessage(e) : "Failed"); }
                 setCtxMenu(null);
               }}
             >
@@ -303,7 +304,7 @@ export function ConversationList({
                 try {
                   await setMuted({ conversationId: ctxMenu.id as any, muted: !ctxMenu.muted });
                   toast.success(ctxMenu.muted ? "Unmuted" : "Muted");
-                } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+                } catch (e) { toast.error(e instanceof Error ? errorMessage(e) : "Failed"); }
                 setCtxMenu(null);
               }}
             >
@@ -316,7 +317,7 @@ export function ConversationList({
                 try {
                   await archiveConv({ conversationId: ctxMenu.id as any, archived: true });
                   toast.success("Archived");
-                } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+                } catch (e) { toast.error(e instanceof Error ? errorMessage(e) : "Failed"); }
                 setCtxMenu(null);
               }}
             >

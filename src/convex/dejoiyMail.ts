@@ -2,7 +2,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { action, internalAction, internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { roleFromMail } from "./lib/adminRoles";
 import { verifyDejoiyMailToken } from "./lib/dejoiyMailToken";
 import type { Role } from "./schema";
@@ -48,7 +48,7 @@ export const upsertUser = internalMutation({
       .first();
     if (user) {
       if (user.isActive === false) {
-        throw new Error("This account has been deactivated. Contact your administrator.");
+        throw new ConvexError("This account has been deactivated. Contact your administrator.");
       }
       await applyMail(ctx, user, c);
       return user._id;
@@ -140,7 +140,7 @@ export const syncDirectory = internalAction({
     const secret = process.env.DEJOIY_MAIL_SSO_SECRET;
     if (!base || !secret) return null; // not connected to Dejoiy Mail (e.g. a local dev copy)
     const res = await fetch(`${base}/api/shine/directory`, { headers: { Authorization: `Bearer ${secret}` } });
-    if (!res.ok) throw new Error(`Dejoiy Mail directory: HTTP ${res.status}`);
+    if (!res.ok) throw new ConvexError(`Dejoiy Mail directory: HTTP ${res.status}`);
     const { people } = (await res.json()) as { people: Array<Record<string, unknown>> };
     const clean = (people ?? []).map((p) => ({
       email: String(p.email ?? ""),
@@ -152,7 +152,7 @@ export const syncDirectory = internalAction({
       photo: typeof p.photo === "string" && p.photo.startsWith("https://") ? p.photo : "",
     })).filter((p) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email));
     // an empty answer would switch everyone off; treat it as a failed read instead
-    if (clean.length === 0) throw new Error("Dejoiy Mail directory came back empty");
+    if (clean.length === 0) throw new ConvexError("Dejoiy Mail directory came back empty");
     return await ctx.runMutation(internal.dejoiyMail.applyDirectory, { people: clean });
   },
 });

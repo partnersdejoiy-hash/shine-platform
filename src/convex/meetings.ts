@@ -2,7 +2,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { mutation, query, internalMutation, MutationCtx, QueryCtx } from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
-import { v, type ObjectType } from "convex/values";
+import { v, type ObjectType, ConvexError } from "convex/values";
 import { getCurrentUser, isSuperAdmin, logAudit } from "./users";
 import { roleHasPermission } from "./permissions";
 
@@ -88,7 +88,7 @@ async function createMeeting(
       !isSuperAdmin(me) &&
       !(await roleHasPermission(ctx, me.role, "start_meeting", me.approvedPermissions))
     ) {
-      throw new Error(
+      throw new ConvexError(
         "Your role does not include starting meetings — request it from Settings → Security",
       );
     }
@@ -219,7 +219,7 @@ export const create = mutation({
   args: createArgs,
   handler: async (ctx, args) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     return createMeeting(ctx, me, args);
   },
 });
@@ -232,7 +232,7 @@ export const createFromMail = internalMutation({
       .query("users")
       .withIndex("email", (q) => q.eq("email", hostEmail.toLowerCase()))
       .first();
-    if (!me || me.isActive === false) throw new Error("This mailbox has no Shine account yet. Open Shine once from Dejoiy Mail.");
+    if (!me || me.isActive === false) throw new ConvexError("This mailbox has no Shine account yet. Open Shine once from Dejoiy Mail.");
     return createMeeting(ctx, me, args);
   },
 });
@@ -347,15 +347,15 @@ export const join = mutation({
   args: { meetingId: v.id("meetings"), isMuted: v.optional(v.boolean()), isVideoOn: v.optional(v.boolean()) },
   handler: async (ctx, { meetingId, isMuted = false, isVideoOn = true }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const meeting = await ctx.db.get(meetingId);
-    if (!meeting) throw new Error("Meeting not found");
+    if (!meeting) throw new ConvexError("Meeting not found");
     if (meeting.status === "ended" || meeting.status === "cancelled") {
-      throw new Error("This meeting has ended");
+      throw new ConvexError("This meeting has ended");
     }
     // Locked meetings reject new joiners (the host and admitted members pass).
     if (meeting.locked && meeting.hostId !== me._id) {
-      throw new Error("This meeting is locked by the host");
+      throw new ConvexError("This meeting is locked by the host");
     }
     const now = Date.now();
     const isHost = meeting.hostId === me._id;
@@ -376,7 +376,7 @@ export const join = mutation({
           (e) => e.toLowerCase() === (me.email ?? "").toLowerCase(),
         );
       if (!isInvited) {
-        throw new Error(
+        throw new ConvexError(
           "This meeting is private — only invited participants can join. Ask the host to add you.",
         );
       }
@@ -463,16 +463,16 @@ export const admitParticipant = mutation({
   args: { meetingId: v.id("meetings"), userId: v.id("users"), admit: v.boolean() },
   handler: async (ctx, { meetingId, userId, admit }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     if (!(await isManager(ctx, meetingId, me._id))) {
-      throw new Error("Only the host or a co-host can admit people");
+      throw new ConvexError("Only the host or a co-host can admit people");
     }
     const p = await ctx.db
       .query("meetingParticipants")
       .withIndex("by_meeting", (q) => q.eq("meetingId", meetingId))
       .filter((q) => q.eq(q.field("userId"), userId))
       .unique();
-    if (!p) throw new Error("Not in this meeting");
+    if (!p) throw new ConvexError("Not in this meeting");
     await ctx.db.patch(p._id, {
       status: admit ? "active" : "denied",
       leftAt: undefined,
@@ -485,9 +485,9 @@ export const setLobbyEnabled = mutation({
   args: { meetingId: v.id("meetings"), enabled: v.boolean() },
   handler: async (ctx, { meetingId, enabled }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     if (!(await isManager(ctx, meetingId, me._id))) {
-      throw new Error("Only the host or a co-host can change this");
+      throw new ConvexError("Only the host or a co-host can change this");
     }
     await ctx.db.patch(meetingId, { lobbyEnabled: enabled });
   },
@@ -497,9 +497,9 @@ export const setLocked = mutation({
   args: { meetingId: v.id("meetings"), locked: v.boolean() },
   handler: async (ctx, { meetingId, locked }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     if (!(await isManager(ctx, meetingId, me._id))) {
-      throw new Error("Only the host or a co-host can change this");
+      throw new ConvexError("Only the host or a co-host can change this");
     }
     await ctx.db.patch(meetingId, { locked });
   },
@@ -514,18 +514,18 @@ export const setParticipantRole = mutation({
   },
   handler: async (ctx, { meetingId, userId, role }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const meeting = await ctx.db.get(meetingId);
     if (!meeting || meeting.hostId !== me._id) {
-      throw new Error("Only the host can assign co-hosts");
+      throw new ConvexError("Only the host can assign co-hosts");
     }
-    if (userId === me._id) throw new Error("You are the host already");
+    if (userId === me._id) throw new ConvexError("You are the host already");
     const p = await ctx.db
       .query("meetingParticipants")
       .withIndex("by_meeting", (q) => q.eq("meetingId", meetingId))
       .filter((q) => q.eq(q.field("userId"), userId))
       .unique();
-    if (!p) throw new Error("Not in this meeting");
+    if (!p) throw new ConvexError("Not in this meeting");
     await ctx.db.patch(p._id, { role });
     await logAudit(ctx, me._id, "meeting.cohost", "meetings", String(meetingId), `${userId}:${role}`);
   },
@@ -536,12 +536,12 @@ export const removeParticipant = mutation({
   args: { meetingId: v.id("meetings"), userId: v.id("users") },
   handler: async (ctx, { meetingId, userId }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     if (!(await isManager(ctx, meetingId, me._id))) {
-      throw new Error("Only the host or a co-host can remove people");
+      throw new ConvexError("Only the host or a co-host can remove people");
     }
     const meeting = await ctx.db.get(meetingId);
-    if (meeting && meeting.hostId === userId) throw new Error("Cannot remove the host");
+    if (meeting && meeting.hostId === userId) throw new ConvexError("Cannot remove the host");
     const p = await ctx.db
       .query("meetingParticipants")
       .withIndex("by_meeting", (q) => q.eq("meetingId", meetingId))
@@ -560,9 +560,9 @@ export const muteAll = mutation({
   args: { meetingId: v.id("meetings") },
   handler: async (ctx, { meetingId }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     if (!(await isManager(ctx, meetingId, me._id))) {
-      throw new Error("Only the host or a co-host can mute everyone");
+      throw new ConvexError("Only the host or a co-host can mute everyone");
     }
     const meeting = await ctx.db.get(meetingId);
     const parts = await ctx.db
@@ -588,12 +588,12 @@ export const createBreakoutRooms = mutation({
   },
   handler: async (ctx, { meetingId, names, durationMinutes }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     if (!(await isManager(ctx, meetingId, me._id))) {
-      throw new Error("Only the host or a co-host can manage breakout rooms");
+      throw new ConvexError("Only the host or a co-host can manage breakout rooms");
     }
     const meeting = await ctx.db.get(meetingId);
-    if (!meeting) throw new Error("Meeting not found");
+    if (!meeting) throw new ConvexError("Meeting not found");
     const cleaned = names.map((n) => n.trim()).filter(Boolean).slice(0, 8);
     if (cleaned.length === 0) {
       // Duration-only update (host toggled the timer after creating rooms).
@@ -607,7 +607,7 @@ export const createBreakoutRooms = mutation({
         });
         return;
       }
-      throw new Error("Add at least one breakout room");
+      throw new ConvexError("Add at least one breakout room");
     }
     const rooms = cleaned.map((name) => ({
       id: `br-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -629,12 +629,12 @@ export const assignToBreakout = mutation({
   args: { meetingId: v.id("meetings"), userId: v.id("users"), roomId: v.optional(v.string()) },
   handler: async (ctx, { meetingId, userId, roomId }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     if (!(await isManager(ctx, meetingId, me._id))) {
-      throw new Error("Only the host or a co-host can assign breakout rooms");
+      throw new ConvexError("Only the host or a co-host can assign breakout rooms");
     }
     const meeting = await ctx.db.get(meetingId);
-    if (!meeting) throw new Error("Meeting not found");
+    if (!meeting) throw new ConvexError("Meeting not found");
     const rooms = meeting.breakoutRooms ?? [];
     const next = rooms.map((r) => ({
       ...r,
@@ -655,15 +655,15 @@ export const startBreakouts = mutation({
   args: { meetingId: v.id("meetings") },
   handler: async (ctx, { meetingId }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     if (!(await isManager(ctx, meetingId, me._id))) {
-      throw new Error("Only the host or a co-host can start breakout rooms");
+      throw new ConvexError("Only the host or a co-host can start breakout rooms");
     }
     const meeting = await ctx.db.get(meetingId);
-    if (!meeting) throw new Error("Meeting not found");
+    if (!meeting) throw new ConvexError("Meeting not found");
     const rooms = meeting.breakoutRooms ?? [];
-    if (rooms.length === 0) throw new Error("No breakout rooms configured");
-    if (meeting.breakoutsActive) throw new Error("Breakout rooms are already running");
+    if (rooms.length === 0) throw new ConvexError("No breakout rooms configured");
+    if (meeting.breakoutsActive) throw new ConvexError("Breakout rooms are already running");
 
     const now = Date.now();
     const started: typeof rooms = [];
@@ -753,12 +753,12 @@ export const endBreakouts = mutation({
   args: { meetingId: v.id("meetings") },
   handler: async (ctx, { meetingId }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     if (!(await isManager(ctx, meetingId, me._id))) {
-      throw new Error("Only the host or a co-host can end breakout rooms");
+      throw new ConvexError("Only the host or a co-host can end breakout rooms");
     }
     const meeting = await ctx.db.get(meetingId);
-    if (!meeting) throw new Error("Meeting not found");
+    if (!meeting) throw new ConvexError("Meeting not found");
     const now = Date.now();
     for (const room of meeting.breakoutRooms ?? []) {
       if (!room.childMeetingId) continue;
@@ -830,10 +830,10 @@ export const end = mutation({
   args: { meetingId: v.id("meetings") },
   handler: async (ctx, { meetingId }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const meeting = await ctx.db.get(meetingId);
-    if (!meeting) throw new Error("Meeting not found");
-    if (meeting.hostId !== me._id) throw new Error("Only the host can end the meeting");
+    if (!meeting) throw new ConvexError("Meeting not found");
+    if (meeting.hostId !== me._id) throw new ConvexError("Only the host can end the meeting");
     const now = Date.now();
     await ctx.db.patch(meetingId, { status: "ended", endTime: now });
     const participants = await ctx.db
@@ -859,9 +859,9 @@ export const cancel = mutation({
   args: { meetingId: v.id("meetings") },
   handler: async (ctx, { meetingId }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const meeting = await ctx.db.get(meetingId);
-    if (!meeting || meeting.hostId !== me._id) throw new Error("Only the host can cancel");
+    if (!meeting || meeting.hostId !== me._id) throw new ConvexError("Only the host can cancel");
     await ctx.db.patch(meetingId, { status: "cancelled" });
     // cancel it on the Dejoiy Mail calendar too; guests get the cancellation from there
     if (meeting.calendarInvId) await ctx.scheduler.runAfter(0, internal.calendarLink.cancelMeeting, { meetingId });
@@ -960,7 +960,7 @@ export const meetingReport = query({
       .filter((q) => q.and(q.eq(q.field("userId"), me._id), q.eq(q.field("role"), "moderator")))
       .unique()) !== null;
     if (!isHost && !isModerator) {
-      throw new Error("Only the host or a co-host can download the report");
+      throw new ConvexError("Only the host or a co-host can download the report");
     }
 
     const host = await ctx.db.get(meeting.hostId);
@@ -1029,7 +1029,7 @@ export const adminEndMeeting = mutation({
   args: { meetingId: v.id("meetings") },
   handler: async (ctx, { meetingId }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const admin = await ctx.db
       .query("users")
       .filter((q) => q.eq(q.field("_id"), me._id))
@@ -1038,10 +1038,10 @@ export const adminEndMeeting = mutation({
       (admin?.role === "super_admin" || admin?.role === "admin") ||
       me.role === "super_admin" ||
       me.role === "admin";
-    if (!isAdminUser) throw new Error("Admins only");
+    if (!isAdminUser) throw new ConvexError("Admins only");
 
     const meeting = await ctx.db.get(meetingId);
-    if (!meeting) throw new Error("Meeting not found");
+    if (!meeting) throw new ConvexError("Meeting not found");
     if (meeting.status === "ended") return;
     const now = Date.now();
     await ctx.db.patch(meetingId, { status: "ended", endTime: now, lastActiveAt: now });

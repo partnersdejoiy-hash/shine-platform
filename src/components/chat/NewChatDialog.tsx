@@ -25,6 +25,7 @@ import { CornerDownLeft, Hash, Loader2, MessageCircle, Search, Shield, Users } f
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
+import { errorMessage } from "@/lib/errors";
 
 export function NewChatDialog({
   open,
@@ -112,7 +113,7 @@ export function NewChatDialog({
       onOpenChange(false);
       navigate(`/app/chats/${convId}`);
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Could not start chat");
+      toast(e instanceof Error ? errorMessage(e) : "Could not start chat");
     } finally {
       setBusy(false);
     }
@@ -174,7 +175,7 @@ export function NewChatDialog({
       onOpenChange(false);
       navigate(`/app/chats/${convId}`);
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Could not create group");
+      toast(e instanceof Error ? errorMessage(e) : "Could not create group");
     } finally {
       setBusy(false);
     }
@@ -202,7 +203,7 @@ export function NewChatDialog({
       onOpenChange(false);
       navigate(`/app/chats/${convId}`);
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Could not create channel");
+      toast(e instanceof Error ? errorMessage(e) : "Could not create channel");
     } finally {
       setBusy(false);
     }

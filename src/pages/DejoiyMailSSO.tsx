@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { api } from "@/convex/_generated/api";
 import { useAction } from "convex/react";
+import { errorMessage } from "@/lib/errors";
 
 /** Same-site paths only, so the token can never send someone elsewhere. */
 function safeNext(raw: string | null): string {
@@ -56,7 +57,7 @@ export default function DejoiyMailSSO() {
         await signIn("dejoiy-mail", { token });
         navigate(next, { replace: true });
       } catch (e) {
-        setError(e instanceof Error ? e.message.replace(/^.*Uncaught Error:\s*/s, "").split("\n")[0] : "Could not sign you in.");
+        setError(e instanceof Error ? errorMessage(e).replace(/^.*Uncaught Error:\s*/s, "").split("\n")[0] : "Could not sign you in.");
       }
     })();
   }, [params, isLoading, isAuthenticated, user?.email, signIn, signOut, navigate, refresh]);

@@ -21,7 +21,10 @@ export function usePresenceHeartbeat() {
   useEffect(() => {
     if (!isAuthenticated) return;
     const name = navigator.platform + " · " + (navigator.userAgent.includes("Mobile") ? "Mobile" : "Desktop");
-    registerDevice({ name, platform: navigator.platform, isCurrent: true }).catch(() => {});
+    // remember which device row is this browser, so Settings marks only this one "This device"
+    registerDevice({ name, platform: navigator.platform })
+      .then((id) => { try { localStorage.setItem("shine-device-id", String(id)); } catch { /* private mode */ } })
+      .catch(() => {});
 
     let lastInput = Date.now();
     let wasIdle = false;

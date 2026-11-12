@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { errorMessage } from "@/lib/errors";
 
 const ROLE_META: Record<string, { label: string; cls: string }> = {
   owner: { label: "Owner", cls: "bg-primary/15 text-primary" },
@@ -75,7 +76,7 @@ export function AppOrganizations() {
       setDomainDraft(form.domain.trim().toLowerCase());
       toast("Organization created");
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Creation failed");
+      toast(e instanceof Error ? errorMessage(e) : "Creation failed");
     }
   };
 
@@ -86,7 +87,7 @@ export function AppOrganizations() {
       await updateOrg({ orgId: effectiveOrg as any, domain: domainDraft.trim() || undefined });
       toast("Domain updated — matching emails join automatically");
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Save failed");
+      toast(e instanceof Error ? errorMessage(e) : "Save failed");
     } finally {
       setSavingDomain(false);
     }
@@ -104,7 +105,7 @@ export function AppOrganizations() {
       setInvite({ email: "", role: "member" });
       toast("Member added");
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Invite failed");
+      toast(e instanceof Error ? errorMessage(e) : "Invite failed");
     }
   };
 

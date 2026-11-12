@@ -35,6 +35,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
+import { errorMessage } from "@/lib/errors";
 
 /** Production meeting links always point at the standalone meet site. */
 export function meetingSiteBase(): string {
@@ -80,7 +81,7 @@ export function MeetHome() {
       });
       navigate(`/meet/${res.slug}/${res.roomCode}`);
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Failed to start");
+      toast(e instanceof Error ? errorMessage(e) : "Failed to start");
     } finally {
       setCreating(false);
     }
@@ -104,7 +105,7 @@ export function MeetHome() {
       navigator.clipboard.writeText(link).catch(() => {});
       toast("Meeting link copied — share it with anyone");
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Failed to create link");
+      toast(e instanceof Error ? errorMessage(e) : "Failed to create link");
     } finally {
       setCreating(false);
     }

@@ -1,6 +1,6 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { mutation, query, QueryCtx } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { presenceStatusValidator, availabilityValidator } from "./schema";
 import { beat, choiceValidator, setOwn } from "./presence";
 
@@ -219,7 +219,7 @@ export const updateProfile = mutation({
   },
   handler: async (ctx, patch) => {
     const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("Not authenticated");
+    if (userId === null) throw new ConvexError("Not authenticated");
     const clean = Object.fromEntries(
       Object.entries(patch).filter(([, val]) => val !== undefined),
     );
@@ -235,9 +235,9 @@ export const setAccentColor = mutation({
   args: { accentColor: v.string() },
   handler: async (ctx, { accentColor }) => {
     const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("Not authenticated");
+    if (userId === null) throw new ConvexError("Not authenticated");
     if (!/^[a-z0-9-]{1,32}$/.test(accentColor)) {
-      throw new Error("Invalid accent color");
+      throw new ConvexError("Invalid accent color");
     }
     await ctx.db.patch(userId, { accentColor });
     await logAudit(ctx, userId, "user.accent_changed", "users", String(userId), accentColor);
@@ -260,7 +260,7 @@ export const setNotificationPrefs = mutation({
   },
   handler: async (ctx, { prefs }) => {
     const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("Not authenticated");
+    if (userId === null) throw new ConvexError("Not authenticated");
     await ctx.db.patch(userId, { notificationPrefs: prefs });
   },
 });
@@ -274,7 +274,7 @@ export const setSoundPrefs = mutation({
   },
   handler: async (ctx, { soundPrefs, customSoundUrl, customSoundStorageId }) => {
     const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("Not authenticated");
+    if (userId === null) throw new ConvexError("Not authenticated");
     const patch: Record<string, unknown> = {};
     if (soundPrefs) patch.soundPrefs = soundPrefs;
     if (customSoundUrl !== undefined) patch.customSoundUrl = customSoundUrl;
@@ -315,7 +315,7 @@ export const setPresence = mutation({
   args: { choice: choiceValidator },
   handler: async (ctx, { choice }) => {
     const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("Sign in first.");
+    if (userId === null) throw new ConvexError("Sign in first.");
     return await setOwn(ctx, userId, { choice });
   },
 });
@@ -325,7 +325,7 @@ export const setStatusText = mutation({
   args: { text: v.string() },
   handler: async (ctx, { text }) => {
     const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("Sign in first.");
+    if (userId === null) throw new ConvexError("Sign in first.");
     return await setOwn(ctx, userId, { text });
   },
 });
@@ -490,13 +490,13 @@ export const updateAvatar = mutation({
   args: { storageId: v.string(), url: v.optional(v.string()) },
   handler: async (ctx, { storageId, url }) => {
     const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("Not authenticated");
+    if (userId === null) throw new ConvexError("Not authenticated");
     const me = await ctx.db.get(userId);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     // Free the previous avatar from storage (no orphans).
     const oldStorageId = me.avatarStorageId;
     const resolved = (await safeStorageUrl(ctx, storageId, url ?? undefined)) ?? "";
-    if (!resolved) throw new Error("Could not resolve uploaded image");
+    if (!resolved) throw new ConvexError("Could not resolve uploaded image");
     await ctx.db.patch(userId, { image: resolved, avatarStorageId: storageId });
     if (oldStorageId && oldStorageId !== storageId) {
       try {
@@ -515,9 +515,9 @@ export const removeAvatar = mutation({
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("Not authenticated");
+    if (userId === null) throw new ConvexError("Not authenticated");
     const me = await ctx.db.get(userId);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const oldStorageId = me.avatarStorageId;
     // Convex ignores `undefined` in patches, so use an empty-string sentinel
     // (all render paths already treat a falsy image as "no photo").
@@ -544,7 +544,7 @@ export const registerDevice = mutation({
   },
   handler: async (ctx, { name, platform, isCurrent }) => {
     const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("Not authenticated");
+    if (userId === null) throw new ConvexError("Not authenticated");
     const existing = await ctx.db
       .query("devices")
       .withIndex("by_user", (q) => q.eq("userId", userId))
@@ -587,9 +587,9 @@ export const setDeviceTrusted = mutation({
   args: { deviceId: v.id("devices"), trusted: v.boolean() },
   handler: async (ctx, { deviceId, trusted }) => {
     const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("Not authenticated");
+    if (userId === null) throw new ConvexError("Not authenticated");
     const device = await ctx.db.get(deviceId);
-    if (!device || device.userId !== userId) throw new Error("Not your device");
+    if (!device || device.userId !== userId) throw new ConvexError("Not your device");
     await ctx.db.patch(deviceId, { isTrusted: trusted });
     await logAudit(ctx, userId, "device.trust", "devices", String(deviceId), String(trusted));
   },
@@ -599,9 +599,9 @@ export const removeDevice = mutation({
   args: { deviceId: v.id("devices") },
   handler: async (ctx, { deviceId }) => {
     const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("Not authenticated");
+    if (userId === null) throw new ConvexError("Not authenticated");
     const device = await ctx.db.get(deviceId);
-    if (!device || device.userId !== userId) throw new Error("Not your device");
+    if (!device || device.userId !== userId) throw new ConvexError("Not your device");
     await ctx.db.delete(deviceId);
     await logAudit(ctx, userId, "device.revoked", "devices", String(deviceId), device.name);
   },

@@ -1,7 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { mutation, query, MutationCtx, QueryCtx } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { getCurrentUser, logAudit, safeStorageUrl } from "./users";
 
 /**
@@ -67,14 +67,14 @@ export const create = mutation({
   },
   handler: async (ctx, { kind, text, mediaUrl, mediaStorageId, mimeType, visibility }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
 
     if (kind === "text" || kind === "link" || kind === "emoji") {
-      if (!text || !text.trim()) throw new Error("Status text is required");
+      if (!text || !text.trim()) throw new ConvexError("Status text is required");
     } else if (!mediaUrl && !mediaStorageId) {
-      throw new Error("Media is required for photo/video status");
+      throw new ConvexError("Media is required for photo/video status");
     }
-    if ((text ?? "").length > 500) throw new Error("Status text is limited to 500 characters");
+    if ((text ?? "").length > 500) throw new ConvexError("Status text is limited to 500 characters");
 
     const url =
       mediaStorageId || mediaUrl
@@ -165,10 +165,10 @@ export const view = mutation({
   args: { statusId: v.id("statuses") },
   handler: async (ctx, { statusId }) => {
     const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("Not authenticated");
+    if (userId === null) throw new ConvexError("Not authenticated");
     const status = await ctx.db.get(statusId);
-    if (!status) throw new Error("Status not found");
-    if (status.expiresAt <= Date.now()) throw new Error("Status expired");
+    if (!status) throw new ConvexError("Status not found");
+    if (status.expiresAt <= Date.now()) throw new ConvexError("Status expired");
 
     const viewers = (status.viewers ?? []).filter(
       (v) => String(v.userId) !== String(userId),
@@ -184,13 +184,13 @@ export const remove = mutation({
   args: { statusId: v.id("statuses") },
   handler: async (ctx, { statusId }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const status = await ctx.db.get(statusId);
-    if (!status) throw new Error("Status not found");
+    if (!status) throw new ConvexError("Status not found");
     const isOwner = String(status.userId) === String(me._id);
     const isMod =
       me.role === "super_admin" || me.role === "admin" || me.role === "dejoiy_admin";
-    if (!isOwner && !isMod) throw new Error("You can only delete your own statuses");
+    if (!isOwner && !isMod) throw new ConvexError("You can only delete your own statuses");
     await ctx.db.delete(statusId);
     if (!isOwner) {
       await logAudit(ctx, me._id, "status.moderated", "statuses", String(statusId));

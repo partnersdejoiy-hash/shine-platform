@@ -10,6 +10,7 @@ import { CalendarDays, ChevronLeft, ChevronRight, Loader2, Plus, Repeat, Trash2,
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
+import { errorMessage } from "@/lib/errors";
 
 type Ev = {
   id: string;
@@ -226,7 +227,7 @@ function EventRow({ e, canDelete, onDeleted }: { e: Ev; canDelete: boolean; onDe
       toast.success("Event deleted");
       onDeleted();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message.split("\n")[0] : "Could not delete the event.");
+      toast.error(err instanceof Error ? errorMessage(err).split("\n")[0] : "Could not delete the event.");
       setBusy(false);
       setSure(false);
     }
@@ -301,7 +302,7 @@ function NewEvent({ day, onClose, onSaved }: { day: Date; onClose: () => void; o
       onSaved();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message.replace(/^.*Uncaught Error:\s*/s, "").split("\n")[0] : "Could not add the event.");
+      setError(err instanceof Error ? errorMessage(err).replace(/^.*Uncaught Error:\s*/s, "").split("\n")[0] : "Could not add the event.");
       setBusy(false);
     }
   };

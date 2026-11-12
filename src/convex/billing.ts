@@ -1,6 +1,6 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { mutation, query } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 
 // =============================================================================
 // SHINE Billing — Razorpay integration (Powered by DEJOIY)
@@ -187,7 +187,7 @@ export const markPaid = mutation({
       .query("payments")
       .withIndex("by_order", (q) => q.eq("orderId", args.orderId))
       .first();
-    if (!payment) throw new Error("Unknown order.");
+    if (!payment) throw new ConvexError("Unknown order.");
     if (payment.status === "paid") return payment;
 
     await ctx.db.patch(payment._id, {

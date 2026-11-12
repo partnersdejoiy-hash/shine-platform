@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { MAIL_MANAGED_ROLES } from "./lib/adminRoles";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { Id } from "./_generated/dataModel";
 import { api } from "./_generated/api";
 import { ROLE_RANK } from "./admin";
@@ -191,17 +191,17 @@ export const createTicket = mutation({
   },
   handler: async (ctx, { kind, target, title, description, priority, category }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const cleanTarget = target.trim();
-    if (!cleanTarget) throw new Error("Target is required");
+    if (!cleanTarget) throw new ConvexError("Target is required");
 
     if (kind === "role" && !VALID_ROLES.has(cleanTarget)) {
-      throw new Error(`Unknown role \"${cleanTarget}\"`);
+      throw new ConvexError(`Unknown role \"${cleanTarget}\"`);
     }
     if (kind === "role") {
       const tgtRank = ROLE_RANK[cleanTarget] ?? 0;
       if (tgtRank >= rankOf(me)) {
-        throw new Error(
+        throw new ConvexError(
           `You are already at or above the ${cleanTarget} level — no promotion ticket needed`,
         );
       }
@@ -217,17 +217,17 @@ export const createTicket = mutation({
       (t) => t.kind === kind && t.target.toLowerCase() === cleanTarget.toLowerCase(),
     );
     if (dup) {
-      throw new Error(`You already have a pending ticket (${dup.ticketNumber}) for this`);
+      throw new ConvexError(`You already have a pending ticket (${dup.ticketNumber}) for this`);
     }
 
     // If the requester is the apex (super admin), there is nobody to ask.
     if (rankOf(me) >= 10) {
-      throw new Error("The super admin already holds the highest role in the hierarchy");
+      throw new ConvexError("The super admin already holds the highest role in the hierarchy");
     }
 
     const chain = await buildApproverChain(ctx, me);
     if (chain.length === 0) {
-      throw new Error("No approver exists above your role — contact the super admin directly");
+      throw new ConvexError("No approver exists above your role — contact the super admin directly");
     }
 
     const now = Date.now();
@@ -389,7 +389,7 @@ export const allTickets = query({
       !me ||
       !(isSuperAdmin(me) || me.role === "dejoiy_admin" || me.role === "admin")
     ) {
-      throw new Error("Admin only");
+      throw new ConvexError("Admin only");
     }
     const rows = await ctx.db.query("tickets").order("desc").take(300);
     return hydrate(ctx, rows);
@@ -401,11 +401,11 @@ export const addTicketNote = mutation({
   args: { ticketId: v.id("tickets"), text: v.string() },
   handler: async (ctx, { ticketId, text }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const ticket = await ctx.db.get(ticketId);
-    if (!ticket) throw new Error("Ticket not found");
+    if (!ticket) throw new ConvexError("Ticket not found");
     const clean = text.trim();
-    if (!clean) throw new Error("Note cannot be empty");
+    if (!clean) throw new ConvexError("Note cannot be empty");
 
     const isRequester = String(ticket.requesterId) === String(me._id);
     const inChain = (ticket.approverChain ?? []).some(
@@ -413,7 +413,7 @@ export const addTicketNote = mutation({
     );
     const isReviewer = REVIEWER_ROLES.has(me.role ?? "");
     if (!isRequester && !inChain && !isReviewer) {
-      throw new Error("Only the requester, approvers or admins can add notes");
+      throw new ConvexError("Only the requester, approvers or admins can add notes");
     }
 
     const notes = [...(ticket.notes ?? []), { authorId: me._id, text: clean, at: Date.now() }];
@@ -428,18 +428,18 @@ export const pickupTicket = mutation({
   args: { ticketId: v.id("tickets") },
   handler: async (ctx, { ticketId }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const ticket = await ctx.db.get(ticketId);
-    if (!ticket) throw new Error("Ticket not found");
+    if (!ticket) throw new ConvexError("Ticket not found");
     if (ticket.status !== "pending" && ticket.status !== "in_progress") {
-      throw new Error("Only open tickets can be picked up");
+      throw new ConvexError("Only open tickets can be picked up");
     }
     const inChain = (ticket.approverChain ?? []).some(
       (id: any) => String(id) === String(me._id),
     );
     const isReviewer = REVIEWER_ROLES.has(me.role ?? "");
     if (!inChain && !isReviewer) {
-      throw new Error("Only tagged approvers or admins can pick up this ticket");
+      throw new ConvexError("Only tagged approvers or admins can pick up this ticket");
     }
 
     await ctx.db.patch(ticketId, {
@@ -484,11 +484,11 @@ export const decideTicket = mutation({
   },
   handler: async (ctx, { ticketId, approve, comment }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const ticket = await ctx.db.get(ticketId);
-    if (!ticket) throw new Error("Ticket not found");
+    if (!ticket) throw new ConvexError("Ticket not found");
     if (ticket.status !== "pending" && ticket.status !== "in_progress") {
-      throw new Error("This ticket is already closed");
+      throw new ConvexError("This ticket is already closed");
     }
 
     const chain = ticket.approverChain ?? [];
@@ -499,7 +499,7 @@ export const decideTicket = mutation({
       String(currentApprover) === String(me._id) ||
       (isReviewer && (ticket.kind === "password" || (ticket.approverChain ?? []).some((id: any) => String(id) === String(me._id)) || isSuperAdmin(me)));
     if (!canDecide) {
-      throw new Error("This ticket is not waiting on your approval");
+      throw new ConvexError("This ticket is not waiting on your approval");
     }
 
     const now = Date.now();
@@ -787,14 +787,14 @@ export const sendTempPasswordForTicket = mutation({
   args: { ticketId: v.id("tickets") },
   handler: async (ctx, { ticketId }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const ticket = await ctx.db.get(ticketId);
-    if (!ticket) throw new Error("Ticket not found");
+    if (!ticket) throw new ConvexError("Ticket not found");
     if (ticket.kind !== "password") {
-      throw new Error("Only password-recovery tickets support this action");
+      throw new ConvexError("Only password-recovery tickets support this action");
     }
     if (ticket.status === "rejected" || ticket.status === "cancelled" || ticket.status === "resolved") {
-      throw new Error("This ticket is already closed");
+      throw new ConvexError("This ticket is already closed");
     }
 
     const inChain = (ticket.approverChain ?? []).some(
@@ -802,11 +802,11 @@ export const sendTempPasswordForTicket = mutation({
     );
     const isReviewer = REVIEWER_ROLES.has(me.role ?? "");
     if (!inChain && !isReviewer) {
-      throw new Error("Only tagged admins can send a temporary password for this ticket");
+      throw new ConvexError("Only tagged admins can send a temporary password for this ticket");
     }
 
     const requester = await ctx.db.get(ticket.requesterId);
-    if (!requester?.email) throw new Error("The requester has no email address");
+    if (!requester?.email) throw new ConvexError("The requester has no email address");
 
     const tempPassword = generateTempPassword();
     const hash = bcrypt.hashSync(tempPassword, 10);
@@ -876,14 +876,14 @@ export const cancelTicket = mutation({
   args: { ticketId: v.id("tickets") },
   handler: async (ctx, { ticketId }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const ticket = await ctx.db.get(ticketId);
-    if (!ticket) throw new Error("Ticket not found");
+    if (!ticket) throw new ConvexError("Ticket not found");
     if (String(ticket.requesterId) !== String(me._id)) {
-      throw new Error("Only the requester can cancel this ticket");
+      throw new ConvexError("Only the requester can cancel this ticket");
     }
     if (ticket.status !== "pending" && ticket.status !== "in_progress") {
-      throw new Error("Only open tickets can be cancelled");
+      throw new ConvexError("Only open tickets can be cancelled");
     }
     await ctx.db.patch(ticketId, { status: "cancelled", updatedAt: Date.now() });
     await logAudit(ctx, me._id, "ticket.cancelled", "tickets", String(ticketId), ticket.ticketNumber);
@@ -895,10 +895,10 @@ export const adminDeleteTicket = mutation({
   args: { ticketId: v.id("tickets") },
   handler: async (ctx, { ticketId }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
-    if (!isSuperAdmin(me)) throw new Error("Super admin only");
+    if (!me) throw new ConvexError("Not authenticated");
+    if (!isSuperAdmin(me)) throw new ConvexError("Super admin only");
     const ticket = await ctx.db.get(ticketId);
-    if (!ticket) throw new Error("Ticket not found");
+    if (!ticket) throw new ConvexError("Ticket not found");
     await ctx.db.delete(ticketId);
     await logAudit(
       ctx,
@@ -917,14 +917,14 @@ export const reopenTicket = mutation({
   args: { ticketId: v.id("tickets") },
   handler: async (ctx, { ticketId }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const ticket = await ctx.db.get(ticketId);
-    if (!ticket) throw new Error("Ticket not found");
+    if (!ticket) throw new ConvexError("Ticket not found");
     if (String(ticket.requesterId) !== String(me._id)) {
-      throw new Error("Only the requester can reopen this ticket");
+      throw new ConvexError("Only the requester can reopen this ticket");
     }
     if (ticket.status !== "resolved" && ticket.status !== "rejected") {
-      throw new Error("Only resolved or rejected tickets can be reopened");
+      throw new ConvexError("Only resolved or rejected tickets can be reopened");
     }
     const now = Date.now();
     const decisions = [...(ticket.decisions ?? []), {
@@ -947,10 +947,10 @@ export const assignTicket = mutation({
   },
   handler: async (ctx, { ticketId, assigneeId }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
-    if (!(isSuperAdmin(me) || me.role === "admin")) throw new Error("Admin only");
+    if (!me) throw new ConvexError("Not authenticated");
+    if (!(isSuperAdmin(me) || me.role === "admin")) throw new ConvexError("Admin only");
     const ticket = await ctx.db.get(ticketId);
-    if (!ticket) throw new Error("Ticket not found");
+    if (!ticket) throw new ConvexError("Ticket not found");
     const now = Date.now();
     const decisions = [...(ticket.decisions ?? []), {
       approverId: me._id,
@@ -975,12 +975,12 @@ export const escalateTicket = mutation({
   args: { ticketId: v.id("tickets") },
   handler: async (ctx, { ticketId }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
-    if (!(isSuperAdmin(me) || me.role === "admin")) throw new Error("Admin only");
+    if (!me) throw new ConvexError("Not authenticated");
+    if (!(isSuperAdmin(me) || me.role === "admin")) throw new ConvexError("Admin only");
     const ticket = await ctx.db.get(ticketId);
-    if (!ticket) throw new Error("Ticket not found");
+    if (!ticket) throw new ConvexError("Ticket not found");
     if (ticket.status === "cancelled" || ticket.status === "resolved") {
-      throw new Error("Cannot escalate a closed ticket");
+      throw new ConvexError("Cannot escalate a closed ticket");
     }
     const now = Date.now();
     const decisions = [...(ticket.decisions ?? []), {

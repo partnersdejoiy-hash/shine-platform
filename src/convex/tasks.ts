@@ -1,6 +1,6 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { mutation, query } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { getCurrentUser } from "./users";
 
 const ASSIGNEE_ARGS = {
@@ -82,7 +82,7 @@ export const create = mutation({
   },
   handler: async (ctx, args) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const ids = [...new Set((args.assigneeIds ?? (args.assigneeId ? [args.assigneeId] : [])).map(String))] as any[];
     const id = await ctx.db.insert("tasks", {
       orgId: args.orgId,
@@ -127,7 +127,7 @@ export const update = mutation({
   },
   handler: async (ctx, { taskId, ...patch }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const clean: Record<string, unknown> = Object.fromEntries(
       Object.entries(patch).filter(([, v]) => v !== undefined),
     );
@@ -147,7 +147,7 @@ export const setStatus = mutation({
   },
   handler: async (ctx, { taskId, status }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     await ctx.db.patch(taskId, { status });
   },
 });
@@ -156,13 +156,13 @@ export const remove = mutation({
   args: { taskId: v.id("tasks") },
   handler: async (ctx, { taskId }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const task = await ctx.db.get(taskId);
     if (!task) return;
     const creator = task.createdBy === me._id;
     const ids = resolveAssigneeIds(task);
     const assignee = ids.some((id) => String(id) === String(me._id));
-    if (!creator && !assignee) throw new Error("Not allowed");
+    if (!creator && !assignee) throw new ConvexError("Not allowed");
     await ctx.db.delete(taskId);
   },
 });

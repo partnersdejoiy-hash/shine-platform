@@ -46,6 +46,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
+import { errorMessage } from "@/lib/errors";
 
 const PAGE_SIZE = 50;
 
@@ -233,7 +234,7 @@ export function ChatView({
       });
       toast.success("Group photo updated");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Photo upload failed");
+      toast.error(e instanceof Error ? errorMessage(e) : "Photo upload failed");
     } finally {
       setAvatarBusy(false);
     }
@@ -249,7 +250,7 @@ export function ChatView({
       await setMemberRole({ conversationId: conversationId as any, userId: uid as any, role: "admin" });
       toast.success("Promoted to group admin");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Promotion failed");
+      toast.error(e instanceof Error ? errorMessage(e) : "Promotion failed");
     }
   };
   const handleDemote = async (uid: string) => {
@@ -257,7 +258,7 @@ export function ChatView({
       await setMemberRole({ conversationId: conversationId as any, userId: uid as any, role: "member" });
       toast.success("Admin rights removed");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Demotion failed");
+      toast.error(e instanceof Error ? errorMessage(e) : "Demotion failed");
     }
   };
 
@@ -271,7 +272,7 @@ export function ChatView({
       setRenaming(false);
       toast.success("Renamed");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Rename failed");
+      toast.error(e instanceof Error ? errorMessage(e) : "Rename failed");
     }
   };
 
@@ -291,7 +292,7 @@ export function ChatView({
           .filter(Boolean)
           .join(" · ")
       : isChannel
-        ? `${members.length} members`
+        ? `${members.length} ${members.length === 1 ? "member" : "members"}`
         : "";
 
   const handleCall = (kind: "audio" | "video") => {
@@ -301,7 +302,7 @@ export function ChatView({
     }
     startCall({ conversationId: conversationId as any, kind })
       .then(() => toast(kind === "video" ? "Calling…" : "Calling…"))
-      .catch((e) => toast(e instanceof Error ? e.message : "Call failed"));
+      .catch((e) => toast(e instanceof Error ? errorMessage(e) : "Call failed"));
   };
 
   const handleSendThreadReply = async (body: string) => {
@@ -610,7 +611,7 @@ export function ChatView({
                             await setConversationAvatar({ conversationId: conversationId as any, clear: true });
                             toast.success("Photo removed");
                           } catch (e) {
-                            toast.error(e instanceof Error ? e.message : "Failed");
+                            toast.error(e instanceof Error ? errorMessage(e) : "Failed");
                           }
                         }}
                       >
@@ -740,7 +741,7 @@ export function ChatView({
                       await updateGroupPolicy({
                         conversationId: conversationId as any,
                         policies: { whoCanSend: val as "everyone" | "admins" },
-                      }).catch((e) => toast.error(e instanceof Error ? e.message : "Failed"));
+                      }).catch((e) => toast.error(e instanceof Error ? errorMessage(e) : "Failed"));
                     }}
                   />
                   <PolicyRow
@@ -750,7 +751,7 @@ export function ChatView({
                       await updateGroupPolicy({
                         conversationId: conversationId as any,
                         policies: { whoCanManageMembers: val as "everyone" | "admins" },
-                      }).catch((e) => toast.error(e instanceof Error ? e.message : "Failed"));
+                      }).catch((e) => toast.error(e instanceof Error ? errorMessage(e) : "Failed"));
                     }}
                   />
                   <PolicyRow
@@ -760,7 +761,7 @@ export function ChatView({
                       await updateGroupPolicy({
                         conversationId: conversationId as any,
                         policies: { whoCanEditInfo: val as "everyone" | "admins" },
-                      }).catch((e) => toast.error(e instanceof Error ? e.message : "Failed"));
+                      }).catch((e) => toast.error(e instanceof Error ? errorMessage(e) : "Failed"));
                     }}
                   />
                 </div>
@@ -873,7 +874,7 @@ export function ChatView({
                       await forward({
                         messageId: forwardTarget as any,
                         toConversationId: c.conversation._id as any,
-                      }).catch((e) => toast(e instanceof Error ? e.message : "Forward failed"));
+                      }).catch((e) => toast(e instanceof Error ? errorMessage(e) : "Forward failed"));
                       toast("Message forwarded");
                     }
                     setForwardTarget(null);
@@ -924,7 +925,7 @@ export function ChatView({
                   if (deleteTarget) {
                     deleteForEveryone({ messageId: deleteTarget.id as any })
                       .then(() => toast.success("Message deleted for everyone"))
-                      .catch((e) => toast.error(e instanceof Error ? e.message : "Delete failed"));
+                      .catch((e) => toast.error(e instanceof Error ? errorMessage(e) : "Delete failed"));
                   }
                   setDeleteTarget(null);
                 }}

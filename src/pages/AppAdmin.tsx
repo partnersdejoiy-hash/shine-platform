@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/errors";
 import { ReachSettings } from "@/components/admin/ReachSettings";
 import { api } from "@/convex/_generated/api";
 import { TicketCard as AdminTicketCard } from "@/components/admin/TicketCard";
@@ -553,7 +554,7 @@ export function AppAdmin() {
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-base font-bold tracking-tight">
-                    {isSuper ? "Super Admin · God Console" : "Admin Console"}
+                    {isSuper ? "Super Admin console" : "Admin Console"}
                   </h2>
                   {isSuper && (
                     <Badge className="gap-1 bg-primary/20 text-primary hover:bg-primary/25">
@@ -1343,7 +1344,7 @@ export function AppAdmin() {
                           const res = await seedPolicies();
                           toast.success(`Seeded ${res.created} default policies (published v1)`);
                         } catch (e) {
-                          toast.error(e instanceof Error ? e.message : "Failed");
+                          toast.error(e instanceof Error ? errorMessage(e) : "Failed");
                         } finally {
                           setPolicyBusy(null);
                         }
@@ -1483,7 +1484,7 @@ export function AppAdmin() {
                           setPolicyDialog(false);
                           setNewPolicy({ title: "", category: "Governance", summary: "", content: "", mandatory: true });
                         } catch (e) {
-                          toast.error(e instanceof Error ? e.message : "Failed");
+                          toast.error(e instanceof Error ? errorMessage(e) : "Failed");
                         } finally {
                           setPolicyBusy(null);
                         }
@@ -1871,7 +1872,7 @@ export function AppAdmin() {
                     setOrgDialog(null);
                     setOrgForm({ name: "", description: "", plan: "enterprise", ownerUserId: "" });
                   } catch (e) {
-                    toast.error(e instanceof Error ? e.message : "Failed to create organization");
+                    toast.error(e instanceof Error ? errorMessage(e) : "Failed to create organization");
                   } finally {
                     setOrgBusy(false);
                   }
@@ -1910,7 +1911,7 @@ export function AppAdmin() {
                     toast.success(`Organization “${orgDeleteTarget.name}” deleted`);
                     setOrgDeleteTarget(null);
                   } catch (e) {
-                    toast.error(e instanceof Error ? e.message : "Failed to delete organization");
+                    toast.error(e instanceof Error ? errorMessage(e) : "Failed to delete organization");
                   } finally {
                     setOrgBusy(false);
                   }
@@ -2032,7 +2033,7 @@ function PermissionMatrix({
         `${ROLE_META.find((r) => r.value === role)?.label ?? role} permission updated`,
       );
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to update permission");
+      toast.error(err instanceof Error ? errorMessage(err) : "Failed to update permission");
     } finally {
       setSaving((s) => {
         const next = { ...s };
@@ -2056,7 +2057,7 @@ function PermissionMatrix({
         `${ROLE_META.find((r) => r.value === role)?.label ?? role} reset to defaults`,
       );
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to reset role");
+      toast.error(err instanceof Error ? errorMessage(err) : "Failed to reset role");
     } finally {
       setSaving((s) => {
         const next = { ...s };
@@ -2394,7 +2395,7 @@ function UserPermissionsDialog({
       await setUserPermission({ userId, permission, grant });
       toast.success(grant ? `Granted "${permission}"` : `Revoked "${permission}"`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to update permission");
+      toast.error(err instanceof Error ? errorMessage(err) : "Failed to update permission");
     } finally {
       setBusy(null);
     }

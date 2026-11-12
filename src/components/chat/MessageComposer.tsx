@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { errorMessage } from "@/lib/errors";
 
 export interface MentionMember {
   _id: string;
@@ -252,7 +253,7 @@ export function MessageComposer({
     if (editTarget) {
       setSending(true);
       await edit({ messageId: editTarget.id as any, body: content }).catch((e) =>
-        toast(e instanceof Error ? e.message : "Edit failed"),
+        toast(e instanceof Error ? errorMessage(e) : "Edit failed"),
       );
       setSending(false);
       setText("");
@@ -265,11 +266,13 @@ export function MessageComposer({
         conversationId: conversationId as any,
         body: content,
         kind: "text",
+        ...(replyTo ? { parentId: replyTo.id as any } : {}),
       });
       setText("");
+      if (replyTo) onCancelReply();
       setTyping({ conversationId: conversationId as any, isTyping: false }).catch(() => {});
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Send failed");
+      toast(e instanceof Error ? errorMessage(e) : "Send failed");
     } finally {
       setSending(false);
     }
@@ -302,7 +305,7 @@ export function MessageComposer({
       });
       toast(`Shared ${results.length} file${results.length > 1 ? "s" : ""}`);
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Upload failed");
+      toast(e instanceof Error ? errorMessage(e) : "Upload failed");
     } finally {
       setUploading(null);
     }
@@ -713,7 +716,7 @@ export function MessageComposer({
             conversationId: conversationId as any,
             question,
             options,
-          }).catch((e) => toast(e instanceof Error ? e.message : "Poll failed"));
+          }).catch((e) => toast(e instanceof Error ? errorMessage(e) : "Poll failed"));
           setPollOpen(false);
         }}
       />

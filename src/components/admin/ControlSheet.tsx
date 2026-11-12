@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { errorMessage } from "@/lib/errors";
 
 // ─── Roles ──────────────────────────────────────────────────────────────
 const ROLES = [
@@ -178,7 +179,7 @@ function UsersTab({ currentUserRole }: { currentUserRole?: string }) {
         await updateField({ userId: userId as any, field, value });
         toast.success(`Updated ${field}`);
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Update failed");
+        toast.error(e instanceof Error ? errorMessage(e) : "Update failed");
       }
     },
     [updateField]
@@ -190,7 +191,7 @@ function UsersTab({ currentUserRole }: { currentUserRole?: string }) {
         await setRole({ userId: userId as any, role: role as any });
         toast.success("Role updated");
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Role change failed");
+        toast.error(e instanceof Error ? errorMessage(e) : "Role change failed");
       }
     },
     [setRole]
@@ -202,7 +203,7 @@ function UsersTab({ currentUserRole }: { currentUserRole?: string }) {
         await toggleActive({ userId: userId as any });
         toast.success("Status toggled");
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Toggle failed");
+        toast.error(e instanceof Error ? errorMessage(e) : "Toggle failed");
       }
     },
     [toggleActive]

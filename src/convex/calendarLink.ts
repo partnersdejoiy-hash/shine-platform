@@ -2,7 +2,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { action, type ActionCtx, internalAction, internalMutation, internalQuery } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 
 /**
  * Shine and Dejoiy Mail share one calendar: the Zimbra one.
@@ -25,7 +25,7 @@ async function mail(path: string, body: unknown) {
     body: JSON.stringify(body),
   });
   const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
-  if (!res.ok) throw new Error(String(data.error ?? `Dejoiy Mail calendar: HTTP ${res.status}`));
+  if (!res.ok) throw new ConvexError(String(data.error ?? `Dejoiy Mail calendar: HTTP ${res.status}`));
   return data;
 }
 
@@ -121,9 +121,9 @@ export const addEvent = action({
   },
   handler: async (ctx, event) => {
     const me = await myEmail(ctx);
-    if (!me) throw new Error("Sign in first.");
+    if (!me) throw new ConvexError("Sign in first.");
     const out = await mail("/api/shine/calendar", { op: "save", owner: me, event: { reminder: 10, ...event } });
-    if (!out) throw new Error("Shine isn't connected to Dejoiy Mail yet.");
+    if (!out) throw new ConvexError("Shine isn't connected to Dejoiy Mail yet.");
     return { ok: true };
   },
 });
@@ -133,7 +133,7 @@ export const removeEvent = action({
   args: { invId: v.string(), title: v.string() },
   handler: async (ctx, { invId, title }) => {
     const me = await myEmail(ctx);
-    if (!me) throw new Error("Sign in first.");
+    if (!me) throw new ConvexError("Sign in first.");
     await mail("/api/shine/calendar", { op: "delete", owner: me, event: { invId, title } });
     return { ok: true };
   },

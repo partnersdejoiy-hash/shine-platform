@@ -34,6 +34,7 @@ export interface ChatMessage {
   body: string;
   kind: "text" | "file" | "voice" | "poll" | "system";
   parentId?: string;
+  replyTo?: { body: string; senderName: string } | null;
   edited?: boolean;
   deleted?: boolean;
   forwarded?: boolean;
@@ -399,7 +400,8 @@ export function MessageBubble({
               isOwn ? "mr-2" : "ml-2",
             )}
           >
-            ↪ reply
+            {message.replyTo?.senderName && <div className="font-semibold text-foreground/80">{message.replyTo.senderName}</div>}
+            <div className="line-clamp-2">{message.replyTo?.body ?? "↪ reply"}</div>
           </div>
         )}
 

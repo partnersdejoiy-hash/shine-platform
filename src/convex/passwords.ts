@@ -2,7 +2,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import bcrypt from "bcryptjs";
 import { api } from "./_generated/api";
 import { internalMutation, mutation, query } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import {
   getCurrentUser,
   isSuperAdmin,
@@ -27,7 +27,7 @@ export const PASSWORD_HISTORY_SIZE = 5;
 
 function validateNewPassword(password: string) {
   if (!password || password.length < PASSWORD_MIN_LENGTH) {
-    throw new Error(
+    throw new ConvexError(
       `Password must be at least ${PASSWORD_MIN_LENGTH} characters.`,
     );
   }
@@ -122,7 +122,7 @@ async function assertNotReused(ctx: any, userId: string, newPassword: string) {
   const all = [existing.hash, ...(existing.history ?? [])];
   for (const h of all) {
     if (bcrypt.compareSync(newPassword, h)) {
-      throw new Error(
+      throw new ConvexError(
         `This password was used recently. Choose a different one — the last ${PASSWORD_HISTORY_SIZE} passwords cannot be reused.`,
       );
     }
@@ -138,7 +138,7 @@ export const loginWithPassword = internalMutation({
   handler: async (ctx, { email, password }) => {
     const normalized = email.trim().toLowerCase();
     if (!normalized || !password) {
-      throw new Error("Email and password are required.");
+      throw new ConvexError("Email and password are required.");
     }
 
     const user: any = await ctx.db
@@ -147,10 +147,10 @@ export const loginWithPassword = internalMutation({
       .first();
 
     if (!user) {
-      throw new Error("No account found with this email.");
+      throw new ConvexError("No account found with this email.");
     }
     if (user.isActive === false) {
-      throw new Error(
+      throw new ConvexError(
         "This account has been deactivated. Contact your administrator.",
       );
     }
@@ -161,12 +161,12 @@ export const loginWithPassword = internalMutation({
       .unique();
 
     if (!row) {
-      throw new Error(
+      throw new ConvexError(
         "No password set for this account yet. Sign in with your email verification code, then create a password in Settings → Security.",
       );
     }
     if (!bcrypt.compareSync(password, row.hash)) {
-      throw new Error("Invalid email or password.");
+      throw new ConvexError("Invalid email or password.");
     }
 
     try {
@@ -186,9 +186,9 @@ export const setMyPassword = mutation({
   },
   handler: async (ctx, { currentPassword, newPassword }) => {
     const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("Not authenticated");
+    if (userId === null) throw new ConvexError("Not authenticated");
     const me = await ctx.db.get(userId);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     validateNewPassword(newPassword);
 
     const existing = await ctx.db
@@ -197,7 +197,7 @@ export const setMyPassword = mutation({
       .unique();
     if (existing) {
       if (!currentPassword || !bcrypt.compareSync(currentPassword, existing.hash)) {
-        throw new Error("Current password is incorrect.");
+        throw new ConvexError("Current password is incorrect.");
       }
     }
     // Password compliance: the last 5 passwords can never be reused.
@@ -231,18 +231,18 @@ export const adminSetUserPassword = mutation({
   },
   handler: async (ctx, { userId, newPassword, mustChange }) => {
     const actor = await getCurrentUser(ctx);
-    if (!actor) throw new Error("Not authenticated");
+    if (!actor) throw new ConvexError("Not authenticated");
     if (
       !(isSuperAdmin(actor) || actor.role === "admin" || actor.role === "it")
     ) {
-      throw new Error("Admin, IT or Super Admin only");
+      throw new ConvexError("Admin, IT or Super Admin only");
     }
     validateNewPassword(newPassword);
 
     const target = await ctx.db.get(userId);
-    if (!target) throw new Error("User not found");
+    if (!target) throw new ConvexError("User not found");
     if (isSuperAdmin(target) && !isSuperAdmin(actor)) {
-      throw new Error(
+      throw new ConvexError(
         "Only the super admin can reset the super admin password",
       );
     }
@@ -274,15 +274,15 @@ export const adminProvisionPassword = mutation({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
     const actor = await getCurrentUser(ctx);
-    if (!actor) throw new Error("Not authenticated");
+    if (!actor) throw new ConvexError("Not authenticated");
     if (
       !(isSuperAdmin(actor) || actor.role === "admin" || actor.role === "it")
     ) {
-      throw new Error("Admin, IT or Super Admin only");
+      throw new ConvexError("Admin, IT or Super Admin only");
     }
     const target = await ctx.db.get(userId);
-    if (!target) throw new Error("User not found");
-    if (!target.email) throw new Error("This user has no email address");
+    if (!target) throw new ConvexError("User not found");
+    if (!target.email) throw new ConvexError("This user has no email address");
 
     // Privileged accounts (admin / super admin / IT / super IT / DEJOIY admin)
     // manage their own credentials — a temporary password can never be issued
@@ -295,7 +295,7 @@ export const adminProvisionPassword = mutation({
       "it",
     ];
     if (target.role && privilegedRoles.includes(target.role)) {
-      throw new Error(
+      throw new ConvexError(
         "Temporary passwords can't be issued to admin / IT accounts — they manage their own credentials.",
       );
     }
@@ -331,10 +331,10 @@ export const resendMyTempPassword = mutation({
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("Not authenticated");
+    if (userId === null) throw new ConvexError("Not authenticated");
     const me = await ctx.db.get(userId);
-    if (!me) throw new Error("Not authenticated");
-    if (!me.email) throw new Error("No email is attached to this account");
+    if (!me) throw new ConvexError("Not authenticated");
+    if (!me.email) throw new ConvexError("No email is attached to this account");
 
     const tempPassword = generateTempPassword();
     const hash = bcrypt.hashSync(tempPassword, 10);
@@ -396,10 +396,10 @@ export const requestTempAuthCode = mutation({
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("Not authenticated");
+    if (userId === null) throw new ConvexError("Not authenticated");
     const me = await ctx.db.get(userId);
-    if (!me) throw new Error("Not authenticated");
-    if (!me.email) throw new Error("No email is attached to this account");
+    if (!me) throw new ConvexError("Not authenticated");
+    if (!me.email) throw new ConvexError("No email is attached to this account");
 
     const code = generateCode();
     await ctx.db.patch(userId, {
@@ -426,19 +426,19 @@ export const setMyPasswordWithCode = mutation({
   args: { code: v.string(), newPassword: v.string() },
   handler: async (ctx, { code, newPassword }) => {
     const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("Not authenticated");
+    if (userId === null) throw new ConvexError("Not authenticated");
     const me = await ctx.db.get(userId);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
 
     const stored = me.tempAuthCode;
     const expires = me.tempAuthCodeExpiresAt;
     if (!stored || !expires || Date.now() > expires) {
-      throw new Error(
+      throw new ConvexError(
         "The verification code is invalid or has expired — request a new one.",
       );
     }
     if (code.trim() !== stored) {
-      throw new Error("The verification code you entered is incorrect.");
+      throw new ConvexError("The verification code you entered is incorrect.");
     }
 
     validateNewPassword(newPassword);
@@ -515,20 +515,20 @@ export const resetPasswordWithCode = mutation({
       .query("users")
       .withIndex("email", (q) => q.eq("email", normalized))
       .unique();
-    if (!target) throw new Error("No account found with this email.");
+    if (!target) throw new ConvexError("No account found with this email.");
     if (target.isActive === false) {
-      throw new Error("This account has been deactivated. Contact your administrator.");
+      throw new ConvexError("This account has been deactivated. Contact your administrator.");
     }
 
     const stored = target.tempAuthCode;
     const expires = target.tempAuthCodeExpiresAt;
     if (!stored || !expires || Date.now() > expires) {
-      throw new Error(
+      throw new ConvexError(
         "The verification code is invalid or has expired — request a new one.",
       );
     }
     if (code.trim() !== stored) {
-      throw new Error("The verification code you entered is incorrect.");
+      throw new ConvexError("The verification code you entered is incorrect.");
     }
 
     validateNewPassword(newPassword);

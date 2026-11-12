@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import { mutation, query } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { api } from "./_generated/api";
 import { Role } from "./schema";
 import { generateTempPassword, PASSWORD_MIN_LENGTH } from "./passwords";
@@ -55,7 +55,7 @@ export const exportUsers = query({
       me.role === "admin" ||
       me.role === "it" ||
       me.role === "client_admin";
-    if (!allowed) throw new Error("Admin, IT or Client Admin only");
+    if (!allowed) throw new ConvexError("Admin, IT or Client Admin only");
     const users = await ctx.db.query("users").collect();
     return users
       .filter((u) => !u.isAnonymous)
@@ -98,10 +98,10 @@ export const importUsers = mutation({
   },
   handler: async (ctx, { rows }) => {
     if (!(await canManageUsers(ctx))) {
-      throw new Error("Admin, IT or Super Admin only");
+      throw new ConvexError("Admin, IT or Super Admin only");
     }
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
 
     const existing = await ctx.db.query("users").collect();
     const existingByEmail = new Map<string, string>();
@@ -241,10 +241,10 @@ export const bulkUserAction = mutation({
   },
   handler: async (ctx, { userIds, action, role }) => {
     if (!(await canManageUsers(ctx))) {
-      throw new Error("Admin, IT or Super Admin only");
+      throw new ConvexError("Admin, IT or Super Admin only");
     }
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
 
     let updated = 0;
     for (const userId of userIds) {
@@ -262,11 +262,11 @@ export const bulkUserAction = mutation({
       } else {
         const nextRole = (role ?? "").trim().toLowerCase();
         if (!VALID_ROLES.has(nextRole)) {
-          throw new Error(`Invalid role "${nextRole}"`);
+          throw new ConvexError(`Invalid role "${nextRole}"`);
         }
         assertNotMailManaged(nextRole);
         if (SUPER_ONLY_ROLES.has(nextRole) && !isSuperAdmin(me)) {
-          throw new Error(`Only the super admin can grant the ${nextRole} role`);
+          throw new ConvexError(`Only the super admin can grant the ${nextRole} role`);
         }
         await ctx.db.patch(userId, { role: nextRole as Role });
         await ensureEmployeeId(ctx, userId);

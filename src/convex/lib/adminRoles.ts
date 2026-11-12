@@ -1,3 +1,4 @@
+import { ConvexError } from "convex/values";
 // Admin rights in Shine come only from Dejoiy Mail (Zimbra): the super admin's
 // email, Zimbra global admins and company (delegated) admins. Shine's own
 // screens can't hand these roles out; everyone else gets the ordinary roles.
@@ -8,7 +9,7 @@ export const MAIL_MANAGED_MESSAGE =
   "Admin roles come from Dejoiy Mail. Make this person an admin in the Dejoiy Mail admin console (admin-mail.dejoiy.com).";
 
 export function assertNotMailManaged(role: string) {
-  if (MAIL_MANAGED_ROLES.has(role)) throw new Error(MAIL_MANAGED_MESSAGE);
+  if (MAIL_MANAGED_ROLES.has(role)) throw new ConvexError(MAIL_MANAGED_MESSAGE);
 }
 
 /** The Shine role for someone signing in from Dejoiy Mail. */

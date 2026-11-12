@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { Building2, Check, ChevronRight, LogOut, Settings, ShieldCheck, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { errorMessage } from "@/lib/errors";
 
 interface Props {
   open: boolean;
@@ -41,7 +42,7 @@ export function StatusSheet({ open, onOpenChange, user, presence, isAdmin, onNav
       setText(value);
       toast.success(value ? "Status updated" : "Status cleared");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't save your status");
+      toast.error(e instanceof Error ? errorMessage(e) : "Couldn't save your status");
     }
     setSaving(false);
   };

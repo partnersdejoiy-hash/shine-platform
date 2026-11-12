@@ -1,7 +1,7 @@
 import { canContact } from "./reach";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { mutation, query } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { getCurrentUser, isSuperAdmin, logAudit, safeStorageUrl } from "./users";
 import { roleHasPermission } from "./permissions";
 
@@ -191,11 +191,11 @@ export const openDirectChat = mutation({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
-    if (me._id === userId) throw new Error("Cannot chat with yourself");
+    if (!me) throw new ConvexError("Not authenticated");
+    if (me._id === userId) throw new ConvexError("Cannot chat with yourself");
     const them = await ctx.db.get(userId);
     // other companies: only their supervisors, and only if your admins allow it
-    if (!them || !(await canContact(ctx, me, them))) throw new Error("You can't message this person from your company.");
+    if (!them || !(await canContact(ctx, me, them))) throw new ConvexError("You can't message this person from your company.");
 
     const myMemberships = await ctx.db
       .query("conversationMembers")
@@ -269,17 +269,17 @@ export const createGroupChat = mutation({
   },
   handler: async (ctx, { name, memberIds, policies }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     if (
       !isSuperAdmin(me) &&
       !(await roleHasPermission(ctx, me.role, "group_chat", me.approvedPermissions))
     ) {
-      throw new Error(
+      throw new ConvexError(
         "Your role does not include group chat — request it from Settings → Security",
       );
     }
     const ids = Array.from(new Set([me._id, ...memberIds]));
-    if (ids.length < 2) throw new Error("A group needs at least two members");
+    if (ids.length < 2) throw new ConvexError("A group needs at least two members");
     const now = Date.now();
     const convId = await ctx.db.insert("conversations", {
       kind: "chat",
@@ -333,7 +333,7 @@ export const createChannel = mutation({
   },
   handler: async (ctx, { orgId, teamId, name, description, channelKind = "channel", isPrivate = false, policies }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     if (!isSuperAdmin(me)) {
       const required =
         channelKind === "broadcast" || channelKind === "announcement"
@@ -342,7 +342,7 @@ export const createChannel = mutation({
             ? "team_groups"
             : "department_groups";
       if (!(await roleHasPermission(ctx, me.role, required, me.approvedPermissions))) {
-        throw new Error(
+        throw new ConvexError(
           `Your role does not include ${required.replace(/_/g, " ")} — request it from Settings → Security`,
         );
       }
@@ -352,7 +352,7 @@ export const createChannel = mutation({
       .withIndex("by_org", (q) => q.eq("orgId", orgId))
       .filter((q) => q.eq(q.field("userId"), me._id))
       .unique();
-    if (!membership) throw new Error("You are not a member of this organization");
+    if (!membership) throw new ConvexError("You are not a member of this organization");
 
     const now = Date.now();
     const convId = await ctx.db.insert("conversations", {
@@ -394,7 +394,7 @@ export const joinChannel = mutation({
   args: { conversationId: v.id("conversations") },
   handler: async (ctx, { conversationId }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const existing = await ctx.db
       .query("conversationMembers")
       .withIndex("by_user_conv", (q) => q.eq("userId", me._id).eq("conversationId", conversationId))
@@ -414,7 +414,7 @@ export const leaveConversation = mutation({
   args: { conversationId: v.id("conversations") },
   handler: async (ctx, { conversationId }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const membership = await ctx.db
       .query("conversationMembers")
       .withIndex("by_user_conv", (q) => q.eq("userId", me._id).eq("conversationId", conversationId))
@@ -436,15 +436,15 @@ export const addMembers = mutation({
   args: { conversationId: v.id("conversations"), memberIds: v.array(v.id("users")) },
   handler: async (ctx, { conversationId, memberIds }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const conversation = await ctx.db.get(conversationId);
-    if (!conversation) throw new Error("Conversation not found");
+    if (!conversation) throw new ConvexError("Conversation not found");
     if (conversation.kind === "chat" && conversation.chatType === "group") {
       // WhatsApp-style group policy: only admins may add when restricted.
       const policy = (conversation.policies as any) ?? {};
       const isAdmin = await isGroupAdmin(ctx, conversationId, me._id as string);
       if (policy.whoCanManageMembers === "admins" && !isAdmin) {
-        throw new Error("Group policy: only group admins can add members");
+        throw new ConvexError("Group policy: only group admins can add members");
       }
     }
     for (const uid of memberIds) {
@@ -472,20 +472,20 @@ export const removeMember = mutation({
   args: { conversationId: v.id("conversations"), userId: v.id("users") },
   handler: async (ctx, { conversationId, userId }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     if (String(me._id) === String(userId)) {
-      throw new Error("Leave the group instead of removing yourself");
+      throw new ConvexError("Leave the group instead of removing yourself");
     }
     const conversation = await ctx.db.get(conversationId);
-    if (!conversation) throw new Error("Conversation not found");
+    if (!conversation) throw new ConvexError("Conversation not found");
     if (conversation.kind === "chat" && conversation.chatType === "group") {
       const policy = (conversation.policies as any) ?? {};
       const isAdmin = await isGroupAdmin(ctx, conversationId, me._id as string);
       if (!isAdmin && policy.whoCanManageMembers === "admins") {
-        throw new Error("Group policy: only group admins can remove members");
+        throw new ConvexError("Group policy: only group admins can remove members");
       }
       if (!isAdmin && policy.whoCanManageMembers !== "admins") {
-        throw new Error("Only group admins can remove members");
+        throw new ConvexError("Only group admins can remove members");
       }
     }
     const membership = await ctx.db
@@ -508,14 +508,14 @@ export const updateGroupPolicy = mutation({
   },
   handler: async (ctx, { conversationId, policies }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const conversation = await ctx.db.get(conversationId);
-    if (!conversation) throw new Error("Conversation not found");
+    if (!conversation) throw new ConvexError("Conversation not found");
     if (conversation.kind !== "chat" || conversation.chatType !== "group") {
-      throw new Error("Group policies only apply to group chats");
+      throw new ConvexError("Group policies only apply to group chats");
     }
     const isAdmin = await isGroupAdmin(ctx, conversationId, me._id as string);
-    if (!isAdmin) throw new Error("Only group admins can change group policies");
+    if (!isAdmin) throw new ConvexError("Only group admins can change group policies");
     const current = (conversation.policies as any) ?? {};
     await ctx.db.patch(conversationId, {
       policies: { ...current, ...policies },
@@ -533,9 +533,9 @@ export const setConversationAvatar = mutation({
   },
   handler: async (ctx, { conversationId, storageId, url, clear }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const conversation = await ctx.db.get(conversationId);
-    if (!conversation) throw new Error("Conversation not found");
+    if (!conversation) throw new ConvexError("Conversation not found");
     const isAdmin = await isGroupAdmin(ctx, conversationId, me._id as string);
     // WhatsApp-style "who can edit info" policy gates photo changes too.
     const policy = (conversation.policies as any) ?? {};
@@ -545,16 +545,16 @@ export const setConversationAvatar = mutation({
         .query("conversationMembers")
         .withIndex("by_user_conv", (q) => q.eq("userId", me._id).eq("conversationId", conversationId))
         .unique();
-      if (!member) throw new Error("You are not a member of this conversation");
+      if (!member) throw new ConvexError("You are not a member of this conversation");
     } else if (!isAdmin) {
-      throw new Error("Only the group creator or a group admin can change the photo");
+      throw new ConvexError("Only the group creator or a group admin can change the photo");
     }
 
     if (clear) {
       await ctx.db.patch(conversationId, { image: undefined, avatarStorageId: undefined });
     } else {
       const resolved = (await safeStorageUrl(ctx, storageId ?? "", url ?? undefined)) ?? url ?? "";
-      if (!resolved) throw new Error("Could not resolve uploaded image");
+      if (!resolved) throw new ConvexError("Could not resolve uploaded image");
       await ctx.db.patch(conversationId, {
         image: resolved,
         avatarStorageId: storageId ?? undefined,
@@ -580,25 +580,25 @@ export const setMemberRole = mutation({
   },
   handler: async (ctx, { conversationId, userId, role }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const conversation = await ctx.db.get(conversationId);
-    if (!conversation) throw new Error("Conversation not found");
+    if (!conversation) throw new ConvexError("Conversation not found");
     const target = await ctx.db
       .query("conversationMembers")
       .withIndex("by_user_conv", (q) => q.eq("userId", userId).eq("conversationId", conversationId))
       .unique();
-    if (!target) throw new Error("User is not a member of this group");
-    if (target.role === "owner") throw new Error("Cannot change the creator's role");
+    if (!target) throw new ConvexError("User is not a member of this group");
+    if (target.role === "owner") throw new ConvexError("Cannot change the creator's role");
     const meMember = await ctx.db
       .query("conversationMembers")
       .withIndex("by_user_conv", (q) => q.eq("userId", me._id).eq("conversationId", conversationId))
       .unique();
     const isOwner = meMember?.role === "owner";
     const isAdmin = meMember?.role === "admin" || isOwner;
-    if (!isAdmin) throw new Error("Only group admins can manage roles");
+    if (!isAdmin) throw new ConvexError("Only group admins can manage roles");
     // WhatsApp-style: only the creator can demote an existing admin.
     if (!isOwner && target.role === "admin" && role === "member") {
-      throw new Error("Only the group creator can remove an admin");
+      throw new ConvexError("Only the group creator can remove an admin");
     }
     if (!isOwner && role === "admin" && (conversation.policies as any)?.whoCanManageMembers === "admins") {
       // admins may still add admins unless the creator locked it — keep permissive,
@@ -627,15 +627,15 @@ export const renameConversation = mutation({
   },
   handler: async (ctx, { conversationId, name }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const conversation = await ctx.db.get(conversationId);
-    if (!conversation) throw new Error("Conversation not found");
+    if (!conversation) throw new ConvexError("Conversation not found");
     if (conversation.kind !== "chat" && conversation.kind !== "channel") {
-      throw new Error("Only groups and channels can be renamed");
+      throw new ConvexError("Only groups and channels can be renamed");
     }
     const trimmed = name.trim();
-    if (!trimmed) throw new Error("Name cannot be empty");
-    if (trimmed.length > 100) throw new Error("Name must be 100 characters or fewer");
+    if (!trimmed) throw new ConvexError("Name cannot be empty");
+    if (trimmed.length > 100) throw new ConvexError("Name must be 100 characters or fewer");
     const isAdmin = await isGroupAdmin(ctx, conversationId, me._id as string);
     const policy = (conversation.policies as any) ?? {};
     if (policy.whoCanEditInfo === "everyone" && conversation.kind === "chat") {
@@ -643,9 +643,9 @@ export const renameConversation = mutation({
         .query("conversationMembers")
         .withIndex("by_user_conv", (q) => q.eq("userId", me._id).eq("conversationId", conversationId))
         .unique();
-      if (!member) throw new Error("You are not a member of this conversation");
+      if (!member) throw new ConvexError("You are not a member of this conversation");
     } else if (!isAdmin) {
-      throw new Error("Only the group creator or a group admin can rename");
+      throw new ConvexError("Only the group creator or a group admin can rename");
     }
     const oldName = conversation.name;
     await ctx.db.patch(conversationId, { name: trimmed });
@@ -663,7 +663,7 @@ export const renameConversation = mutation({
 export const markRead = mutation({  args: { conversationId: v.id("conversations") },
   handler: async (ctx, { conversationId }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const membership = await ctx.db
       .query("conversationMembers")
       .withIndex("by_user_conv", (q) => q.eq("userId", me._id).eq("conversationId", conversationId))
@@ -679,12 +679,12 @@ export const archiveConversation = mutation({
   args: { conversationId: v.id("conversations"), archived: v.boolean() },
   handler: async (ctx, { conversationId, archived }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const membership = await ctx.db
       .query("conversationMembers")
       .withIndex("by_user_conv", (q) => q.eq("userId", me._id).eq("conversationId", conversationId))
       .unique();
-    if (!membership) throw new Error("Not a member");
+    if (!membership) throw new ConvexError("Not a member");
     await ctx.db.patch(membership._id, { isArchived: archived });
   },
 });
@@ -694,12 +694,12 @@ export const togglePin = mutation({
   args: { conversationId: v.id("conversations"), pinned: v.boolean() },
   handler: async (ctx, { conversationId, pinned }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const membership = await ctx.db
       .query("conversationMembers")
       .withIndex("by_user_conv", (q) => q.eq("userId", me._id).eq("conversationId", conversationId))
       .unique();
-    if (!membership) throw new Error("Not a member");
+    if (!membership) throw new ConvexError("Not a member");
     await ctx.db.patch(membership._id, { isPinned: pinned });
   },
 });
@@ -708,7 +708,7 @@ export const setMuted = mutation({
   args: { conversationId: v.id("conversations"), muted: v.boolean() },
   handler: async (ctx, { conversationId, muted }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const membership = await ctx.db
       .query("conversationMembers")
       .withIndex("by_user_conv", (q) => q.eq("userId", me._id).eq("conversationId", conversationId))

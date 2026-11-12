@@ -44,6 +44,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { meetingSiteBase } from "@/pages/MeetHome";
+import { errorMessage } from "@/lib/errors";
 
 export function AppMeetings() {
   const { user } = useAuth();
@@ -195,7 +196,7 @@ export function AppMeetings() {
         })
         .catch(() => toast(`Meeting scheduled · Room ${res.roomCode}`));
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Failed to schedule");
+      toast(e instanceof Error ? errorMessage(e) : "Failed to schedule");
     } finally {
       setScheduling(false);
     }
@@ -215,7 +216,7 @@ export function AppMeetings() {
       });
       navigate(`/meet/${res.slug}/${res.roomCode}`);
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Failed to start");
+      toast(e instanceof Error ? errorMessage(e) : "Failed to start");
     }
   };
 

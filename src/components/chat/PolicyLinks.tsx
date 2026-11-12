@@ -15,6 +15,7 @@ import { useMutation, useQuery } from "convex/react";
 import { CheckCircle2, Download, Loader2, Printer, Search, ShieldCheck } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { errorMessage } from "@/lib/errors";
 
 type Policy = {
   _id: string;
@@ -52,7 +53,7 @@ export function PolicyLinks() {
       toast.success(`"${p.title}" acknowledged`);
       setOpen(null);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to acknowledge");
+      toast.error(e instanceof Error ? errorMessage(e) : "Failed to acknowledge");
     } finally {
       setBusy(false);
     }

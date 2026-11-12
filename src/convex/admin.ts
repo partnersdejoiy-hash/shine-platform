@@ -1,6 +1,6 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { mutation, query } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import {
   ensureEmployeeId,
   getCurrentUser,
@@ -39,7 +39,7 @@ async function isAdmin(ctx: any) {
 export const stats = query({
   args: {},
   handler: async (ctx) => {
-    if (!(await isAdmin(ctx))) throw new Error("Admin only");
+    if (!(await isAdmin(ctx))) throw new ConvexError("Admin only");
     const now = Date.now();
 
     const [users, orgs, meetings, tasks, files] = await Promise.all([
@@ -99,7 +99,7 @@ export const stats = query({
 export const manageUsers = query({
   args: {},
   handler: async (ctx) => {
-    if (!(await isAdmin(ctx))) throw new Error("Admin only");
+    if (!(await isAdmin(ctx))) throw new ConvexError("Admin only");
     const users = await ctx.db.query("users").collect();
     const withPresence = await Promise.all(
       users.map(async (u: any) => {
@@ -140,27 +140,27 @@ export const setUserRole = mutation({
   handler: async (ctx, { userId, role }) => {
     const actor = await getCurrentUser(ctx);
     if (!actor || !(isSuperAdmin(actor) || actor.role === "dejoiy_admin" || actor.role === "admin")) {
-      throw new Error("Admin only");
+      throw new ConvexError("Admin only");
     }
     const target = await ctx.db.get(userId);
-    if (!target) throw new Error("User not found");
+    if (!target) throw new ConvexError("User not found");
     // Admin rights are managed in Dejoiy Mail, in both directions.
     assertNotMailManaged(role);
-    if (MAIL_MANAGED_ROLES.has(target.role ?? "")) throw new Error(MAIL_MANAGED_MESSAGE);
+    if (MAIL_MANAGED_ROLES.has(target.role ?? "")) throw new ConvexError(MAIL_MANAGED_MESSAGE);
     // The permanent super admin can never be demoted.
     if (isSuperAdmin(target) && !isSuperAdmin(actor)) {
-      throw new Error("The super admin account cannot be modified");
+      throw new ConvexError("The super admin account cannot be modified");
     }
     // Only the super admin can grant (or take) the super admin role.
     if (role === "super_admin" && !isSuperAdmin(actor)) {
-      throw new Error("Only the super admin can grant the super admin role");
+      throw new ConvexError("Only the super admin can grant the super admin role");
     }
     // Hierarchy enforcement: nobody can grant a role equal to or above their
     // own. The super admin (rank 10) may grant everything.
     const actorRank = isSuperAdmin(actor) ? 10 : ROLE_RANK[actor.role ?? "user"] ?? 0;
     const targetRank = ROLE_RANK[role] ?? 0;
     if (actorRank <= targetRank) {
-      throw new Error(
+      throw new ConvexError(
         `Hierarchy rule: ${actor.role} cannot assign the ${role} role — it must come from a higher role`,
       );
     }
@@ -198,10 +198,10 @@ export const requestPermission = mutation({
   },
   handler: async (ctx, { permission, reason, durationDays }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const permissionName = permission.trim();
-    if (!permissionName) throw new Error("Permission is required");
-    if (permissionName.length > 64) throw new Error("Permission name is too long");
+    if (!permissionName) throw new ConvexError("Permission is required");
+    if (permissionName.length > 64) throw new ConvexError("Permission name is too long");
 
     const pending = await ctx.db
       .query("permissionRequests")
@@ -209,10 +209,10 @@ export const requestPermission = mutation({
       .filter((q) => q.eq(q.field("status"), "pending"))
       .collect();
     if (pending.length >= 5) {
-      throw new Error("You already have 5 pending requests — wait for them to be reviewed");
+      throw new ConvexError("You already have 5 pending requests — wait for them to be reviewed");
     }
     const dup = pending.find((p) => p.permission.toLowerCase() === permissionName.toLowerCase());
-    if (dup) throw new Error("You already have a pending request for this permission");
+    if (dup) throw new ConvexError("You already have a pending request for this permission");
 
     const now = Date.now();
     await ctx.db.insert("permissionRequests", {
@@ -252,7 +252,7 @@ export const allPermissionRequests = query({
   args: {},
   handler: async (ctx) => {
     const me = await getCurrentUser(ctx);
-    if (!me || !(await canReviewPermissionRequests(me))) throw new Error("Admin, IT or Super Admin only");
+    if (!me || !(await canReviewPermissionRequests(me))) throw new ConvexError("Admin, IT or Super Admin only");
     const rows = await ctx.db.query("permissionRequests").order("desc").take(200);
     return Promise.all(
       rows.map(async (r) => {
@@ -273,10 +273,10 @@ export const reviewPermissionRequest = mutation({
   },
   handler: async (ctx, { requestId, approve, comment }) => {
     const me = await getCurrentUser(ctx);
-    if (!me || !(await canReviewPermissionRequests(me))) throw new Error("Admin, IT or Super Admin only");
+    if (!me || !(await canReviewPermissionRequests(me))) throw new ConvexError("Admin, IT or Super Admin only");
     const req = await ctx.db.get(requestId);
-    if (!req) throw new Error("Request not found");
-    if (req.status !== "pending") throw new Error("Request already reviewed");
+    if (!req) throw new ConvexError("Request not found");
+    if (req.status !== "pending") throw new ConvexError("Request already reviewed");
 
     const now = Date.now();
     const detail = `${approve ? "approved" : "rejected"}${comment ? ` — ${comment}` : ""}`;
@@ -312,14 +312,14 @@ export const setUserPermission = mutation({
   handler: async (ctx, { userId, permission, grant }) => {
     const actor = await getCurrentUser(ctx);
     if (!actor || !(isSuperAdmin(actor) || actor.role === "admin")) {
-      throw new Error("Admin only");
+      throw new ConvexError("Admin only");
     }
     const permissionName = permission.trim();
-    if (!permissionName) throw new Error("Permission is required");
+    if (!permissionName) throw new ConvexError("Permission is required");
     const target = await ctx.db.get(userId);
-    if (!target) throw new Error("User not found");
+    if (!target) throw new ConvexError("User not found");
     if (isSuperAdmin(target) && !isSuperAdmin(actor)) {
-      throw new Error("The super admin account cannot be modified");
+      throw new ConvexError("The super admin account cannot be modified");
     }
 
     const current = (target.approvedPermissions ?? []) as string[];
@@ -345,12 +345,12 @@ export const toggleUserActive = mutation({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
     const actor = await getCurrentUser(ctx);
-    if (!actor || !(isSuperAdmin(actor) || actor.role === "admin")) throw new Error("Admin only");
+    if (!actor || !(isSuperAdmin(actor) || actor.role === "admin")) throw new ConvexError("Admin only");
     const user = await ctx.db.get(userId);
-    if (!user) throw new Error("User not found");
+    if (!user) throw new ConvexError("User not found");
     // The permanent super admin account can never be deactivated.
     if (isSuperAdmin(user) && !isSuperAdmin(actor)) {
-      throw new Error("The super admin account cannot be deactivated");
+      throw new ConvexError("The super admin account cannot be deactivated");
     }
     const next = user.isActive === false;
     await ctx.db.patch(userId, { isActive: next });
@@ -362,7 +362,7 @@ export const toggleUserActive = mutation({
 export const allOrgs = query({
   args: {},
   handler: async (ctx) => {
-    if (!(await isAdmin(ctx))) throw new Error("Admin only");
+    if (!(await isAdmin(ctx))) throw new ConvexError("Admin only");
     return await ctx.db.query("organizations").collect();
   },
 });
@@ -379,12 +379,12 @@ export const setUserOrg = mutation({
   },
   handler: async (ctx, { userId, orgId }) => {
     const actor = await getCurrentUser(ctx);
-    if (!actor || !(isSuperAdmin(actor) || actor.role === "admin")) throw new Error("Admin only");
+    if (!actor || !(isSuperAdmin(actor) || actor.role === "admin")) throw new ConvexError("Admin only");
     const target = await ctx.db.get(userId);
-    if (!target) throw new Error("User not found");
+    if (!target) throw new ConvexError("User not found");
     // The permanent super admin can never be moved.
     if (isSuperAdmin(target) && !isSuperAdmin(actor)) {
-      throw new Error("The super admin account cannot be moved");
+      throw new ConvexError("The super admin account cannot be moved");
     }
 
     // Replace all current memberships with a single membership in the target org.
@@ -397,7 +397,7 @@ export const setUserOrg = mutation({
     let orgName: string | undefined;
     if (orgId) {
       const org = await ctx.db.get(orgId);
-      if (!org) throw new Error("Organization not found");
+      if (!org) throw new ConvexError("Organization not found");
       orgName = org.name;
       await ctx.db.insert("organizationMembers", {
         orgId,
@@ -434,9 +434,9 @@ export const createOrganization = mutation({
   },
   handler: async (ctx, { name, description, plan, ownerUserId }) => {
     const actor = await getCurrentUser(ctx);
-    if (!actor || !isSuperAdmin(actor)) throw new Error("Super Admin only");
+    if (!actor || !isSuperAdmin(actor)) throw new ConvexError("Super Admin only");
     const clean = name.trim();
-    if (!clean) throw new Error("Organization name is required");
+    if (!clean) throw new ConvexError("Organization name is required");
     const now = Date.now();
     const ownerId = ownerUserId ?? actor._id;
     const orgId = await ctx.db.insert("organizations", {
@@ -475,11 +475,11 @@ export const deleteOrganization = mutation({
   args: { orgId: v.id("organizations") },
   handler: async (ctx, { orgId }) => {
     const actor = await getCurrentUser(ctx);
-    if (!actor || !isSuperAdmin(actor)) throw new Error("Super Admin only");
+    if (!actor || !isSuperAdmin(actor)) throw new ConvexError("Super Admin only");
     const org = await ctx.db.get(orgId);
-    if (!org) throw new Error("Organization not found");
+    if (!org) throw new ConvexError("Organization not found");
     if (org.slug === "dejoiy" || org.name.toLowerCase() === "dejoiy") {
-      throw new Error("The DEJOIY home organization can never be deleted");
+      throw new ConvexError("The DEJOIY home organization can never be deleted");
     }
     const orgName = org.name;
 
@@ -547,7 +547,7 @@ export const deleteOrganization = mutation({
 export const ensureAllEmployeeIds = mutation({
   args: {},
   handler: async (ctx) => {
-    if (!(await isAdmin(ctx))) throw new Error("Admin only");
+    if (!(await isAdmin(ctx))) throw new ConvexError("Admin only");
     const users = await ctx.db.query("users").take(2000);
     let assigned = 0;
     for (const u of users) {
@@ -564,7 +564,7 @@ export const ensureAllEmployeeIds = mutation({
 export const roleHierarchy = query({
   args: {},
   handler: async (ctx) => {
-    if (!(await isAdmin(ctx))) throw new Error("Admin only");
+    if (!(await isAdmin(ctx))) throw new ConvexError("Admin only");
     const users = await ctx.db.query("users").take(2000);
     const counts = new Map<string, number>();
     const samples = new Map<string, string[]>();
@@ -588,7 +588,7 @@ export const roleHierarchy = query({
 export const auditLogs = query({
   args: {},
   handler: async (ctx) => {
-    if (!(await isAdmin(ctx))) throw new Error("Admin only");
+    if (!(await isAdmin(ctx))) throw new ConvexError("Admin only");
     const rows = await ctx.db.query("auditLogs").order("desc").take(100);
     const items = [];
     for (const row of rows) {
@@ -612,7 +612,7 @@ export const ping = query({
 export const adminBreakdown = query({
   args: {},
   handler: async (ctx) => {
-    if (!(await isAdmin(ctx))) throw new Error("Admin only");
+    if (!(await isAdmin(ctx))) throw new ConvexError("Admin only");
     const now = Date.now();
 
     const [meetingRows, taskRows, fileRows, orgRows, callRows] = await Promise.all([
@@ -740,15 +740,15 @@ export const adminUpdateUserField = mutation({
   handler: async (ctx, { userId, field, value }) => {
     const actor = await getCurrentUser(ctx);
     if (!actor || !(isSuperAdmin(actor) || actor.role === "dejoiy_admin" || actor.role === "admin")) {
-      throw new Error("Admin only");
+      throw new ConvexError("Admin only");
     }
     if (!(EDITABLE_USER_FIELDS as readonly string[]).includes(field)) {
-      throw new Error(`Field "${field}" is not editable via Control Sheet`);
+      throw new ConvexError(`Field "${field}" is not editable via Control Sheet`);
     }
     const target = await ctx.db.get(userId);
-    if (!target) throw new Error("User not found");
+    if (!target) throw new ConvexError("User not found");
     if (isSuperAdmin(target) && !isSuperAdmin(actor)) {
-      throw new Error("The super admin account cannot be modified");
+      throw new ConvexError("The super admin account cannot be modified");
     }
     const prev = (target as any)[field];
     if (prev === value) return; // no-op
@@ -779,9 +779,9 @@ export const addUserToOrg = mutation({
   },
   handler: async (ctx, { email, orgId, role = "member", department, designation }) => {
     const actor = await getCurrentUser(ctx);
-    if (!actor) throw new Error("Not authenticated");
+    if (!actor) throw new ConvexError("Not authenticated");
     if (!(isSuperAdmin(actor) || actor.role === "dejoiy_admin" || actor.role === "admin")) {
-      throw new Error("Admin only");
+      throw new ConvexError("Admin only");
     }
 
     // Find user by email
@@ -789,7 +789,7 @@ export const addUserToOrg = mutation({
       .query("users")
       .withIndex("email", (q) => q.eq("email", email.toLowerCase().trim()))
       .unique();
-    if (!target) throw new Error("No SHINE account found for that email");
+    if (!target) throw new ConvexError("No SHINE account found for that email");
 
     // Check if already a member
     const existing = await ctx.db
@@ -797,7 +797,7 @@ export const addUserToOrg = mutation({
       .withIndex("by_org", (q) => q.eq("orgId", orgId))
       .filter((q) => q.eq(q.field("userId"), target._id))
       .unique();
-    if (existing) throw new Error("That user is already a member of this organization");
+    if (existing) throw new ConvexError("That user is already a member of this organization");
 
     const now = Date.now();
     await ctx.db.insert("organizationMembers", {

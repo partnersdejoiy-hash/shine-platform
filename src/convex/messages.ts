@@ -1,7 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { mutation, query, MutationCtx, QueryCtx } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { getCurrentUser, isSuperAdmin, logAudit, safeStorageUrl } from "./users";
 import { canMentionEveryone, domainOf } from "./reach";
 import { maybeAskJoi } from "./joi";
@@ -146,8 +146,18 @@ export const list = query({
           })),
         };
       }
+      // the message this one answers, so the bubble can quote it
+      let replyTo: { body: string; senderName: string } | null = null;
+      if (msg.parentId) {
+        const parent = await ctx.db.get(msg.parentId);
+        const who = parent ? await ctx.db.get(parent.senderId) : null;
+        replyTo = parent
+          ? { body: parent.deleted ? "Message deleted" : (parent.body || "📎 Attachment").slice(0, 160), senderName: who?.name ?? who?.email ?? "Someone" }
+          : { body: "Message deleted", senderName: "" };
+      }
       messages.push({
         ...msg,
+        replyTo,
         poll,
         sender: sender ?? null,
         reactions,
@@ -217,14 +227,14 @@ type SendArgs = {
 
 async function handleSend(ctx: MutationCtx, args: SendArgs) {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const conversation = await ctx.db.get(args.conversationId);
-    if (!conversation) throw new Error("Conversation not found");
+    if (!conversation) throw new ConvexError("Conversation not found");
     const membership = await ctx.db
       .query("conversationMembers")
       .withIndex("by_user_conv", (q) => q.eq("userId", me._id).eq("conversationId", args.conversationId))
       .unique();
-    if (!membership) throw new Error("You are not a member of this conversation");
+    if (!membership) throw new ConvexError("You are not a member of this conversation");
 
     // WhatsApp-style group policy: when the group restricts sending to admins,
     // only group admins/owners may post. Enforced server-side, never client-side.
@@ -237,7 +247,7 @@ async function handleSend(ctx: MutationCtx, args: SendArgs) {
       convPolicy.whoCanSend === "admins" &&
       !isGroupAdmin
     ) {
-      throw new Error("Group policy: only group admins can send messages here");
+      throw new ConvexError("Group policy: only group admins can send messages here");
     }
 
     const kind = args.kind ?? "text";
@@ -388,7 +398,7 @@ export const sendSystem = mutation({
   args: { conversationId: v.id("conversations"), body: v.string() },
   handler: async (ctx, { conversationId, body }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const id = await ctx.db.insert("messages", {
       conversationId,
       senderId: me._id,
@@ -405,10 +415,10 @@ export const edit = mutation({
   args: { messageId: v.id("messages"), body: v.string() },
   handler: async (ctx, { messageId, body }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const msg = await ctx.db.get(messageId);
-    if (!msg || msg.senderId !== me._id) throw new Error("Cannot edit this message");
-    if (!body.trim()) throw new Error("Message cannot be empty");
+    if (!msg || msg.senderId !== me._id) throw new ConvexError("Cannot edit this message");
+    if (!body.trim()) throw new ConvexError("Message cannot be empty");
     await ctx.db.patch(messageId, { body: body.trim(), edited: true, updatedAt: Date.now() });
   },
 });
@@ -425,13 +435,13 @@ export const deleteForEveryone = mutation({
   args: { messageId: v.id("messages") },
   handler: async (ctx, { messageId }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const isAdminRole = isSuperAdmin(me) || me.role === "admin";
     if (!isAdminRole) {
-      throw new Error("Only Super Admins and Administrators can delete messages for everyone");
+      throw new ConvexError("Only Super Admins and Administrators can delete messages for everyone");
     }
     const msg = await ctx.db.get(messageId);
-    if (!msg) throw new Error("Message not found");
+    if (!msg) throw new ConvexError("Message not found");
     const conversation = await ctx.db.get(msg.conversationId);
     await ctx.db.patch(messageId, { deleted: true, body: "", updatedAt: Date.now() });
     if (conversation) {
@@ -454,9 +464,9 @@ export const deleteForMe = mutation({
   args: { messageId: v.id("messages") },
   handler: async (ctx, { messageId }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const msg = await ctx.db.get(messageId);
-    if (!msg) throw new Error("Message not found");
+    if (!msg) throw new ConvexError("Message not found");
     const hiddenFor = msg.hiddenFor ?? [];
     await ctx.db.patch(messageId, { hiddenFor: [...hiddenFor, me._id] });
   },
@@ -466,7 +476,7 @@ export const react = mutation({
   args: { messageId: v.id("messages"), emoji: v.string() },
   handler: async (ctx, { messageId, emoji }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const existing = await ctx.db
       .query("reactions")
       .withIndex("by_message", (q) => q.eq("messageId", messageId))
@@ -484,9 +494,9 @@ export const pin = mutation({
   args: { messageId: v.id("messages") },
   handler: async (ctx, { messageId }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const msg = await ctx.db.get(messageId);
-    if (!msg) throw new Error("Message not found");
+    if (!msg) throw new ConvexError("Message not found");
     const existing = await ctx.db
       .query("pinnedMessages")
       .withIndex("by_conversation", (q) => q.eq("conversationId", msg.conversationId))
@@ -512,16 +522,16 @@ export const forward = mutation({
   args: { messageId: v.id("messages"), toConversationId: v.id("conversations") },
   handler: async (ctx, { messageId, toConversationId }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const msg = await ctx.db.get(messageId);
-    if (!msg) throw new Error("Message not found");
+    if (!msg) throw new ConvexError("Message not found");
     const target = await ctx.db.get(toConversationId);
-    if (!target) throw new Error("Target conversation not found");
+    if (!target) throw new ConvexError("Target conversation not found");
     const membership = await ctx.db
       .query("conversationMembers")
       .withIndex("by_user_conv", (q) => q.eq("userId", me._id).eq("conversationId", toConversationId))
       .unique();
-    if (!membership) throw new Error("You are not in the target conversation");
+    if (!membership) throw new ConvexError("You are not in the target conversation");
     const now = Date.now();
     await ctx.db.insert("messages", {
       conversationId: toConversationId,
@@ -541,10 +551,10 @@ export const votePoll = mutation({
   args: { messageId: v.id("messages"), optionId: v.string() },
   handler: async (ctx, { messageId, optionId }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const msg = await ctx.db.get(messageId);
-    if (!msg || !msg.poll) throw new Error("Poll not found");
-    if (msg.poll.closed) throw new Error("This poll has closed");
+    if (!msg || !msg.poll) throw new ConvexError("Poll not found");
+    if (msg.poll.closed) throw new ConvexError("This poll has closed");
     const options = msg.poll.options.map((o) => {
       const votes = o.votes.filter((uid) => uid !== me._id);
       return o.id === optionId ? { ...o, votes: [...votes, me._id] } : { ...o, votes };
@@ -560,11 +570,11 @@ export const closePoll = mutation({
   args: { messageId: v.id("messages") },
   handler: async (ctx, { messageId }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const msg = await ctx.db.get(messageId);
-    if (!msg || !msg.poll) throw new Error("Poll not found");
+    if (!msg || !msg.poll) throw new ConvexError("Poll not found");
     const conv = await ctx.db.get(msg.conversationId);
-    if (!conv) throw new Error("Conversation not found");
+    if (!conv) throw new ConvexError("Conversation not found");
     const isAuthor = msg.senderId === me._id;
     // meeting rooms: host/co-host can close any poll; otherwise the author can
     let isManager = isAuthor;
@@ -583,7 +593,7 @@ export const closePoll = mutation({
         if (p && (p.role === "host" || p.role === "moderator")) isManager = true;
       }
     }
-    if (!isManager) throw new Error("Only the host or the poll author can close this poll");
+    if (!isManager) throw new ConvexError("Only the host or the poll author can close this poll");
     await ctx.db.patch(messageId, {
       poll: { ...msg.poll, closed: true },
     });
@@ -598,8 +608,8 @@ export const createPoll = mutation({
   },
   handler: async (ctx, { conversationId, question, options }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
-    if (options.length < 2) throw new Error("A poll needs at least two options");
+    if (!me) throw new ConvexError("Not authenticated");
+    if (options.length < 2) throw new ConvexError("A poll needs at least two options");
     return await handleSend(ctx, {
       conversationId,
       body: question,
@@ -620,9 +630,9 @@ export const toggleBookmark = mutation({
   args: { messageId: v.id("messages") },
   handler: async (ctx, { messageId }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const msg = await ctx.db.get(messageId);
-    if (!msg) throw new Error("Message not found");
+    if (!msg) throw new ConvexError("Message not found");
     const existing = await ctx.db
       .query("bookmarks")
       .withIndex("by_user", (q) => q.eq("userId", me._id))
@@ -702,10 +712,10 @@ export const globalSearch = query({
     const [allUsers, messageHits, fileHits, meetingHits, conversationHits, orgHits] =
       await Promise.all([
         ctx.db.query("users").take(200),
-        ctx.db.query("messages").withSearchIndex("search_body", (idx) => idx.search("body", q)).take(8),
-        ctx.db.query("files").withSearchIndex("search_name", (idx) => idx.search("name", q)).take(8),
+        ctx.db.query("messages").withSearchIndex("search_body", (idx) => idx.search("body", q)).take(150),
+        ctx.db.query("files").withSearchIndex("search_name", (idx) => idx.search("name", q)).take(100),
         ctx.db.query("meetings").withSearchIndex("search_title", (idx) => idx.search("title", q)).take(8),
-        ctx.db.query("conversations").withSearchIndex("search_name", (idx) => idx.search("name", q)).take(8),
+        ctx.db.query("conversations").withSearchIndex("search_name", (idx) => idx.search("name", q)).take(50),
         ctx.db.query("organizations").withSearchIndex("search_name", (idx) => idx.search("name", q)).take(8),
       ]);
     const userHits = allUsers
@@ -719,8 +729,10 @@ export const globalSearch = query({
       .collect();
     const convIds = new Set(memberships.map((m) => m.conversationId));
     const allowedMessages = [];
+    // search hits are platform-wide: keep only the user's own conversations (so their message isn't crowded out by others')
     for (const msg of messageHits) {
-      if (!convIds.has(msg.conversationId) || msg.deleted) continue;
+      if (allowedMessages.length >= 20) break;
+      if (!convIds.has(msg.conversationId) || msg.deleted || (msg.hiddenFor ?? []).includes(userId)) continue;
       const sender = await ctx.db.get(msg.senderId);
       const conversation = await ctx.db.get(msg.conversationId);
       allowedMessages.push({ ...msg, sender, conversation });
@@ -735,8 +747,13 @@ export const globalSearch = query({
         return { ...m, host };
       }),
     );
+    // files: only the user's own, or shared in their conversations; private channels: only for members
+    const files = fileHits.filter((f) => f.ownerId === userId || (f.conversationId && convIds.has(f.conversationId))).slice(0, 8);
+    const visibleConversations = conversationHits
+      .filter((c) => convIds.has(c._id) || ((c as any).chatType !== "direct" && !(c as any).isPrivate))
+      .slice(0, 8);
     const conversations = await Promise.all(
-      conversationHits.map(async (c) => {
+      visibleConversations.map(async (c) => {
         const memberRows = await ctx.db
           .query("conversationMembers")
           .withIndex("by_conversation", (q) => q.eq("conversationId", c._id))
@@ -748,7 +765,7 @@ export const globalSearch = query({
     return {
       users,
       messages: allowedMessages,
-      files: fileHits,
+      files,
       meetings,
       conversations,
       organizations: orgHits,

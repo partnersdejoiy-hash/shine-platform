@@ -21,6 +21,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { JOI_AVATAR } from "@/lib/joi";
 import { toast } from "sonner";
+import { errorMessage } from "@/lib/errors";
 
 type ChatItem = { role: "user" | "ai"; content: string; kind?: string };
 
@@ -93,7 +94,7 @@ export function ShineAIDrawer({
     } catch (e) {
       push({
         role: "ai",
-        content: `Something went wrong: ${e instanceof Error ? e.message : "unknown error"}`,
+        content: `Something went wrong: ${e instanceof Error ? errorMessage(e) : "unknown error"}`,
       });
     } finally {
       setBusy(false);

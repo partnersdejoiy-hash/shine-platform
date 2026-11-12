@@ -9,6 +9,7 @@ import { KeyRound, Loader2, Lock, RefreshCw, ShieldCheck, Sparkles } from "lucid
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
+import { errorMessage } from "@/lib/errors";
 
 export function AppChangePassword() {
   const navigate = useNavigate();
@@ -48,7 +49,7 @@ export function AppChangePassword() {
       toast.success("Password updated — welcome to SHINE");
       navigate("/app", { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update password");
+      setError(err instanceof Error ? errorMessage(err) : "Failed to update password");
       setBusy(false);
     }
   };
@@ -63,7 +64,7 @@ export function AppChangePassword() {
         toast.error("Email delivery failed — contact your administrator.");
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to resend");
+      toast.error(err instanceof Error ? errorMessage(err) : "Failed to resend");
     } finally {
       setHelpBusy(false);
     }
@@ -82,7 +83,7 @@ export function AppChangePassword() {
         toast.error("Email delivery failed — contact your administrator.");
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to send code");
+      toast.error(err instanceof Error ? errorMessage(err) : "Failed to send code");
     } finally {
       setHelpBusy(false);
     }

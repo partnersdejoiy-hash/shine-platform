@@ -1,3 +1,4 @@
+import { ConvexError } from "convex/values";
 // THIS FILE IS READ ONLY. Do not touch this file unless you are correctly adding a new auth provider in accordance to the vly auth documentation
 
 // Wire the auth.js / Better Auth secret. The deployment manages the secret via
@@ -169,7 +170,7 @@ const adminPassword = ConvexCredentials({
     const password =
       typeof credentials.password === "string" ? credentials.password : "";
     if (!email || !password) {
-      throw new Error("Email and password are required.");
+      throw new ConvexError("Email and password are required.");
     }
     const userId = await ctx.runMutation(internal.passwords.loginWithPassword, {
       email,
@@ -204,17 +205,17 @@ const dejoiyMailPassword = ConvexCredentials({
   authorize: async (credentials, ctx) => {
     const email = typeof credentials.email === "string" ? credentials.email.trim().toLowerCase() : "";
     const password = typeof credentials.password === "string" ? credentials.password : "";
-    if (!email || !password) throw new Error("Enter your Dejoiy Mail email and password.");
+    if (!email || !password) throw new ConvexError("Enter your Dejoiy Mail email and password.");
     const base = process.env.DEJOIY_MAIL_URL;
     const secret = process.env.DEJOIY_MAIL_SSO_SECRET;
-    if (!base || !secret) throw new Error("Dejoiy Mail sign-in is not set up on this server yet.");
+    if (!base || !secret) throw new ConvexError("Dejoiy Mail sign-in is not set up on this server yet.");
     const res = await fetch(`${base}/api/shine/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${secret}` },
       body: JSON.stringify({ email, password }),
     });
     const out = (await res.json().catch(() => ({}))) as Record<string, unknown>;
-    if (!res.ok) throw new Error(String(out.error ?? "Could not sign you in. Try again."));
+    if (!res.ok) throw new ConvexError(String(out.error ?? "Could not sign you in. Try again."));
     const userId = await ctx.runMutation(internal.dejoiyMail.upsertUser, {
       email: String(out.email ?? email),
       name: String(out.name ?? ""),

@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { errorMessage } from "@/lib/errors";
 
 /**
  * Mandatory policy acknowledgement gate.
@@ -42,7 +43,7 @@ export function PolicyAckGate() {
       toast.success("Policy acknowledged");
       setOpen(null);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to acknowledge");
+      toast.error(e instanceof Error ? errorMessage(e) : "Failed to acknowledge");
     } finally {
       setBusyId(null);
     }

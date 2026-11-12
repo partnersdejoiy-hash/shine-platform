@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { MessageSquarePlus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
+import { errorMessage } from "@/lib/errors";
 
 export function AppChats() {
   const { id } = useParams();
@@ -28,7 +29,7 @@ export function AppChats() {
       const convId = await openDirect({ userId: userId as never });
       navigate(`/app/chats/${convId}`);
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Could not start the chat");
+      toast(e instanceof Error ? errorMessage(e) : "Could not start the chat");
     }
   };
   // "New chat" in the sidebar: ?compose=1 when it brings you here, an event when you're already here

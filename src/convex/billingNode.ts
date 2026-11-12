@@ -4,7 +4,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { createHmac } from "node:crypto";
 import { action } from "./_generated/server";
 import { api } from "./_generated/api";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { PLANS, razorpayConfigured } from "./billing";
 
 const basicAuth = () =>
@@ -25,18 +25,18 @@ export const createOrder = action({
   args: { planCode: v.string() },
   handler: async (ctx, args) => {
     if (!razorpayConfigured()) {
-      throw new Error(
+      throw new ConvexError(
         "Razorpay is not configured yet. Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in the project Keys tab.",
       );
     }
     const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("You must be signed in.");
+    if (userId === null) throw new ConvexError("You must be signed in.");
 
     const user = await ctx.runQuery(api.users.currentUser);
     const plan = PLANS.find((p) => p.code === args.planCode);
-    if (!plan) throw new Error("Unknown plan.");
+    if (!plan) throw new ConvexError("Unknown plan.");
     if (plan.price <= 0) {
-      throw new Error(
+      throw new ConvexError(
         "This plan is custom-priced — contact sales@shine.dejoiy.com.",
       );
     }
@@ -63,7 +63,7 @@ export const createOrder = action({
     });
     if (!res.ok) {
       const detail = await res.text();
-      throw new Error(
+      throw new ConvexError(
         `Razorpay order failed (${res.status}): ${detail.slice(0, 300)}`,
       );
     }
@@ -106,10 +106,10 @@ export const verifyPayment = action({
   },
   handler: async (ctx, args) => {
     if (!razorpayConfigured()) {
-      throw new Error("Razorpay is not configured.");
+      throw new ConvexError("Razorpay is not configured.");
     }
     const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("You must be signed in.");
+    if (userId === null) throw new ConvexError("You must be signed in.");
 
     const expected = createHmac(
       "sha256",
@@ -118,7 +118,7 @@ export const verifyPayment = action({
       .update(`${args.orderId}|${args.paymentId}`)
       .digest("hex");
     if (expected !== args.signature) {
-      throw new Error("Payment signature verification failed.");
+      throw new ConvexError("Payment signature verification failed.");
     }
 
     // Mark the payment paid + upgrade the org plan (server-verified, so this

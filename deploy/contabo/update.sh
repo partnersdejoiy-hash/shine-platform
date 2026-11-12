@@ -12,7 +12,8 @@ cd "$DIR"
 if [ -z "${FIRST:-}" ]; then
   echo "== Updating code"
   git fetch -q origin "$BRANCH" && git checkout -q "$BRANCH" && git pull -q --ff-only origin "$BRANCH"
-  docker compose -p shine -f deploy/contabo/docker-compose.yml --env-file /etc/shine/convex.env pull -q
+  # a new Convex server version restarts the backend (everyone sees "temporarily unavailable"): only when asked
+  [ -n "${CONVEX_UPGRADE:-}" ] && docker compose -p shine -f deploy/contabo/docker-compose.yml --env-file /etc/shine/convex.env pull -q
   docker compose -p shine -f deploy/contabo/docker-compose.yml --env-file /etc/shine/convex.env up -d
 fi
 git log --oneline -1
@@ -35,7 +36,10 @@ docker run --rm --network host "${JOI_ENV[@]}" -v "$DIR":/app -v /etc/shine:/etc
     npx convex run dejoiyMail:syncDirectory || echo "(people list from Dejoiy Mail not loaded yet: needs PROVISION_ADMIN in /etc/dmail/adapter.env)"
     npx vite build --logLevel warn
   '
-rsync -a --delete dist/ /var/www/shine/
+# keep last weeks' asset files: tabs opened before this update still load their pages instead of crashing
+rsync -a --exclude index.html dist/ /var/www/shine/
+cp dist/index.html /var/www/shine/index.html
+find /var/www/shine/assets -type f -mtime +14 -delete 2>/dev/null || true
 echo "== Check"
 curl -fsS -o /dev/null -w "https://$APP_HOST -> %{http_code}\n" "https://$APP_HOST/"
 curl -fsS -o /dev/null -w "https://$API_HOST/version -> %{http_code}\n" "https://$API_HOST/version"

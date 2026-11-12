@@ -1,6 +1,6 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { mutation, query } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { getCurrentUser, safeStorageUrl } from "./users";
 
 /** Generate an upload URL for the client to PUT a file to Convex storage. */
@@ -25,7 +25,7 @@ export const saveFile = mutation({
   },
   handler: async (ctx, { storageId, url, name, mimeType, size, conversationId, folderId, kind }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     // Self-hosted uploads carry a ready-to-render URL; Convex keys are resolved
     // here (and again lazily in myFiles) so files always display.
     const resolved = (await safeStorageUrl(ctx, storageId, url)) ?? "";
@@ -79,7 +79,7 @@ export const createFolder = mutation({
   args: { name: v.string(), parentId: v.optional(v.id("folders")) },
   handler: async (ctx, { name, parentId }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     return await ctx.db.insert("folders", {
       ownerId: me._id,
       name: name.trim(),
@@ -93,9 +93,9 @@ export const deleteFolder = mutation({
   args: { folderId: v.id("folders") },
   handler: async (ctx, { folderId }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const folder = await ctx.db.get(folderId);
-    if (!folder || folder.ownerId !== me._id) throw new Error("Not your folder");
+    if (!folder || folder.ownerId !== me._id) throw new ConvexError("Not your folder");
     const children = await ctx.db
       .query("files")
       .withIndex("by_folder", (q) => q.eq("folderId", folderId))
@@ -112,9 +112,9 @@ export const deleteFile = mutation({
   args: { fileId: v.id("files") },
   handler: async (ctx, { fileId }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const file = await ctx.db.get(fileId);
-    if (!file || (file.ownerId !== me._id && !file.conversationId)) throw new Error("Not your file");
+    if (!file || (file.ownerId !== me._id && !file.conversationId)) throw new ConvexError("Not your file");
     await ctx.storage.delete(file.storageId as any);
     await ctx.db.delete(fileId);
   },
@@ -124,9 +124,9 @@ export const renameFile = mutation({
   args: { fileId: v.id("files"), name: v.string() },
   handler: async (ctx, { fileId, name }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const file = await ctx.db.get(fileId);
-    if (!file || file.ownerId !== me._id) throw new Error("Not your file");
+    if (!file || file.ownerId !== me._id) throw new ConvexError("Not your file");
     await ctx.db.patch(fileId, { name: name.trim() });
   },
 });

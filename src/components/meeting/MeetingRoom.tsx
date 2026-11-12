@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/errors";
 import { api } from "@/convex/_generated/api";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Badge } from "@/components/ui/badge";
@@ -282,19 +283,15 @@ export function MeetingRoom() {
   useEffect(() => {
     if (isViewer || localStream || !id || !detail) return;
     let cancelled = false;
-    navigator.mediaDevices
-      .getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-        video: { width: { ideal: 1280 }, height: { ideal: 720 } },
-      })
+    getMedia()
       .then((stream) => {
         if (cancelled) {
           stream.getTracks().forEach((t) => t.stop());
           return;
         }
         setLocalStream(stream);
-        setMicOn(true);
-        setCamOn(true);
+        setMicOn(stream.getAudioTracks().length > 0);
+        setCamOn(stream.getVideoTracks().length > 0);
       })
       .catch(() => {
         if (!cancelled) {
@@ -309,23 +306,24 @@ export function MeetingRoom() {
   // join flow — waiting-room users are admitted reactively when the host admits them
   const handleJoin = async () => {
     try {
-      if (!isViewer && !localStream) {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-          video: { width: { ideal: 1280 }, height: { ideal: 720 } },
-        });
+      let stream = localStream;
+      if (!isViewer && !stream) {
+        stream = await getMedia();
         setLocalStream(stream);
-        setMicOn(true);
-        setCamOn(true);
+        setMicOn(stream.getAudioTracks().length > 0);
+        setCamOn(stream.getVideoTracks().length > 0);
       }
       if (id) {
-        await join({ meetingId: id as any, isMuted: isViewer, isVideoOn: !isViewer });
+        const hasMic = !isViewer && !!stream?.getAudioTracks().length;
+        const hasCam = !isViewer && !!stream?.getVideoTracks().length;
+        await join({ meetingId: id as any, isMuted: !hasMic, isVideoOn: hasCam });
+        if (!isViewer && !hasMic && !hasCam) toast("No camera or microphone found: you joined without them");
         track("joined", isViewer ? "as viewer" : "with media");
       }
       setRequestedJoin(true);
       if (isViewer) toast("You joined as a viewer — mic & camera are off");
     } catch (e) {
-      setMediaError(e instanceof Error ? e.message : "Camera/microphone access denied. You can still join without media.");
+      setMediaError(e instanceof Error ? errorMessage(e) : "Camera/microphone access denied. You can still join without media.");
       if (id) {
         await join({ meetingId: id as any, isMuted: true, isVideoOn: false }).catch(() => {});
         track("joined", "no media");
@@ -743,7 +741,7 @@ export function MeetingRoom() {
       XLSX.writeFile(wb, `shine-meeting-report-${m.roomCode}.xlsx`);
       toast("Report downloaded");
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Failed to generate report");
+      toast(e instanceof Error ? errorMessage(e) : "Failed to generate report");
     }
   };
 
@@ -2401,4 +2399,18 @@ function PollDialog({
       </DialogContent>
     </Dialog>
   );
+}
+
+/** Camera and mic if both work, else whichever one exists, else nothing (an empty stream): never blocks joining. */
+async function getMedia(): Promise<MediaStream> {
+  const audio = { echoCancellation: true, noiseSuppression: true, autoGainControl: true };
+  const video = { width: { ideal: 1280 }, height: { ideal: 720 } };
+  for (const c of [{ audio, video }, { audio }, { video }] as MediaStreamConstraints[]) {
+    try {
+      return await navigator.mediaDevices.getUserMedia(c);
+    } catch {
+      /* no such device, or not allowed: try with less */
+    }
+  }
+  return new MediaStream();
 }

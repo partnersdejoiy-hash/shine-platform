@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getCurrentUser, isSuperAdmin, logAudit } from "./users";
 
@@ -341,7 +341,7 @@ export const getPermissionMatrix = query({
   args: {},
   handler: async (ctx) => {
     const me = await getCurrentUser(ctx);
-    if (!me || !(await canManagePermissions(me))) throw new Error("Admin, IT or Super Admin only");
+    if (!me || !(await canManagePermissions(me))) throw new ConvexError("Admin, IT or Super Admin only");
     const rows = await ctx.db.query("rolePermissions").collect();
     const overrides = new Map<string, Record<string, PermValue>>();
     for (const r of rows) overrides.set(r.role, r.permissions as Record<string, PermValue>);
@@ -367,10 +367,10 @@ export const setRolePermission = mutation({
   },
   handler: async (ctx, { role, permission, value }) => {
     const me = await getCurrentUser(ctx);
-    if (!me || !(await canManagePermissions(me))) throw new Error("Admin, IT or Super Admin only");
-    if (!ROLES_ALL.includes(role as MatrixRole)) throw new Error(`Unknown role "${role}"`);
-    if (!PERMISSION_BY_ID.has(permission)) throw new Error(`Unknown permission "${permission}"`);
-    if (isLockedRole(role)) throw new Error("Super Admin permissions are locked to full access");
+    if (!me || !(await canManagePermissions(me))) throw new ConvexError("Admin, IT or Super Admin only");
+    if (!ROLES_ALL.includes(role as MatrixRole)) throw new ConvexError(`Unknown role "${role}"`);
+    if (!PERMISSION_BY_ID.has(permission)) throw new ConvexError(`Unknown permission "${permission}"`);
+    if (isLockedRole(role)) throw new ConvexError("Super Admin permissions are locked to full access");
 
     const existing = await ctx.db
       .query("rolePermissions")
@@ -414,9 +414,9 @@ export const resetRolePermissions = mutation({
   args: { role: v.string() },
   handler: async (ctx, { role }) => {
     const me = await getCurrentUser(ctx);
-    if (!me || !(await canManagePermissions(me))) throw new Error("Admin, IT or Super Admin only");
-    if (!ROLES_ALL.includes(role as MatrixRole)) throw new Error(`Unknown role "${role}"`);
-    if (isLockedRole(role)) throw new Error("Super Admin permissions are locked");
+    if (!me || !(await canManagePermissions(me))) throw new ConvexError("Admin, IT or Super Admin only");
+    if (!ROLES_ALL.includes(role as MatrixRole)) throw new ConvexError(`Unknown role "${role}"`);
+    if (isLockedRole(role)) throw new ConvexError("Super Admin permissions are locked");
     const existing = await ctx.db
       .query("rolePermissions")
       .withIndex("by_role", (q: any) => q.eq("role", role))

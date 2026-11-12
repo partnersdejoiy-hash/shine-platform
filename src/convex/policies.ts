@@ -1,6 +1,6 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { mutation, query } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { getCurrentUser, isSuperAdmin, logAudit } from "./users";
 
 /**
@@ -209,8 +209,8 @@ export const seedDefaultPolicies = mutation({
   args: {},
   handler: async (ctx) => {
     const actor = await getCurrentUser(ctx);
-    if (!actor) throw new Error("Not authenticated");
-    if (!isPolicyAdmin(actor)) throw new Error("Admin role required");
+    if (!actor) throw new ConvexError("Not authenticated");
+    if (!isPolicyAdmin(actor)) throw new ConvexError("Admin role required");
 
     let created = 0;
     const now = Date.now();
@@ -267,9 +267,9 @@ export const createPolicy = mutation({
   },
   handler: async (ctx, { title, category, mandatory, summary, content }) => {
     const actor = await getCurrentUser(ctx);
-    if (!actor) throw new Error("Not authenticated");
-    if (!isPolicyAdmin(actor)) throw new Error("Admin role required");
-    if (!title.trim()) throw new Error("Policy title is required");
+    if (!actor) throw new ConvexError("Not authenticated");
+    if (!isPolicyAdmin(actor)) throw new ConvexError("Admin role required");
+    if (!title.trim()) throw new ConvexError("Policy title is required");
 
     const now = Date.now();
     const policyId = await ctx.db.insert("policies", {
@@ -315,11 +315,11 @@ export const publishPolicy = mutation({
   },
   handler: async (ctx, { policyId, summary, content }) => {
     const actor = await getCurrentUser(ctx);
-    if (!actor) throw new Error("Not authenticated");
-    if (!isPolicyAdmin(actor)) throw new Error("Admin role required");
+    if (!actor) throw new ConvexError("Not authenticated");
+    if (!isPolicyAdmin(actor)) throw new ConvexError("Admin role required");
 
     const policy = await ctx.db.get(policyId);
-    if (!policy) throw new Error("Policy not found");
+    if (!policy) throw new ConvexError("Policy not found");
 
     const now = Date.now();
     const nextVersion = policy.currentVersion + 1;
@@ -374,13 +374,13 @@ export const acknowledgePolicy = mutation({
   },
   handler: async (ctx, { policyId, userAgent }) => {
     const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("Not authenticated");
+    if (userId === null) throw new ConvexError("Not authenticated");
     const me = await ctx.db.get(userId);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
 
     const policy = await ctx.db.get(policyId);
     if (!policy || policy.status !== "published") {
-      throw new Error("Policy is not published");
+      throw new ConvexError("Policy is not published");
     }
 
     const version = policy.currentVersion;
@@ -559,8 +559,8 @@ export const policyStats = query({
   args: {},
   handler: async (ctx) => {
     const actor = await getCurrentUser(ctx);
-    if (!actor) throw new Error("Not authenticated");
-    if (!isPolicyAdmin(actor)) throw new Error("Admin role required");
+    if (!actor) throw new ConvexError("Not authenticated");
+    if (!isPolicyAdmin(actor)) throw new ConvexError("Admin role required");
 
     const policies = await ctx.db.query("policies").collect();
     const versions = await ctx.db.query("policyVersions").collect();

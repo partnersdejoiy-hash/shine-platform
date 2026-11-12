@@ -34,6 +34,7 @@ import {
 import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
+import { errorMessage } from "@/lib/errors";
 
 type StatusRow = {
   status: {
@@ -149,7 +150,7 @@ export function AppContacts() {
       setGroupName("");
       navigate(`/app/chats/${convId}`);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to create group");
+      toast.error(e instanceof Error ? errorMessage(e) : "Failed to create group");
     }
   };
 
@@ -452,7 +453,7 @@ function StatusTab({ onOpenChat }: { onOpenChat: (userId: string) => void }) {
       setText("");
       setPreview(null);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to post status");
+      toast.error(e instanceof Error ? errorMessage(e) : "Failed to post status");
     } finally {
       setBusy(false);
     }

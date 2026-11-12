@@ -1,6 +1,6 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { mutation, query } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { getCurrentUser } from "./users";
 
 export const myContacts = query({
@@ -46,8 +46,8 @@ export const add = mutation({
   args: { contactId: v.id("users") },
   handler: async (ctx, { contactId }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
-    if (me._id === contactId) throw new Error("Cannot add yourself");
+    if (!me) throw new ConvexError("Not authenticated");
+    if (me._id === contactId) throw new ConvexError("Cannot add yourself");
     const existing = await ctx.db
       .query("contacts")
       .withIndex("by_user", (q) => q.eq("userId", me._id))
@@ -81,13 +81,13 @@ export const toggleFavorite = mutation({
   args: { contactId: v.id("users") },
   handler: async (ctx, { contactId }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const existing = await ctx.db
       .query("contacts")
       .withIndex("by_user", (q) => q.eq("userId", me._id))
       .filter((q) => q.eq(q.field("contactId"), contactId))
       .unique();
-    if (!existing) throw new Error("Not a contact");
+    if (!existing) throw new ConvexError("Not a contact");
     await ctx.db.patch(existing._id, { isFavorite: !existing.isFavorite });
   },
 });
@@ -96,7 +96,7 @@ export const toggleBlock = mutation({
   args: { contactId: v.id("users") },
   handler: async (ctx, { contactId }) => {
     const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Not authenticated");
+    if (!me) throw new ConvexError("Not authenticated");
     const existing = await ctx.db
       .query("contacts")
       .withIndex("by_user", (q) => q.eq("userId", me._id))
