@@ -47,7 +47,7 @@ export const upsertUser = internalMutation({
       .withIndex("email", (q) => q.eq("email", c.email))
       .first();
     if (user) {
-      if (user.isActive === false) {
+      if (user.isActive === false || user.chatOff) {
         throw new ConvexError("This account has been deactivated. Contact your administrator.");
       }
       await applyMail(ctx, user, c);

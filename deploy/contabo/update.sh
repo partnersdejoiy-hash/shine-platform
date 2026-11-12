@@ -40,13 +40,6 @@ docker run --rm --network host "${JOI_ENV[@]}" -v "$DIR":/app -v /etc/shine:/etc
 rsync -a --exclude index.html dist/ /var/www/shine/
 cp dist/index.html /var/www/shine/index.html
 find /var/www/shine/assets -type f -mtime +14 -delete 2>/dev/null || true
-# Dejoiy Mail's admin console shows Shine's admin inside it: allow that one site to frame Shine
-NGX=/etc/nginx/sites-available/shine
-if [ -f "$NGX" ] && ! grep -q "admin-mail.dejoiy.com" "$NGX"; then
-  cp "$NGX" "/root/shine-nginx.bak.$(date +%s)"
-  sed -i "s#frame-ancestors 'self' https://mail.dejoiy.com\"#frame-ancestors 'self' https://mail.dejoiy.com https://admin-mail.dejoiy.com\"#" "$NGX"
-  nginx -t && systemctl reload nginx || echo "nginx refused the change: restore the backup in /root"
-fi
 echo "== Check"
 curl -fsS -o /dev/null -w "https://$APP_HOST -> %{http_code}\n" "https://$APP_HOST/"
 curl -fsS -o /dev/null -w "https://$API_HOST/version -> %{http_code}\n" "https://$API_HOST/version"

@@ -21,7 +21,9 @@ export const currentUser = query({
 export const getCurrentUser = async (ctx: QueryCtx) => {
   const userId = await getAuthUserId(ctx);
   if (userId === null) return null;
-  return await ctx.db.get(userId);
+  const user = await ctx.db.get(userId);
+  // switched off by an admin: treated as signed out everywhere, at once
+  return user?.chatOff ? null : user;
 };
 
 /**

@@ -99,6 +99,7 @@ const schema = defineSchema(
       customStatus: v.optional(v.string()), // the written status everyone sees (like WhatsApp's)
       // how the person wants to show up: "auto" = Active, or Away when idle (like Gmail)
       presenceChoice: v.optional(v.union(v.literal("auto"), v.literal("away"), v.literal("busy"), v.literal("invisible"))),
+      chatOff: v.optional(v.boolean()), // an admin switched this person's chat and meetings off (the mail sync never undoes it)
       presenceUntil: v.optional(v.number()), // "Away for 15 min": when the choice goes back to automatic
       // may this person message/email supervisors at other companies? unset = follow their company's setting
       reachSupervisors: v.optional(v.boolean()),

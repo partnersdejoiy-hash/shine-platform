@@ -92,6 +92,28 @@ http.route({
   }),
 });
 
+// Dejoiy Mail's admin console manages Shine too: numbers, people, channels, live meetings, and two actions.
+// The mail server has already checked the admin and passes their company domain as scope (none = Dejoiy's own admins).
+http.route({
+  path: "/dejoiy/admin",
+  method: "POST",
+  handler: httpAction(async (ctx, req) => {
+    if (!mailAllowed(req)) return json(403, { error: "Not allowed" });
+    const b = ((await req.json().catch(() => null)) ?? {}) as Record<string, unknown>;
+    const scope = typeof b.scope === "string" && /^[a-z0-9.-]{3,253}$/.test(b.scope) ? b.scope : undefined;
+    const by = String(b.actor ?? "");
+    try {
+      if (b.op === "summary") return json(200, await ctx.runQuery(internal.mailAdmin.summary, { scope }));
+      if (b.op === "set_active") return json(200, await ctx.runMutation(internal.mailAdmin.setActive, { email: String(b.email ?? ""), active: b.active === true, by, scope }));
+      if (b.op === "end_meeting") return json(200, await ctx.runMutation(internal.mailAdmin.endMeeting, { meetingId: String(b.meetingId ?? ""), by, scope }));
+    } catch (e) {
+      const data = (e as { data?: unknown })?.data;
+      return json(400, { error: typeof data === "string" ? data : "Shine couldn't do that." });
+    }
+    return json(400, { error: "Unknown request" });
+  }),
+});
+
 // Dejoiy Mail: supervisors at other companies this mailbox may write to (contacts, address suggestions).
 http.route({
   path: "/dejoiy/supervisors",
