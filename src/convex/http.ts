@@ -3,6 +3,8 @@ import { internal } from "./_generated/api";
 import { httpAction } from "./_generated/server";
 import { auth } from "./auth";
 import { verifyJoiToken } from "./joi";
+import { personFromGrant } from "./joiRead";
+import { readFreshJoiToken } from "./lib/joiGrant";
 
 const http = httpRouter();
 
@@ -181,6 +183,22 @@ http.route({
     await ctx.runMutation(internal.joi.ensureJoi, {});
     const id = await ctx.runMutation(internal.joi.dm, { email: String(body?.email ?? ""), body: text });
     return id ? json(200, { ok: true }) : json(404, { error: "No one on Shine with that email" });
+  }),
+});
+
+// Joi reads the chats of the person talking to her (read-only; see joiRead.ts):
+// Bearer = Joi's fresh signature (JOI_APP_SECRET, at most 2 minutes), body = { grant, conversationId? }.
+http.route({
+  path: "/joi/chats",
+  method: "POST",
+  handler: httpAction(async (ctx, req) => {
+    const header = req.headers.get("Authorization") ?? "";
+    if (!header.startsWith("Bearer ") || !(await readFreshJoiToken(process.env.JOI_APP_SECRET, header.slice(7)))) return json(403, { error: "Not allowed" });
+    const body = (await req.json().catch(() => null)) as { grant?: unknown; conversationId?: unknown } | null;
+    const userId = await personFromGrant(ctx, body?.grant);
+    if (!userId) return json(403, { error: "Ask the person to open Joi in Shine again." });
+    const conversationId = typeof body?.conversationId === "string" ? body.conversationId.slice(0, 64) : undefined;
+    return json(200, await ctx.runQuery(internal.joiRead.chats, { userId, conversationId }));
   }),
 });
 

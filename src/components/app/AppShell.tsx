@@ -76,10 +76,11 @@ export function AppShell() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const joiToken = useAction(api.joi.widgetToken);
+  const joiGrant = useAction(api.joiRead.grant);
   // Joi, DEJOIY's AI buddy, is Shine's assistant (she took over from Shine AI)
   const askJoi = () => {
     setAiOpen(false);
-    void openJoi(user ?? undefined, joiToken().catch(() => null)).then((ok) => {
+    void openJoi(user ?? undefined, joiToken().catch(() => null), joiGrant().catch(() => null)).then((ok) => {
       if (!ok) toast("Joi can't be reached right now. Try again in a bit.");
     });
   };

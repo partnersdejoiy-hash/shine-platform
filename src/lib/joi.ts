@@ -8,7 +8,14 @@ const JOI_URL = ((import.meta.env.VITE_JOI_URL as string | undefined) || "https:
 const JOI_API = ((import.meta.env.VITE_JOI_API_URL as string | undefined) || JOI_URL).replace(/\/+$/, "");
 export const JOI_AVATAR = `${JOI_URL}/joi-avatar.webp?v=7`;
 
-type JoiApi = { open: () => void; setUser: (u: { name?: string; email?: string }) => void; setAppToken: (t: string) => void };
+export type JoiDataGrant = { app: "shine"; grant: string; url: string };
+type JoiApi = {
+  open: () => void;
+  setUser: (u: { name?: string; email?: string }) => void;
+  setAppToken: (t: string) => void;
+  // Joi's side: keep this and send it to `url` (POST /joi/chats) to read this person's own chats, read-only
+  setDataGrant?: (g: JoiDataGrant) => void;
+};
 declare global {
   interface Window {
     Joi?: JoiApi & { __loaded?: boolean };
@@ -45,10 +52,16 @@ function load(user?: { name?: string | null; email?: string | null }): Promise<b
 }
 
 /** Opens Joi's chat. `token` (from the server) lets her use DEJOIY's internal memory here. */
-export async function openJoi(user?: { name?: string | null; email?: string | null }, token?: Promise<string | null>): Promise<boolean> {
+export async function openJoi(
+  user?: { name?: string | null; email?: string | null },
+  token?: Promise<string | null>,
+  grant?: Promise<JoiDataGrant | null>,
+): Promise<boolean> {
   const ok = await load(user);
   if (!ok || !window.Joi) return false;
   window.Joi.open();
   token?.then((t) => t && window.Joi?.setAppToken(t)).catch(() => {});
+  // lets Joi read this person's own chats (only theirs, only reading) while they talk to her
+  grant?.then((g) => g && window.Joi?.setDataGrant?.(g)).catch(() => {});
   return true;
 }
