@@ -31,6 +31,8 @@ export function StatusSheet({ open, onOpenChange, user, presence, isAdmin, onNav
   const [text, setText] = useState(user?.customStatus ?? "");
   const [saving, setSaving] = useState(false);
   const choice = (user?.presenceChoice as PresenceChoice | undefined) ?? "auto";
+  const until = (user as { presenceUntil?: number } | null | undefined)?.presenceUntil;
+  const untilText = until && until > Date.now() && choice !== "auto" ? `Back to Active at ${new Date(until).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : "";
   useEffect(() => {
     if (open) setText(user?.customStatus ?? "");
   }, [open, user?.customStatus]);
@@ -145,6 +147,19 @@ export function StatusSheet({ open, onOpenChange, user, presence, isAdmin, onNav
               </button>
             ))}
           </div>
+          {/* Cliq-style quick breaks: back to Active by itself */}
+          <div className="mt-2 flex flex-wrap gap-2 px-3" aria-label="Step away for a while">
+            {([["Away 15 min", "away", 15], ["Away 1 hour", "away", 60], ["Do not disturb 1 hour", "busy", 60]] as const).map(([label, c, m]) => (
+              <button
+                key={label}
+                onClick={() => setChoice(c, m).then(() => toast.success(`${label}, then back to Active`)).catch(() => toast.error("Couldn't change that"))}
+                className="min-h-9 rounded-full border border-border px-3 text-xs font-semibold transition-colors hover:bg-accent"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {untilText && <p className="mt-2 px-3 text-xs text-muted-foreground">{untilText}</p>}
         </section>
 
         <nav className="border-t border-border/70 px-2 py-2" aria-label="Account">

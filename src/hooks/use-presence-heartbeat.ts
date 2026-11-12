@@ -59,7 +59,8 @@ export function usePresenceActions() {
   const setPresence = useMutation(api.users.setPresence);
   const setText = useMutation(api.users.setStatusText);
   return {
-    setChoice: (choice: PresenceChoice) => setPresence({ choice }),
+    /** minutes: hold the choice that long, then back to automatic ("Away for 15 min") */
+    setChoice: (choice: PresenceChoice, minutes?: number) => setPresence({ choice, ...(minutes ? { minutes } : {}) }),
     setStatusText: (text: string) => setText({ text }),
   };
 }

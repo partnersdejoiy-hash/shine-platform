@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import { displayName, timeAgo } from "@/lib/format";
+import { effectiveStatus } from "@/lib/presence";
 import { isOnline, presenceLabel } from "@/lib/presence";
 import { uploadBlob } from "@/lib/upload";
 import { cn } from "@/lib/utils";
@@ -238,6 +239,7 @@ export function AppContacts() {
 
         <Tabs defaultValue="all" className="mt-6">
           <TabsList>
+            <TabsTrigger value="team">Team</TabsTrigger>
             <TabsTrigger value="status">Status</TabsTrigger>
             <TabsTrigger value="all">All</TabsTrigger>
             <TabsTrigger value="favorites">
@@ -248,6 +250,10 @@ export function AppContacts() {
               Blocked {blocked.length > 0 && <span className="ml-1 text-[10px] text-primary">{blocked.length}</span>}
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="team" className="mt-4">
+            <TeamBoard people={colleagues ?? []} presence={presenceRows ?? []} onOpenChat={chat} />
+          </TabsContent>
 
           <StatusTab onOpenChat={chat} />
 
@@ -709,5 +715,54 @@ function PersonCard({
         <div className="flex shrink-0 items-center gap-0.5">{actions}</div>
       )}
     </motion.div>
+  );
+}
+
+/** Who's around right now, like Cliq's department board: At work, Away, Offline. Tap someone to message them. */
+function TeamBoard({ people, presence, onOpenChat }: {
+  people: Array<{ _id: string; name?: string | null; email?: string | null; image?: string | null; customStatus?: string | null }>;
+  presence: Array<{ userId: string; status?: string; updatedAt?: number }>;
+  onOpenChat: (userId: string) => void;
+}) {
+  const byUser = new Map(presence.map((p) => [p.userId, p]));
+  const where = (id: string) => {
+    const st = effectiveStatus(byUser.get(id) as Parameters<typeof effectiveStatus>[0]);
+    return st === "online" || st === "busy" ? "work" : st === "away" ? "away" : "off";
+  };
+  const cols = [
+    { key: "work", title: "At work", empty: "Nobody is active right now." },
+    { key: "away", title: "Away", empty: "Nobody is away." },
+    { key: "off", title: "Offline", empty: "Everyone is around." },
+  ];
+  return (
+    <div className="grid gap-4 md:grid-cols-3">
+      {cols.map((c) => {
+        const list = people.filter((p) => where(p._id) === c.key).sort((a, b) => displayName(a).localeCompare(displayName(b)));
+        return (
+          <section key={c.key} className="rounded-2xl border border-border/70 bg-card p-3" aria-label={c.title}>
+            <h2 className="mb-2 px-1 text-sm font-bold">
+              {c.title} <span className="font-medium text-muted-foreground">({list.length})</span>
+            </h2>
+            {list.length === 0 ? (
+              <p className="px-1 py-6 text-center text-xs text-muted-foreground">{c.empty}</p>
+            ) : (
+              <ul className="space-y-1">
+                {list.map((p) => (
+                  <li key={p._id}>
+                    <button onClick={() => onOpenChat(p._id)} className="flex min-h-11 w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left transition-colors hover:bg-accent">
+                      <UserAvatar user={p as never} presence={byUser.get(p._id) as never} size="sm" showStatus />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold">{displayName(p as never)}</span>
+                        <span className="block truncate text-xs text-muted-foreground">{p.customStatus || p.email}</span>
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        );
+      })}
+    </div>
   );
 }

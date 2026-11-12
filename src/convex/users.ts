@@ -312,11 +312,11 @@ export const heartbeat = mutation({
 
 /** Pick how you show up: Automatic (Active / Away when idle), Away, Do not disturb, or Appear offline. */
 export const setPresence = mutation({
-  args: { choice: choiceValidator },
-  handler: async (ctx, { choice }) => {
+  args: { choice: choiceValidator, minutes: v.optional(v.number()) },
+  handler: async (ctx, { choice, minutes }) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) throw new ConvexError("Sign in first.");
-    return await setOwn(ctx, userId, { choice });
+    return await setOwn(ctx, userId, { choice, minutes });
   },
 });
 

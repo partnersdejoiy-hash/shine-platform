@@ -24,8 +24,13 @@ export function statusFor(choice: Choice | undefined, idle: boolean) {
 
 /** One heartbeat from any app (Shine or Dejoiy Mail). */
 export async function beat(ctx: MutationCtx, user: Doc<"users">, idle: boolean) {
-  const status = statusFor(user.presenceChoice, idle);
   const now = Date.now();
+  // a timed choice ("Away for 15 min") has run out: back to automatic
+  if (user.presenceUntil && user.presenceUntil <= now) {
+    await ctx.db.patch(user._id, { presenceChoice: "auto", presenceUntil: undefined });
+    user = { ...user, presenceChoice: "auto", presenceUntil: undefined };
+  }
+  const status = statusFor(user.presenceChoice, idle);
   const row = await ctx.db.query("presence").withIndex("by_user", (q) => q.eq("userId", user._id)).unique();
   if (row) await ctx.db.patch(row._id, { status, updatedAt: now, customStatus: user.customStatus });
   else await ctx.db.insert("presence", { userId: user._id, status, updatedAt: now, customStatus: user.customStatus });
@@ -34,9 +39,14 @@ export async function beat(ctx: MutationCtx, user: Doc<"users">, idle: boolean) 
 }
 
 /** Save someone's choice and/or written status, and show it right away. */
-export async function setOwn(ctx: MutationCtx, userId: Id<"users">, change: { choice?: Choice; text?: string }) {
+export async function setOwn(ctx: MutationCtx, userId: Id<"users">, change: { choice?: Choice; text?: string; minutes?: number }) {
   const patch: Partial<Doc<"users">> = {};
-  if (change.choice) patch.presenceChoice = change.choice;
+  if (change.choice) {
+    patch.presenceChoice = change.choice;
+    // minutes: hold this choice for a while (5 min to 24 h), then go back to automatic
+    const m = change.choice === "auto" ? 0 : Math.min(Math.max(Math.round(change.minutes ?? 0), 0), 1440);
+    patch.presenceUntil = m >= 5 ? Date.now() + m * 60_000 : undefined;
+  }
   if (change.text !== undefined) patch.customStatus = cleanStatus(change.text) || undefined;
   if (Object.keys(patch).length) await ctx.db.patch(userId, patch);
   const user = await ctx.db.get(userId);
@@ -45,7 +55,7 @@ export async function setOwn(ctx: MutationCtx, userId: Id<"users">, change: { ch
   const idle = row?.status === "away" && user.presenceChoice !== "away";
   if (row && Date.now() - row.updatedAt < FRESH) await beat(ctx, user, idle);
   else if (row) await ctx.db.patch(row._id, { customStatus: user.customStatus });
-  return { choice: user.presenceChoice ?? "auto", text: user.customStatus ?? "" };
+  return { choice: user.presenceChoice ?? "auto", text: user.customStatus ?? "", until: user.presenceUntil ?? null };
 }
 
 /** What others see: Active / Away / Busy / Offline (appear-offline shows as Offline). */
