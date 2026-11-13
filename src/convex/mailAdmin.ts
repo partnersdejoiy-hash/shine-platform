@@ -112,8 +112,8 @@ export const endMeeting = internalMutation({
  * a channel of their company that they are a member of, and not one limited to admins unless they are one.
  */
 export const post = internalMutation({
-  args: { channel: v.string(), text: v.string(), by: v.string(), scope: v.optional(v.string()) },
-  handler: async (ctx, { channel, text, by, scope }) => {
+  args: { channel: v.string(), text: v.string(), by: v.string(), scope: v.optional(v.string()), via: v.optional(v.string()) },
+  handler: async (ctx, { channel, text, by, scope, via }) => {
     const body = text.trim().slice(0, 4000);
     if (!body) throw new ConvexError("The message is empty.");
     const me = await userByEmail(ctx, by);
@@ -138,7 +138,7 @@ export const post = internalMutation({
     const id = await ctx.db.insert("messages", { conversationId: conversation._id, senderId: me._id, kind: "text", body, createdAt: now });
     await ctx.db.patch(conversation._id, { lastMessageAt: now });
     await notifyMembers(ctx, conversation, me._id, `#${conversation.name}`, body.slice(0, 140), `/app/chats/${conversation._id}`, "message", []);
-    await logAudit(ctx, me._id, "message.api", "conversations", String(conversation._id), `by ${by} through a Dejoiy Mail API token`);
+    await logAudit(ctx, me._id, "message.api", "conversations", String(conversation._id), via === "automation" ? `by ${by}'s Dejoiy Mail automation` : `by ${by} through a Dejoiy Mail API token`);
     return { ok: true, channel: conversation.name, messageId: id };
   },
 });
