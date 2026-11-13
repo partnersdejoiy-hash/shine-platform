@@ -3,6 +3,7 @@ import { internalMutation, internalQuery } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { seenAs } from "./presence";
 import { SUPER_ADMIN_EMAIL, logAudit } from "./users";
+import { notifyMembers } from "./messages";
 
 /**
  * Shine as seen from Dejoiy Mail's admin console (one admin for mail and chat). Dejoiy Mail's server calls
@@ -102,5 +103,42 @@ export const endMeeting = internalMutation({
     const actor = await userByEmail(ctx, by);
     await logAudit(ctx, (actor ?? host)._id, "meeting.ended", "meetings", String(meeting._id), `by ${by} from Dejoiy Mail admin`);
     return { ended: true };
+  },
+});
+
+/**
+ * A company's own automation posts in one of its channels (Dejoiy Mail's API, "shine.post").
+ * It posts as the admin who made the API token, and only where that person may post themselves:
+ * a channel of their company that they are a member of, and not one limited to admins unless they are one.
+ */
+export const post = internalMutation({
+  args: { channel: v.string(), text: v.string(), by: v.string(), scope: v.optional(v.string()) },
+  handler: async (ctx, { channel, text, by, scope }) => {
+    const body = text.trim().slice(0, 4000);
+    if (!body) throw new ConvexError("The message is empty.");
+    const me = await userByEmail(ctx, by);
+    if (!me || !inScope(me.email, scope) || me.isActive === false || me.chatOff)
+      throw new ConvexError("The person who made this API token has no active Shine account in your company.");
+    const wanted = channel.trim().replace(/^#/, "").toLowerCase();
+    const found = [];
+    for (const c of await ctx.db.query("conversations").withIndex("by_kind", (q) => q.eq("kind", "channel")).collect()) {
+      if (c.isMeeting || c.name.trim().toLowerCase() !== wanted) continue;
+      const owner = await ctx.db.get(c.createdBy);
+      if (owner && inScope(owner.email, scope)) found.push(c);
+    }
+    if (found.length === 0) throw new ConvexError("No Shine channel of your company has that name.");
+    if (found.length > 1) throw new ConvexError("More than one channel of your company has that name; rename one.");
+    const conversation = found[0];
+    const membership = await ctx.db.query("conversationMembers").withIndex("by_user_conv", (q) => q.eq("userId", me._id).eq("conversationId", conversation._id)).unique();
+    if (!membership) throw new ConvexError(`${me.email} (who made this API token) is not a member of #${conversation.name}.`);
+    const admin = membership.role === "owner" || membership.role === "admin";
+    if (!admin && (conversation.policies?.whoCanSend === "admins" || conversation.channelKind === "announcement" || conversation.channelKind === "broadcast"))
+      throw new ConvexError(`Only admins of #${conversation.name} may post there.`);
+    const now = Date.now();
+    const id = await ctx.db.insert("messages", { conversationId: conversation._id, senderId: me._id, kind: "text", body, createdAt: now });
+    await ctx.db.patch(conversation._id, { lastMessageAt: now });
+    await notifyMembers(ctx, conversation, me._id, `#${conversation.name}`, body.slice(0, 140), `/app/chats/${conversation._id}`, "message", []);
+    await logAudit(ctx, me._id, "message.api", "conversations", String(conversation._id), `by ${by} through a Dejoiy Mail API token`);
+    return { ok: true, channel: conversation.name, messageId: id };
   },
 });

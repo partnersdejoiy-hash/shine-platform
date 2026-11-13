@@ -108,6 +108,8 @@ http.route({
       if (b.op === "summary") return json(200, await ctx.runQuery(internal.mailAdmin.summary, { scope }));
       if (b.op === "set_active") return json(200, await ctx.runMutation(internal.mailAdmin.setActive, { email: String(b.email ?? ""), active: b.active === true, by, scope }));
       if (b.op === "end_meeting") return json(200, await ctx.runMutation(internal.mailAdmin.endMeeting, { meetingId: String(b.meetingId ?? ""), by, scope }));
+      // a company's API token posting in its own channel: always within a company, never without scope
+      if (b.op === "post" && scope) return json(200, await ctx.runMutation(internal.mailAdmin.post, { channel: String(b.channel ?? "").slice(0, 100), text: String(b.text ?? "").slice(0, 4000), by, scope }));
     } catch (e) {
       const data = (e as { data?: unknown })?.data;
       return json(400, { error: typeof data === "string" ? data : "Shine couldn't do that." });
