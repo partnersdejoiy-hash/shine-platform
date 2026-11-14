@@ -37,7 +37,7 @@
   pointer-events: none;
 }
 .sl-bar > * { pointer-events: auto; }
-.sl-word { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 22px; letter-spacing: -0.04em; color: inherit; text-decoration: none; }
+.sl-word { display: flex; align-items: center; min-height: 44px; gap: 10px; font-weight: 800; font-size: 22px; letter-spacing: -0.04em; color: inherit; text-decoration: none; }
 .sl-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   min-height: 48px; padding: 0 24px; border: 0; border-radius: 999px;
