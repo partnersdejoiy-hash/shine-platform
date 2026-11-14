@@ -97,6 +97,8 @@ export const ensureJoi = internalMutation({
       channel = (await ctx.db.get(channelId))!;
     }
 
+    if (channel.image !== JOI_PHOTO) await ctx.db.patch(channel._id, { image: JOI_PHOTO }); // #joi follows her picture too
+
     // everyone in the company is added to #joi once (new people on the next run); whoever leaves stays out
     const inChannel = await ctx.db.query("conversationMembers").withIndex("by_conversation", (q) => q.eq("conversationId", channel!._id)).collect();
     const have = new Set(inChannel.map((m) => String(m.userId)));

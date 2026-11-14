@@ -265,6 +265,8 @@ const schema = defineSchema(
       isMuted: v.optional(v.boolean()),
       isArchived: v.optional(v.boolean()),
       isPinned: v.optional(v.boolean()),
+      // "Delete chat": this person no longer sees the chat's messages up to this time (everyone else still does)
+      clearedAt: v.optional(v.number()),
       joinedAt: v.number(),
     })
       .index("by_conversation", ["conversationId"])

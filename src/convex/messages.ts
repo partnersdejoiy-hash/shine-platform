@@ -105,9 +105,12 @@ export const list = query({
       memberRows.map((m) => [m.userId, m.lastReadAt ?? 0]),
     );
 
+    const reachedCleared = page.page.some((m) => m.createdAt <= (membership.clearedAt ?? 0));
     const messages = [];
     for (const msg of page.page) {
       if ((msg.hiddenFor ?? []).includes(userId)) continue;
+      // shortcut: only the chat view honours "Delete chat"; search, pinned and file lists still find older messages. Filter them too if people notice.
+      if (msg.createdAt <= (membership.clearedAt ?? 0)) continue;
       const sender = await ctx.db.get(msg.senderId);
       const reactions = await ctx.db
         .query("reactions")
@@ -169,8 +172,9 @@ export const list = query({
 
     return {
       messages: messages.reverse(),
-      nextCursor: page.isDone ? null : page.continueCursor,
-      hasMore: !page.isDone,
+      // older pages hold only messages from before a "Delete chat": stop there
+      nextCursor: page.isDone || reachedCleared ? null : page.continueCursor,
+      hasMore: !page.isDone && !reachedCleared,
     };
   },
 });

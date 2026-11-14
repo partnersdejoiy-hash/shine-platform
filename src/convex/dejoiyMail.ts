@@ -27,7 +27,7 @@ async function applyMail(
   const patch: Partial<Doc<"users">> = {};
   if (!user.name && c.name) patch.name = c.name;
   // a photo uploaded in Shine wins; otherwise show the Dejoiy Mail one (or none once it's removed there)
-  if (!user.avatarStorageId) {
+  if (!user.avatarStorageId && user.source !== "joi") {
     const image = c.photo || (user.image && MAIL_PHOTO.test(user.image) ? undefined : user.image);
     if (image !== user.image) patch.image = image;
   }

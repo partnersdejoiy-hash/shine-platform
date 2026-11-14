@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { toneFor } from "@/lib/tone";
 import { motion } from "framer-motion";
 import { api } from "@/convex/_generated/api";
-import { Hash, MessageSquarePlus, Mic, Pin, PinOff, Search, Volume2, VolumeX, Archive, ArchiveRestore } from "lucide-react";
+import { Hash, MessageSquarePlus, Mic, Pin, PinOff, Search, Volume2, VolumeX, Archive, ArchiveRestore, Trash2 } from "lucide-react";
 import { useMutation } from "convex/react";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -78,6 +78,7 @@ export function ConversationList({
   const setMuted = useMutation(api.conversations.setMuted);
   const togglePin = useMutation(api.conversations.togglePin);
   const archiveConv = useMutation(api.conversations.archiveConversation);
+  const deleteChat = useMutation(api.conversations.deleteChat);
 
   const filtered = useMemo(() => {
     if (!items) return [];
@@ -322,6 +323,20 @@ export function ConversationList({
               }}
             >
               <Archive className="size-3.5" /> Archive
+            </button>
+            <button
+              className="flex w-full items-center gap-2.5 px-3 py-2.5 text-xs text-destructive transition-colors hover:bg-accent"
+              onClick={async () => {
+                const id = ctxMenu.id;
+                setCtxMenu(null);
+                if (!window.confirm("Delete this chat for you? Its messages disappear from your view. Other people keep theirs.")) return;
+                try {
+                  await deleteChat({ conversationId: id as any });
+                  toast.success("Chat deleted");
+                } catch (e) { toast.error(e instanceof Error ? errorMessage(e) : "Failed"); }
+              }}
+            >
+              <Trash2 className="size-3.5" /> Delete chat
             </button>
           </div>
         </>

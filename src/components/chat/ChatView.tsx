@@ -42,6 +42,7 @@ import {
   Video,
   X,
   ArrowLeft,
+  Trash2,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
@@ -66,6 +67,8 @@ export function ChatView({
   const presenceAll = useQuery(api.users.presenceAll);
   const typing = useQuery(api.conversations.typingIn, { conversationId: conversationId as any });
   const markRead = useMutation(api.conversations.markRead);
+  const deleteChat = useMutation(api.conversations.deleteChat);
+  const [deleteChatOpen, setDeleteChatOpen] = useState(false);
   const startCall = useMutation(api.calls.start);
 
   const [pages, setPages] = useState<ChatMessage[][]>([]);
@@ -433,6 +436,9 @@ export function ChatView({
             </Button>
             <Button variant="ghost" size="icon" className="size-9 text-muted-foreground" title="Video call" onClick={() => handleCall("video")}>
               <Video className="size-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="size-9 text-muted-foreground" title="Delete chat" aria-label="Delete chat" onClick={() => setDeleteChatOpen(true)}>
+              <Trash2 className="size-4" />
             </Button>
             <Button
               variant="ghost"
@@ -904,6 +910,36 @@ export function ChatView({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* DELETE CHAT */}
+      <AlertDialog open={deleteChatOpen} onOpenChange={setDeleteChatOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this chat?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Its messages disappear from your view and the chat leaves your list until someone writes in it again. Other people keep their copy.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-white hover:bg-destructive/90"
+              onClick={async () => {
+                try {
+                  await deleteChat({ conversationId: conversationId as any });
+                  toast.success("Chat deleted");
+                  if (onBack) onBack();
+                  else navigate("/app/chats");
+                } catch (e) {
+                  toast.error(e instanceof Error ? errorMessage(e) : "Could not delete the chat");
+                }
+              }}
+            >
+              Delete chat
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* DELETE DIALOG */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(v) => !v && setDeleteTarget(null)}>

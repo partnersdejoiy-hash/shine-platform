@@ -33,14 +33,18 @@ export const list = query({
         }),
       );
 
-      const lastMessage = await ctx.db
+      const newest = await ctx.db
         .query("messages")
         .withIndex("by_conversation", (q) => q.eq("conversationId", conversation._id))
         .order("desc")
         .first();
+      // a chat you deleted stays out of your list until a new message arrives in it
+      const clearedAt = membership.clearedAt ?? 0;
+      const lastMessage = newest && newest.createdAt > clearedAt ? newest : null;
+      if (clearedAt && !lastMessage) continue;
 
       let unread = 0;
-      const lastReadAt = membership.lastReadAt ?? 0;
+      const lastReadAt = Math.max(membership.lastReadAt ?? 0, clearedAt);
       if (lastMessage && lastMessage.createdAt > lastReadAt && lastMessage.senderId !== userId) {
         unread = await ctx.db
           .query("messages")
@@ -686,6 +690,25 @@ export const archiveConversation = mutation({
       .unique();
     if (!membership) throw new ConvexError("Not a member");
     await ctx.db.patch(membership._id, { isArchived: archived });
+  },
+});
+
+/**
+ * Delete a chat for yourself: its messages so far disappear from your view and the chat leaves your
+ * list until someone writes in it again. Other members keep everything, and so does the company record.
+ */
+export const deleteChat = mutation({
+  args: { conversationId: v.id("conversations") },
+  handler: async (ctx, { conversationId }) => {
+    const me = await getCurrentUser(ctx);
+    if (!me) throw new ConvexError("Not authenticated");
+    const membership = await ctx.db
+      .query("conversationMembers")
+      .withIndex("by_user_conv", (q) => q.eq("userId", me._id).eq("conversationId", conversationId))
+      .unique();
+    if (!membership) throw new ConvexError("Not a member");
+    const now = Date.now();
+    await ctx.db.patch(membership._id, { clearedAt: now, lastReadAt: now, isPinned: false, isArchived: false });
   },
 });
 
