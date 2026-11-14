@@ -15,7 +15,9 @@ import { notifyMembers } from "./messages";
 
 export const joiEmail = () => (process.env.JOI_EMAIL ?? "joi-ai@mail.dejoiy.com").trim().toLowerCase();
 // her animated profile picture (Joi bobbing, waving and winking on DEJOIY pink)
-const JOI_PHOTO = "https://joi-ai.dejoiy.com/joi-avatar.webp?v=8";
+// Joi's photo is her look from her letters: the pink round window with the black ring (public/joi-profile.png).
+// Served by Shine itself; bump ?v= when the picture changes so browsers fetch the new one.
+const JOI_PHOTO = `${(process.env.SITE_URL ?? "https://app.shine.dejoiy.com").replace(/\/+$/, "")}/joi-profile.png?v=9`;
 export const JOI_STATUS = "Joi is an AI. It can make mistakes.";
 const CHANNEL = "joi";
 
