@@ -7,7 +7,7 @@
 const JOI_URL = ((import.meta.env.VITE_JOI_URL as string | undefined) || "https://joi-ai.dejoiy.com").replace(/\/+$/, "");
 const JOI_API = ((import.meta.env.VITE_JOI_API_URL as string | undefined) || JOI_URL).replace(/\/+$/, "");
 // Joi's look from her letters (pink round window, black ring), served by Shine itself.
-export const JOI_AVATAR = "/joi-profile.png?v=9";
+export const JOI_AVATAR = "/joi-profile.webp?v=10";
 
 export type JoiDataGrant = { app: "shine"; grant: string; url: string };
 type JoiApi = {
