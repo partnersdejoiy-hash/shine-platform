@@ -310,3 +310,13 @@
     background: transparent;
   }
 }
+
+/* Phones and touch screens: every text field is at least 16px, so iOS does not zoom the page when
+   you tap into one (about 30 fields use text-xs/text-sm). Outside any layer, so it wins over utilities. */
+@media (max-width: 767px), (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
+  textarea,
+  select {
+    font-size: max(16px, 1em);
+  }
+}
