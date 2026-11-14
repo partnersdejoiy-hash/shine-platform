@@ -17,6 +17,14 @@ All relevant files live in the 'src' directory.
 
 Use bun for the package manager.
 
+## Android app
+
+SHINE is also an Android app (`com.dejoiy.shine`, a Trusted Web Activity that opens
+https://app.shine.dejoiy.com/app/chats full screen). GitHub builds it: Actions > **SHINE Android app** >
+Run workflow puts `shine-<version>.apk` and `.aab` in a Release. Signing key, secrets, installing the APK
+without Play Store and removing the address bar (`android/shine/fingerprints.json`): see
+[android/README.md](android/README.md).
+
 ## Setup
 
 This project is set up already and running on a cloud environment, as well as a convex development in the sandbox.
