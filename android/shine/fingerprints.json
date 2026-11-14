@@ -1,0 +1,4 @@
+{
+  "_note": "SHA-256 fingerprints of the keys that sign the SHINE Android app, like \"AB:CD:...\" (32 pairs). Add the upload key's (printed by android/keystore.sh) and, once the app is on Google Play, the app signing key's (Play Console > Setup > App signing). Empty: the site publishes [] and the app shows a small address bar. See android/README.md, step 5.",
+  "sha256": []
+}

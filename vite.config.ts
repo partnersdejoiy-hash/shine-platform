@@ -3,10 +3,11 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 import { defineConfig } from "vite";
+import { assetlinksPlugin } from "./android/shine/assetlinks.mjs";
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), vlyPlugin(), tailwindcss()],
+  plugins: [react(), vlyPlugin(), tailwindcss(), assetlinksPlugin(path.resolve(__dirname, "android/shine/fingerprints.json"))],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

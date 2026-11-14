@@ -1,0 +1,43 @@
+{
+  "display": "standalone",
+  "displayOverride": [],
+  "orientation": "default",
+  "enableNotifications": true,
+  "splashScreenFadeOutDuration": 300,
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "minSdkVersion": 21,
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "generatorApp": "bubblewrap-cli",
+  "appVersionCode": 1,
+  "navigationDividerColor": "#00000000",
+  "navigationDividerColorDark": "#00000000",
+  "packageId": "com.dejoiy.shine",
+  "host": "app.shine.dejoiy.com",
+  "name": "SHINE",
+  "launcherName": "SHINE",
+  "themeColor": "#FFFBF7",
+  "themeColorDark": "#141216",
+  "navigationColor": "#FFFBF7",
+  "navigationColorDark": "#141216",
+  "backgroundColor": "#FFFBF7",
+  "startUrl": "/app/chats?source=android",
+  "iconUrl": "https://app.shine.dejoiy.com/icon-512.png",
+  "maskableIconUrl": "https://app.shine.dejoiy.com/icon-maskable-512.png",
+  "webManifestUrl": "https://app.shine.dejoiy.com/manifest.webmanifest",
+  "fullScopeUrl": "https://app.shine.dejoiy.com/",
+  "signingKey": {
+    "path": "./upload-keystore.jks",
+    "alias": "shine"
+  },
+  "shortcuts": [],
+  "appVersion": "1.0.0"
+}

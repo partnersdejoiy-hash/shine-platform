@@ -7,3 +7,10 @@ server/tsconfig.build.tsbuildinfo
 src/convex/_generated
 .convex-tmp
 .taste-skill/
+# Android: never commit keys or build output
+*.jks
+*.keystore
+android/shine/.gradle
+android/shine/app/build
+android/shine/build
+android/shine/local.properties
