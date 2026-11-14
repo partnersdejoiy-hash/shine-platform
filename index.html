@@ -30,6 +30,35 @@
 
 <body>
   <div id="root"></div>
+  <!-- The loading screen until the app has drawn itself: the same logo, size and background as the
+       Android splash, so the two meet without a jump. Plain CSS/SVG; still for reduced motion; gone
+       as soon as React draws, and after 5 seconds at the latest, whatever happens. -->
+  <style>
+    #shine-boot{position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;background:#FFFBF7;transition:opacity .35s ease}
+    html.dark #shine-boot{background:#141216}
+    #shine-boot.out{opacity:0;pointer-events:none}
+    #shine-boot svg{width:120px;height:120px;animation:shine-breathe 1.6s ease-in-out infinite}
+    #shine-boot .dot{transform-box:fill-box;transform-origin:center;animation:shine-blink 1.6s ease-in-out infinite}
+    #shine-boot .dot2{animation-delay:.18s}
+    @keyframes shine-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+    @keyframes shine-blink{0%,62%,100%{transform:scale(1)}76%{transform:scale(.25)}}
+    @media (prefers-reduced-motion:reduce){#shine-boot svg,#shine-boot .dot{animation:none}#shine-boot{transition:none}}
+  </style>
+  <div id="shine-boot" role="status" aria-label="Loading SHINE">
+    <svg viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="25" fill="#FF4FA3"/><path fill="#FFFFFF" fill-rule="evenodd" d="M34.8 24.8H59.2A23.8 23.8 0 0 1 59.2 72.4H46.3L35.8 81.9V72.4H34.8Z M47.2 38.9H58.1A9.5 9.5 0 0 1 58.1 57.9H47.2Z"/><circle class="dot" cx="22.8" cy="37.9" r="6.7" fill="#D4F53C"/><circle class="dot dot2" cx="22.8" cy="59" r="6.7" fill="#FFFFFF"/></svg>
+  </div>
+  <script>
+    (function () {
+      var boot = document.getElementById("shine-boot"), root = document.getElementById("root"), gone = false;
+      function hide() {
+        if (gone) return; gone = true;
+        boot.classList.add("out");
+        setTimeout(function () { if (boot.parentNode) boot.parentNode.removeChild(boot); }, 400);
+      }
+      if (window.MutationObserver) new MutationObserver(function (_, o) { if (root.firstChild) { o.disconnect(); hide(); } }).observe(root, { childList: true });
+      setTimeout(hide, 5000);   // never stays up, even if the app fails to start
+    })();
+  </script>
   <script type="module" src="/src/main.tsx"></script>
 </body>
 
