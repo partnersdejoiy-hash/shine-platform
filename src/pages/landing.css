@@ -168,6 +168,8 @@
 .sl-plan-price small { display: block; font-size: 15px; font-weight: 500; color: #5b5560; }
 .sl-plan .sl-btn { background: var(--pink); color: var(--ink); white-space: nowrap; }
 .sl-plan:hover h3 { color: var(--pink-dark); }
+.sl-plan-alone { background: var(--lime); border-radius: 24px; padding-left: 24px; padding-right: 24px; margin-top: 18px; border-bottom: 0; }
+.sl-plan-alone .sl-btn { background: var(--ink); color: var(--paper); }
 .sl-plans-fine { font-size: 16px; color: #5b5560; max-width: 70ch; }
 
 /* ---- the first step, already open ---- */
@@ -255,6 +257,7 @@
   .sl-plan-price { grid-column: 2; grid-row: 1; text-align: right; }
   .sl-plan-price b { font-size: 28px; }
   .sl-plan .sl-btn { grid-column: 1 / -1; justify-self: start; }
+  .sl-plan-alone { padding: 20px 16px; }
   .sl-cta { grid-template-columns: 1fr; padding: 96px 16px 40px; min-height: 84svh; align-content: space-between; }
   .sl-cta-copy, .sl-dialog { grid-column: 1; }
   .sl-cta-copy { align-self: start; }

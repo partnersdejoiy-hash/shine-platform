@@ -5,6 +5,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { dejoiyMailSignInUrl } from "@/lib/embed";
 import { Eye, EyeOff, Loader2, Lock, Mail, MessageSquareText, ShieldCheck, Video } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { useNavigate, useSearchParams } from "react-router";
 import { errorMessage } from "@/lib/errors";
 
@@ -38,7 +40,12 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
     setBusy(true);
     setError(null);
     try {
-      await signIn("dejoiy-mail-password", { email: email.trim(), password });
+      // Dejoiy Mail accounts first; companies on Shine alone have their own Shine password
+      await signIn("dejoiy-mail-password", { email: email.trim(), password }).catch(async (mailErr) => {
+        await signIn("password", { email: email.trim().toLowerCase(), password }).catch(() => {
+          throw mailErr;
+        });
+      });
       navigate(redirect);
     } catch (err) {
       const raw = err instanceof Error ? errorMessage(err) : "";
@@ -147,7 +154,7 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
                 </a>
               </Button>
               <p className="mt-5 text-xs text-muted-foreground">
-                Your password is checked by Dejoiy Mail and never stored in Shine. Forgot it? Reset it from{" "}
+                Dejoiy Mail passwords are checked by Dejoiy Mail and never stored in Shine. Forgot it? Reset it from{" "}
                 <a href="https://mail.dejoiy.com" className="font-semibold text-foreground underline decoration-primary decoration-2 underline-offset-4">
                   Dejoiy Mail
                 </a>
@@ -157,9 +164,96 @@ export default function AuthPage({ redirectAfterAuth }: AuthProps = {}) {
             <p className="mt-6 text-center text-xs text-muted-foreground">
               No mailbox yet? Ask your company admin to create one in Dejoiy Mail.
             </p>
+            <ShineSignup open={searchParams.get("signup") === "1"} onDone={async (em, pw) => {
+              await signIn("password", { email: em, password: pw });
+              navigate("/app/settings?tab=billing");
+            }} />
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** A company without Dejoiy Mail starts Shine on its own: work email, password, then the emailed code. */
+function ShineSignup({ open: startOpen, onDone }: { open: boolean; onDone: (email: string, password: string) => Promise<void> }) {
+  const start = useMutation(api.shineOnly.startSignup);
+  const finish = useMutation(api.shineOnly.finishSignup);
+  const [open, setOpen] = useState(startOpen);
+  const [step, setStep] = useState<"form" | "code">("form");
+  const [f, setF] = useState({ name: "", company: "", email: "", password: "", code: "" });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const clean = (e: unknown) => (e instanceof Error ? errorMessage(e) : "").replace(/^.*Uncaught (Convex)?Error:\s*/s, "").split("\n")[0] || "Something went wrong. Try again.";
+  const go = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      if (step === "form") {
+        await start({ name: f.name, company: f.company, email: f.email, password: f.password });
+        setStep("code");
+      } else {
+        await finish({ email: f.email, code: f.code });
+        await onDone(f.email.trim().toLowerCase(), f.password);
+      }
+    } catch (err) {
+      setError(clean(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const field = (key: keyof typeof f, label: string, props: React.InputHTMLAttributes<HTMLInputElement>) => (
+    <label className="block space-y-1.5">
+      <span className="text-sm font-bold">{label}</span>
+      <Input {...props} value={f[key]} onChange={(e) => setF({ ...f, [key]: e.target.value })} className="h-12 rounded-2xl text-base" disabled={busy} />
+    </label>
+  );
+  if (!open)
+    return (
+      <p className="mt-2 text-center text-xs text-muted-foreground">
+        Want Shine without Dejoiy Mail?{" "}
+        <button type="button" onClick={() => setOpen(true)} className="font-semibold text-foreground underline decoration-primary decoration-2 underline-offset-4">
+          Start Shine for your company
+        </button>{" "}
+        · ₹29 a person a month, 11 days free
+      </p>
+    );
+  return (
+    <div className="mt-6 rounded-[28px] border-2 border-[var(--sticker-border)] bg-card p-8 shadow-[6px_6px_0_var(--sticker-shadow)] sm:p-9">
+      <h2 className="text-2xl font-extrabold tracking-[-0.04em]">Start Shine for your company</h2>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Shine on its own, without Dejoiy Mail: 11 days free, then ₹29 a person a month (+GST). Use your work email; colleagues join
+        with the same domain.
+      </p>
+      <form onSubmit={go} className="mt-6 space-y-3" noValidate>
+        {step === "form" ? (
+          <>
+            {field("name", "Your name", { autoComplete: "name", placeholder: "Priya Nair" })}
+            {field("company", "Company", { autoComplete: "organization", placeholder: "Acme Pvt Ltd" })}
+            {field("email", "Work email", { type: "email", autoComplete: "email", inputMode: "email", placeholder: "priya@acme.in" })}
+            {field("password", "Choose a password", { type: "password", autoComplete: "new-password", placeholder: "At least 8 characters" })}
+          </>
+        ) : (
+          <>
+            <p className="text-sm">We sent a 6-digit code to <b>{f.email}</b>. It works for 30 minutes.</p>
+            {field("code", "Code", { inputMode: "numeric", autoComplete: "one-time-code", placeholder: "123456", maxLength: 6 })}
+          </>
+        )}
+        {error && (
+          <p role="alert" className="rounded-2xl border-[1.5px] border-destructive/40 bg-destructive/10 px-3.5 py-2.5 text-sm font-semibold text-destructive">
+            {error}
+          </p>
+        )}
+        <Button type="submit" size="lg" className="w-full" disabled={busy}>
+          {busy && <Loader2 className="size-4 animate-spin" />} {step === "form" ? "Send me the code" : "Create my Shine"}
+        </Button>
+        {step === "code" && (
+          <button type="button" className="w-full text-xs font-semibold text-muted-foreground hover:underline" onClick={() => setStep("form")}>
+            Change details
+          </button>
+        )}
+      </form>
     </div>
   );
 }

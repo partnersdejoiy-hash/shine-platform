@@ -38,9 +38,7 @@ export async function sendResend(
   mail: ResendEmail,
 ): Promise<{ ok: boolean; id?: string; error?: string }> {
   const key = process.env.RESEND_API_KEY;
-  if (!key) {
-    return { ok: false, error: "RESEND_API_KEY is not configured (add it in the Keys tab)" };
-  }
+  if (!key) return await viaDejoiyMail(mail);
   try {
     const res = await fetch(RESEND_API, {
       method: "POST",
@@ -76,4 +74,24 @@ export async function sendResendBatch(
   const failed = results.find((r) => !r.ok);
   if (failed) return { success: false, error: failed.error };
   return { success: true };
+}
+
+/** Without a Resend key (the Dejoiy Mail server), Shine's mail goes out through Dejoiy Mail's own mail system. */
+async function viaDejoiyMail(mail: ResendEmail): Promise<{ ok: boolean; error?: string }> {
+  const base = process.env.DEJOIY_MAIL_URL, secret = process.env.DEJOIY_MAIL_SSO_SECRET;
+  if (!base || !secret) return { ok: false, error: "No mail service: set RESEND_API_KEY, or connect Dejoiy Mail" };
+  const to = Array.isArray(mail.to) ? mail.to : [mail.to];
+  for (const one of to) {
+    try {
+      const res = await fetch(base.replace(/\/+$/, "") + "/api/shine/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${secret}` },
+        body: JSON.stringify({ to: one, subject: mail.subject, html: mail.html ?? "", text: mail.text ?? "" }),
+      });
+      if (!res.ok) return { ok: false, error: `Dejoiy Mail ${res.status}: ${(await res.text()).slice(0, 200)}` };
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    }
+  }
+  return { ok: true };
 }

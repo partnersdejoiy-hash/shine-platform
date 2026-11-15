@@ -12,6 +12,8 @@ cd "$DIR"
 # calls and meetings through the media server, once setup-calls.sh has run
 CALLS=(); LIVEKIT_ENV=()
 [ -f /etc/shine/livekit.yaml ] && CALLS=(--profile calls) && LIVEKIT_ENV=(--env-file /etc/shine/livekit.env)
+# Shine on its own, paid on Dejoiy Pay: /etc/shine/pay.env, written by mail-dejoiy's deploy/connect-pay.sh
+PAY_ENV=(); [ -f /etc/shine/pay.env ] && PAY_ENV=(--env-file /etc/shine/pay.env)
 if [ -z "${FIRST:-}" ]; then
   echo "== Updating code"
   git fetch -q origin "$BRANCH" && git checkout -q "$BRANCH" && git pull -q --ff-only origin "$BRANCH"
@@ -25,7 +27,7 @@ git log --oneline -1
 # Joi in Shine (optional): JOI_API_URL and JOI_APP_SECRET in /etc/shine/joi.env
 JOI_ENV=()
 [ -f /etc/shine/joi.env ] && JOI_ENV=(--env-file /etc/shine/joi.env)
-docker run --rm --network host "${JOI_ENV[@]}" "${LIVEKIT_ENV[@]}" -v "$DIR":/app -v /etc/shine:/etc/shine -w /app \
+docker run --rm --network host "${JOI_ENV[@]}" "${LIVEKIT_ENV[@]}" "${PAY_ENV[@]}" -v "$DIR":/app -v /etc/shine:/etc/shine -w /app \
   -e CONVEX_SELF_HOSTED_URL=http://127.0.0.1:3210 \
   -e CONVEX_SELF_HOSTED_ADMIN_KEY="$(cat /etc/shine/admin-key)" \
   -e SHINE_APP_URL="https://$APP_HOST" -e SHINE_SSO_SECRET="$SSO_SECRET" \

@@ -204,4 +204,26 @@ http.route({
   }),
 });
 
+// Dejoiy Pay: a payment went through (Shine on its own, see shineOnly.ts). The note is signed when
+// DEJOIY_PAY_WEBHOOK_SECRET is set; either way Dejoiy Pay itself is asked whether the link is paid.
+http.route({
+  path: "/dejoiy-pay/webhook",
+  method: "POST",
+  handler: httpAction(async (ctx, req) => {
+    const raw = await req.text();
+    const secret = process.env.DEJOIY_PAY_WEBHOOK_SECRET;
+    if (secret) {
+      const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+      const mac = Array.from(new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(raw))), (b) => b.toString(16).padStart(2, "0")).join("");
+      if (!sameSecret((req.headers.get("X-Dejoiy-Signature") ?? "").trim().toLowerCase(), mac)) return json(400, { error: "Bad signature" });
+    }
+    let note: any = null;
+    try { note = JSON.parse(raw); } catch { return json(400, { error: "Not JSON" }); }
+    const payment = note?.payload;
+    if (note?.event !== "payment.captured" || payment?.source !== "link" || !String(payment?.source_id ?? "").startsWith("plink_")) return json(200, { ok: true, used: false });
+    const used = await ctx.runAction(internal.shineOnly.fromWebhook, { linkId: String(payment.source_id) });
+    return json(200, { ok: true, used: used > 0 });
+  }),
+});
+
 export default http;

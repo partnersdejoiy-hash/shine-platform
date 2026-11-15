@@ -29,7 +29,7 @@ for (const [name, value] of Object.entries(vars)) {
 }
 // Joi in Shine (optional): from /etc/shine/joi.env, see deploy/contabo/README.md
 // Calls through the media server (optional): from /etc/shine/livekit.env, written by setup-calls.sh
-for (const name of ["JOI_API_URL", "JOI_APP_SECRET", "JOI_EMAIL", "JOI_SHINE_ORG", "LIVEKIT_URL", "LIVEKIT_API_KEY", "LIVEKIT_API_SECRET"]) {
+for (const name of ["JOI_API_URL", "JOI_APP_SECRET", "JOI_EMAIL", "JOI_SHINE_ORG", "LIVEKIT_URL", "LIVEKIT_API_KEY", "LIVEKIT_API_SECRET", "DEJOIY_PAY_KEY_ID", "DEJOIY_PAY_KEY_SECRET", "DEJOIY_PAY_WEBHOOK_SECRET"]) {
   const value = process.env[name];
   if (!value) continue;
   execFileSync("npx", ["convex", "env", "set", "--", name, value], { stdio: ["ignore", "ignore", "inherit"] });

@@ -181,6 +181,11 @@ const schema = defineSchema(
       ownerId: v.id("users"),
       plan: v.optional(v.string()),
       domain: v.optional(v.string()),
+      // Shine on its own (no Dejoiy Mail): paid per person through Dejoiy Pay, see shineOnly.ts
+      shineOnly: v.optional(v.boolean()),
+      trialEnds: v.optional(v.number()),
+      paidUntil: v.optional(v.number()),
+      seats: v.optional(v.number()),
       createdAt: v.number(),
     })
       .index("by_owner", ["ownerId"])
@@ -279,6 +284,17 @@ const schema = defineSchema(
 
     // One-time sign-in codes, in their own table: a user's own row goes out to everyone they chat with,
     // so a code kept there could be read by them. Five wrong tries and the code is gone.
+    // A company signing up for Shine on its own: kept until the emailed code is entered (30 minutes)
+    shineSignups: defineTable({
+      email: v.string(),
+      name: v.string(),
+      company: v.string(),
+      hash: v.string(),
+      code: v.string(),
+      tries: v.number(),
+      expiresAt: v.number(),
+    }).index("by_email", ["email"]),
+
     authCodes: defineTable({
       userId: v.id("users"),
       code: v.string(),
@@ -826,6 +842,10 @@ const schema = defineSchema(
         v.literal("refunded"),
       ),
       receipt: v.optional(v.string()),
+      // Dejoiy Pay payment link (orderId holds its plink_ id): where to pay, and for how many people / how long
+      url: v.optional(v.string()),
+      seats: v.optional(v.number()),
+      period: v.optional(v.union(v.literal("month"), v.literal("year"))),
       createdAt: v.number(),
     })
       .index("by_user", ["userId", "createdAt"])

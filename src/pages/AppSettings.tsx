@@ -463,7 +463,7 @@ export function AppSettings() {
           </p>
         </div>
 
-        <Tabs defaultValue="profile" className="mt-6">
+        <Tabs defaultValue={new URLSearchParams(location.search).get("tab") ?? "profile"} className="mt-6">
           <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-3xl sm:inline-flex sm:w-auto sm:rounded-full">
             <TabsTrigger value="profile">
               <UserRound className="size-3.5" /> Profile

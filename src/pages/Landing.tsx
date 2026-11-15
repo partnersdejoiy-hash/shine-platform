@@ -355,8 +355,8 @@ function Plans() {
       <div className="sl-plans-intro">
         <h2 id="sl-plans-title" data-in>Shine comes free with Dejoiy Mail.</h2>
         <p data-in style={{ "--d": 1 } as CSSProperties}>
-          It isn't sold on its own. Every Dejoiy Mail plan has Shine chat, calls and meetings for everyone with a mailbox. One flat
-          price for the whole company, not per person, and 11 days free to try.
+          Every Dejoiy Mail plan has Shine chat, calls and meetings for everyone with a mailbox: one flat price for the whole
+          company, not per person. Only want chat? Take Shine on its own at ₹29 a person. 11 days free either way.
         </p>
       </div>
       <div className="sl-seg sl-plans-seg" role="group" aria-label="Billing period" data-in style={{ "--d": 2 } as CSSProperties}>
@@ -381,10 +381,19 @@ function Plans() {
             </a>
           </li>
         ))}
+        <li className="sl-plan sl-plan-alone" data-in style={{ "--d": 5 } as CSSProperties}>
+          <h3>Just Shine</h3>
+          <span className="sl-plan-boxes">Without Dejoiy Mail · any team size</span>
+          <span className="sl-plan-price">
+            <b>{inr(yearly ? 240 : 29)}</b>/person/{yearly ? "year" : "month"}
+            <small>{yearly ? "₹20 a month, billed yearly" : "or ₹240 a person a year"}</small>
+          </span>
+          <a className="sl-btn" href="/auth?signup=1">Start Shine free</a>
+        </li>
       </ol>
       <p className="sl-plans-fine" data-in>
-        Prices before 18% GST. Paid on Dejoiy Pay (UPI, cards, netbanking) by your company admin in Dejoiy Mail Admin → Plan &amp;
-        billing. Already on Dejoiy Mail? Shine is already yours: just sign in.
+        Prices before 18% GST. Paid on Dejoiy Pay (UPI, cards, netbanking) by your company admin: in Dejoiy Mail Admin → Plan &amp;
+        billing, or for Shine alone in Shine → Settings → Billing. Already on Dejoiy Mail? Shine is already yours: just sign in.
       </p>
     </section>
   );
