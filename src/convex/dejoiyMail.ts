@@ -7,6 +7,7 @@ import { roleFromMail } from "./lib/adminRoles";
 import { verifyDejoiyMailToken } from "./lib/dejoiyMailToken";
 import type { Role } from "./schema";
 import { ensureEmployeeId, isSuperAdminEmail, logAudit } from "./users";
+import { joiEmail } from "./joi";
 
 /**
  * Accounts come from Dejoiy Mail (Zimbra). The first time someone opens Shine
@@ -29,7 +30,7 @@ async function applyMail(
   const standIn = !user.name || user.name === c.email || user.name === c.email.split("@")[0];
   if (standIn && c.name && c.name !== user.name) patch.name = c.name;
   // a photo uploaded in Shine wins; otherwise show the Dejoiy Mail one (or none once it's removed there)
-  if (!user.avatarStorageId && user.source !== "joi") {
+  if (!user.avatarStorageId && user.source !== "joi" && user.email !== joiEmail()) {
     const image = c.photo || (user.image && MAIL_PHOTO.test(user.image) ? undefined : user.image);
     if (image !== user.image) patch.image = image;
   }
@@ -99,6 +100,9 @@ export const applyDirectory = internalMutation({
         .withIndex("email", (q) => q.eq("email", email))
         .first();
       const c = { email, name: p.name, admin: p.admin, photo: p.photo };
+      // Joi's row belongs to joi.ensureJoi: her mailbox's old photo, its name and the "mail" mark must not
+      // land on her (the mark would also switch off applyMail's guard, and her picture flipped every 15 minutes)
+      if (email === joiEmail() || user?.source === "joi") continue;
       if (!user) {
         const userId = await ctx.db.insert("users", {
           email,
