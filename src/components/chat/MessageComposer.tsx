@@ -21,9 +21,19 @@ import { uploadBlob, uploadFile } from "@/lib/upload";
 import { cn } from "@/lib/utils";
 import { useMutation, useQuery } from "convex/react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router";
 import {
   AtSign,
   AudioLines,
+  Bell,
+  BellOff,
+  LogOut,
+  Megaphone,
+  MessageSquare,
+  Smile,
+  Type,
+  UserPlus,
+  UserRound,
   BarChart3,
   Code2,
   CornerDownLeft,
@@ -41,6 +51,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { errorMessage } from "@/lib/errors";
+import { namedPeople } from "@/lib/namedPeople";
 
 export interface MentionMember {
   _id: string;
@@ -102,7 +113,20 @@ const SLASH_COMMANDS = [
     hint: "Ask the chat a question with options",
     icon: <BarChart3 className="size-4" />,
   },
+  // the Rocket.Chat ones people use most
+  { cmd: "/me", hint: "Say what you're doing: /me is on a call", icon: <UserRound className="size-4" /> },
+  { cmd: "/shrug", hint: "Add ¯\\_(ツ)_/¯ to your message", icon: <Smile className="size-4" /> },
+  { cmd: "/msg", hint: "Message someone directly: /msg @Riya Sen are you free?", icon: <MessageSquare className="size-4" /> },
+  { cmd: "/invite", hint: "Add people to this group: /invite @Riya Sen @Aman", icon: <UserPlus className="size-4" /> },
+  { cmd: "/topic", hint: "Set this group's topic (empty clears it)", icon: <Type className="size-4" /> },
+  { cmd: "/announce", hint: "Pin an announcement at the top for everyone (empty clears it)", icon: <Megaphone className="size-4" /> },
+  { cmd: "/status", hint: "Set your written status: /status In a meeting till 4", icon: <Smile className="size-4" /> },
+  { cmd: "/mute", hint: "Mute this chat's notifications", icon: <BellOff className="size-4" /> },
+  { cmd: "/unmute", hint: "Turn this chat's notifications back on", icon: <Bell className="size-4" /> },
+  { cmd: "/leave", hint: "Leave this group or channel", icon: <LogOut className="size-4" /> },
 ];
+
+
 
 export function MessageComposer({
   conversationId,
@@ -116,6 +140,14 @@ export function MessageComposer({
   const { user } = useAuth();
   const send = useMutation(api.messages.send);
   const edit = useMutation(api.messages.edit);
+  const setTopic = useMutation(api.conversations.setTopic);
+  const addMembers = useMutation(api.conversations.addMembers);
+  const leave = useMutation(api.conversations.leaveConversation);
+  const setMuted = useMutation(api.conversations.setMuted);
+  const setStatusText = useMutation(api.users.setStatusText);
+  const openDirectChat = useMutation(api.conversations.openDirectChat);
+  const directory = useQuery(api.users.directory);
+  const navigate = useNavigate();
   const createPoll = useMutation(api.messages.createPoll);
   const setTyping = useMutation(api.conversations.setTyping);
   const generateUploadUrl = useMutation(api.files.generateUploadUrl);
@@ -187,7 +219,8 @@ export function MessageComposer({
     } else {
       setMentionOpen(false);
     }
-    setSlashOpen(value.trim() === "/");
+    setSlashOpen(/^\/[a-z]*$/.test(value.trim()));
+    setSlashIndex(0);
     if (value.trim() !== "/") setSlashIndex(0);
   };
 
@@ -204,14 +237,16 @@ export function MessageComposer({
     closePopovers();
   };
 
+  const slashShown = SLASH_COMMANDS.filter((c) => c.cmd.startsWith(text.trim() || "/"));
   const insertSlash = (i: number) => {
     closePopovers();
-    if (SLASH_COMMANDS[i].cmd === "/poll") {
+    if (!slashShown[i]) return;
+    if (slashShown[i].cmd === "/poll") {
       setText("");
       setPollOpen(true);
       return;
     }
-    setText(SLASH_COMMANDS[i].cmd + " ");
+    setText(slashShown[i].cmd + " ");
   };
 
   // voice recording
@@ -237,10 +272,58 @@ export function MessageComposer({
     }, 2500);
   }, [conversationId, setTyping]);
 
+  /** Rocket.Chat-style commands that do something instead of sending text. True when handled. */
+  const runCommand = async (content: string): Promise<boolean> => {
+    const m = /^\/(me|shrug|msg|invite|topic|announce|status|mute|unmute|leave)\b\s*([\s\S]*)$/.exec(content);
+    if (!m || editTarget) return false;
+    const [, cmd, arg] = m;
+    const id = conversationId as any;
+    const people = (directory ?? []).filter((p) => p._id !== user?._id);
+    const done = (msg: string) => {
+      setText("");
+      toast.success(msg);
+    };
+    if (cmd === "me" || cmd === "shrug") return false; // these send text, handled below
+    if (cmd === "topic" || cmd === "announce") {
+      await setTopic({ conversationId: id, field: cmd === "topic" ? "topic" : "announcement", text: arg });
+      done(arg.trim() ? (cmd === "topic" ? "Topic set." : "Announcement pinned.") : "Cleared.");
+    } else if (cmd === "status") {
+      await setStatusText({ text: arg });
+      done(arg.trim() ? "Status set." : "Status cleared.");
+    } else if (cmd === "mute" || cmd === "unmute") {
+      await setMuted({ conversationId: id, muted: cmd === "mute" });
+      done(cmd === "mute" ? "Chat muted." : "Notifications on.");
+    } else if (cmd === "leave") {
+      if (!window.confirm("Leave this chat?")) return true;
+      await leave({ conversationId: id });
+      setText("");
+      navigate("/app/chats");
+    } else if (cmd === "invite") {
+      const { people: who } = namedPeople(arg, people);
+      if (!who.length) throw new Error("Name them with @, like /invite @Riya Sen");
+      await addMembers({ conversationId: id, memberIds: who.map((p) => p._id as any) });
+      done(`Added ${who.map((p) => p.name ?? p.email).join(", ")}.`);
+    } else if (cmd === "msg") {
+      const { people: who, rest } = namedPeople(arg, people);
+      if (who.length !== 1 || !rest) throw new Error("Write it as /msg @Riya Sen your message");
+      const chatId = await openDirectChat({ userId: who[0]._id as any });
+      await send({ conversationId: chatId as any, body: rest, kind: "text" });
+      done(`Sent to ${who[0].name ?? who[0].email}.`);
+    }
+    return true;
+  };
+
   const handleSendText = async (body?: string) => {
     const raw = body ?? text;
     let content = raw.trim();
     if (!content || sending) return;
+    try {
+      if (await runCommand(content)) return closePopovers();
+    } catch (e) {
+      return void toast.error(e instanceof Error ? errorMessage(e) : "That command didn't work");
+    }
+    if (/^\/me\s+\S/.test(content)) content = `*${user?.name ?? "Someone"} ${content.replace(/^\/me\s+/, "")}*`;
+    else if (/^\/shrug\b/.test(content)) content = (content.replace(/^\/shrug\s*/, "") + " ¯\\_(ツ)_/¯").trim();
     // /md → send as markdown, /code → send wrapped in a fenced code block
     if (/^\/md\b/.test(content)) {
       content = content.replace(/^\/md\s*/, "");
@@ -451,12 +534,12 @@ export function MessageComposer({
         />
 
         {/* slash command menu — type "/" */}
-        {slashOpen && (
-          <div className="absolute bottom-full left-0 right-0 z-30 mb-2 overflow-hidden rounded-xl border border-border/80 bg-popover p-1 shadow-2xl">
+        {slashOpen && slashShown.length > 0 && (
+          <div className="absolute bottom-full left-0 right-0 z-30 mb-2 max-h-80 overflow-y-auto rounded-xl border border-border/80 bg-popover p-1 shadow-2xl">
             <div className="px-2 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               Slash commands
             </div>
-            {SLASH_COMMANDS.map((c, i) => (
+            {slashShown.map((c, i) => (
               <button
                 key={c.cmd}
                 onMouseEnter={() => setSlashIndex(i)}
@@ -640,15 +723,15 @@ export function MessageComposer({
                 return;
               }
             }
-            if (slashOpen) {
+            if (slashOpen && slashShown.length > 0) {
               if (e.key === "ArrowDown") {
                 e.preventDefault();
-                setSlashIndex((i) => (i + 1) % SLASH_COMMANDS.length);
+                setSlashIndex((i) => (i + 1) % Math.max(slashShown.length, 1));
                 return;
               }
               if (e.key === "ArrowUp") {
                 e.preventDefault();
-                setSlashIndex((i) => (i - 1 + SLASH_COMMANDS.length) % SLASH_COMMANDS.length);
+                setSlashIndex((i) => (i - 1 + slashShown.length) % Math.max(slashShown.length, 1));
                 return;
               }
               if (e.key === "Enter" || e.key === "Tab") {

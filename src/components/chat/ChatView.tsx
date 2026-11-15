@@ -60,6 +60,7 @@ import {
   X,
   ArrowLeft,
   Trash2,
+  Megaphone,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
@@ -235,6 +236,8 @@ export function ChatView({
   const canDeleteForEveryone = user?.role === "super_admin" || user?.role === "admin";
 
   const conversation = detail?.conversation;
+  // your newest message: in a group it shows who has read it
+  const lastOwnId = [...messages].reverse().find((m) => isOwn(m, myId) && m.kind !== "system")?._id;
   const members = detail?.members ?? [];
   const other = conversation?.kind === "chat" && conversation.chatType === "direct"
     ? members.find((m) => m._id !== myId)
@@ -527,6 +530,9 @@ export function ChatView({
           </div>
         )}
 
+        {/* the group's topic and announcement (/topic, /announce), as in Rocket.Chat */}
+        <ChatNotice key={String(conversationId)} topic={conversation?.description} announcement={conversation?.announcement} chatId={String(conversationId)} />
+
         {/* messages */}
         <div ref={scrollRef} onScroll={onScroll} className={cn(paperClass(look), "min-h-0 flex-1 overflow-y-auto py-4")}>
           {loadingMore && (
@@ -560,6 +566,7 @@ export function ChatView({
                   onEdit={(m) => setEditTarget({ id: m._id, body: m.body })}
                   onPreview={(url, name) => setPreview({ url, name })}
                 />
+                {!other && msg._id === lastOwnId && <SeenBy at={msg.createdAt} members={(detail?.members ?? []) as any} myId={myId} />}
               </div>
             );
           })}
@@ -1331,5 +1338,58 @@ function ContactInfo({ person, status, muted, onCall, onSearch, onMute, onTheme,
         </button>
       </div>
     </section>
+  );
+}
+
+/** Topic under the header; an announcement stays pinned until each person hides it (it comes back when it changes). */
+function ChatNotice({ topic, announcement, chatId }: { topic?: string; announcement?: string; chatId: string }) {
+  const key = `shine-announce-${chatId}`;
+  const [hidden, setHidden] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  });
+  const showAnnouncement = !!announcement && hidden !== announcement;
+  if (!topic && !showAnnouncement) return null;
+  return (
+    <div className="space-y-1.5 border-b border-border/60 px-4 py-2">
+      {topic && <p className="truncate text-xs text-muted-foreground" title={topic}>Topic: {topic}</p>}
+      {showAnnouncement && (
+        <div className="flex items-start gap-2 rounded-xl bg-primary/10 px-3 py-2 text-sm">
+          <Megaphone className="mt-0.5 size-4 shrink-0 text-primary" />
+          <p className="min-w-0 flex-1 [overflow-wrap:anywhere]">{announcement}</p>
+          <button
+            type="button"
+            className="shrink-0 text-xs font-semibold text-primary hover:underline"
+            onClick={() => {
+              setHidden(announcement!);
+              try {
+                localStorage.setItem(key, announcement!);
+              } catch {
+                /* private window: hidden for now only */
+              }
+            }}
+          >
+            Hide
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Read receipts for groups (Rocket.Chat's "read by"): who has opened the chat since your last message. */
+function SeenBy({ at, members, myId }: { at: number; members: { _id: string; name?: string; lastReadAt?: number }[]; myId: string }) {
+  const others = members.filter((m) => m._id !== myId);
+  const seen = others.filter((m) => (m.lastReadAt ?? 0) >= at);
+  if (!others.length) return null;
+  const names = seen.map((m) => (m.name ?? "Someone").split(" ")[0]);
+  const text = !seen.length ? "Not seen yet" : seen.length === others.length ? "Seen by everyone" : `Seen by ${names.slice(0, 3).join(", ")}${names.length > 3 ? ` +${names.length - 3}` : ""}`;
+  return (
+    <p className="px-4 pt-0.5 text-right text-[11px] text-muted-foreground" title={seen.map((m) => m.name).join(", ")}>
+      {text}
+    </p>
   );
 }

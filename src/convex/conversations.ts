@@ -626,6 +626,49 @@ export const setMemberRole = mutation({
 });
 
 /** Rename a group or channel. Owner/admin only, or anyone if whoCanEditInfo === "everyone". */
+/**
+ * A group's or channel's topic (shown under its name) and announcement (pinned at the top for
+ * everyone), as in Rocket.Chat's /topic and /announce. Same rule as renaming: admins, or everyone
+ * when the group lets everyone edit its info. Empty text clears it.
+ */
+export const setTopic = mutation({
+  args: {
+    conversationId: v.id("conversations"),
+    field: v.union(v.literal("topic"), v.literal("announcement")),
+    text: v.string(),
+  },
+  handler: async (ctx, { conversationId, field, text }) => {
+    const me = await getCurrentUser(ctx);
+    if (!me) throw new ConvexError("Not authenticated");
+    const conversation = await ctx.db.get(conversationId);
+    if (!conversation) throw new ConvexError("Conversation not found");
+    if (conversation.kind === "chat" && conversation.chatType !== "group") {
+      throw new ConvexError("Topics and announcements are for groups and channels");
+    }
+    const member = await ctx.db
+      .query("conversationMembers")
+      .withIndex("by_user_conv", (q) => q.eq("userId", me._id).eq("conversationId", conversationId))
+      .unique();
+    if (!member) throw new ConvexError("You are not a member of this conversation");
+    const anyone = ((conversation.policies as any) ?? {}).whoCanEditInfo === "everyone" && conversation.kind === "chat";
+    if (!anyone && !(await isGroupAdmin(ctx, conversationId, me._id as string))) {
+      throw new ConvexError("Only a group admin can change this");
+    }
+    const clean = text.replace(/\s+/g, " ").trim();
+    if (clean.length > 500) throw new ConvexError("Keep it to 500 characters");
+    await ctx.db.patch(conversationId, field === "topic" ? { description: clean || undefined } : { announcement: clean || undefined });
+    const what = field === "topic" ? "topic" : "announcement";
+    await ctx.db.insert("messages", {
+      conversationId,
+      senderId: me._id,
+      kind: "system",
+      body: clean ? `${me.name ?? "Someone"} set the ${what}: ${clean}` : `${me.name ?? "Someone"} cleared the ${what}`,
+      createdAt: Date.now(),
+    });
+    await logAudit(ctx, me._id, `conversation.${what}`, "conversations", String(conversationId), clean.slice(0, 120));
+  },
+});
+
 export const renameConversation = mutation({
   args: {
     conversationId: v.id("conversations"),

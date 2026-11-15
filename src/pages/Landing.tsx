@@ -136,6 +136,8 @@ export default function Landing() {
 
         <Commands />
 
+        <Plans />
+
         <FirstStep start={start} isAuthenticated={isAuthenticated} onGo={(to) => navigate(to)} />
       </main>
 
@@ -333,6 +335,57 @@ function Commands() {
           {shown.length === 0 && <li className="sl-cmd-empty">Nothing by that name yet. Try "call" or "file".</li>}
         </ul>
       </div>
+    </section>
+  );
+}
+
+// Must match Dejoiy Mail's pricing (mail-dejoiy: web/js/signup.js and server/billing.py); rupees before GST.
+const PLANS = [
+  { id: "starter", name: "Starter", month: 99, year: 790, boxes: "Up to 51 mailboxes" },
+  { id: "team", name: "Team", month: 299, year: 2490, boxes: "Up to 101 mailboxes" },
+  { id: "business", name: "Business", month: 699, year: 5990, boxes: "Unlimited mailboxes" },
+];
+const inr = (n: number) => "₹" + n.toLocaleString("en-IN", { maximumFractionDigits: 0 });
+
+/** Shine is never bought alone: every Dejoiy Mail plan includes it. */
+function Plans() {
+  const [yearly, setYearly] = useState(true);
+  return (
+    <section id="plans" className="sl-plans" data-ink="#121212" data-ground="#fffbf7" aria-labelledby="sl-plans-title">
+      <div className="sl-plans-intro">
+        <h2 id="sl-plans-title" data-in>Shine comes free with Dejoiy Mail.</h2>
+        <p data-in style={{ "--d": 1 } as CSSProperties}>
+          It isn't sold on its own. Every Dejoiy Mail plan has Shine chat, calls and meetings for everyone with a mailbox. One flat
+          price for the whole company, not per person, and 11 days free to try.
+        </p>
+      </div>
+      <div className="sl-seg sl-plans-seg" role="group" aria-label="Billing period" data-in style={{ "--d": 2 } as CSSProperties}>
+        <button type="button" aria-pressed={!yearly} onClick={() => setYearly(false)}>
+          Monthly
+        </button>
+        <button type="button" aria-pressed={yearly} onClick={() => setYearly(true)}>
+          Yearly · save up to 33%
+        </button>
+      </div>
+      <ol className="sl-plan-list">
+        {PLANS.map((p, i) => (
+          <li key={p.id} className="sl-plan" data-in style={{ "--d": i + 2 } as CSSProperties}>
+            <h3>{p.name}</h3>
+            <span className="sl-plan-boxes">{p.boxes} · Shine included</span>
+            <span className="sl-plan-price">
+              <b>{inr(yearly ? p.year : p.month)}</b>/{yearly ? "year" : "month"}
+              <small>{yearly ? `${inr(p.year / 12)} a month, billed yearly` : `or ${inr(p.year)} a year`}</small>
+            </span>
+            <a className="sl-btn" href={`${DEJOIY_MAIL_URL}/signup?plan=${p.id}&billing=${yearly ? "year" : "month"}`}>
+              Try {p.name} free
+            </a>
+          </li>
+        ))}
+      </ol>
+      <p className="sl-plans-fine" data-in>
+        Prices before 18% GST. Paid on Dejoiy Pay (UPI, cards, netbanking) by your company admin in Dejoiy Mail Admin → Plan &amp;
+        billing. Already on Dejoiy Mail? Shine is already yours: just sign in.
+      </p>
     </section>
   );
 }

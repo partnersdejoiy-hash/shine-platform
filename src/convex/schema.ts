@@ -229,6 +229,8 @@ const schema = defineSchema(
       ),
       name: v.string(),
       description: v.optional(v.string()),
+      // pinned at the top of the chat for everyone (Rocket.Chat's room announcement); set by admins with /announce
+      announcement: v.optional(v.string()),
       // group / channel display picture — set by the creator or a group admin
       image: v.optional(v.string()),
       avatarStorageId: v.optional(v.string()),

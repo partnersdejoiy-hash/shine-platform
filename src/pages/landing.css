@@ -153,6 +153,23 @@
 .sl-cmd-item.sel .say { display: block; animation: sl-pop 260ms var(--ease-out) both; }
 .sl-cmd-empty { padding: 20px 0; font-size: 22px; font-weight: 700; }
 
+/* ---- plans: Shine comes with Dejoiy Mail ---- */
+.sl-plans { background: var(--paper); padding: 140px var(--m) 150px; display: grid; gap: 40px; }
+.sl-plans-intro { display: grid; grid-template-columns: 7fr 5fr; gap: 24px; align-items: end; }
+.sl-plans-intro h2 { font-size: clamp(44px, 5vw, 84px); line-height: 0.95; letter-spacing: -0.045em; font-weight: 800; max-width: 12ch; }
+.sl-plans-intro p { font-size: 22px; font-weight: 500; max-width: 40ch; }
+.sl-plans-seg { width: min(440px, 100%); }
+.sl-plan-list { list-style: none; margin: 0; padding: 0; border-top: 3px solid var(--ink); }
+.sl-plan { display: grid; grid-template-columns: 3fr 4fr 4fr auto; gap: 24px; align-items: center; padding: 28px 0; border-bottom: 3px solid var(--ink); }
+.sl-plan h3 { font-size: clamp(36px, 4vw, 64px); line-height: 1; letter-spacing: -0.04em; font-weight: 800; }
+.sl-plan-boxes { font-size: 20px; font-weight: 600; }
+.sl-plan-price { display: block; font-size: 18px; font-weight: 600; }
+.sl-plan-price b { font-size: clamp(32px, 3vw, 48px); letter-spacing: -0.03em; font-weight: 800; line-height: 1.05; }
+.sl-plan-price small { display: block; font-size: 15px; font-weight: 500; color: #5b5560; }
+.sl-plan .sl-btn { background: var(--pink); color: var(--ink); white-space: nowrap; }
+.sl-plan:hover h3 { color: var(--pink-dark); }
+.sl-plans-fine { font-size: 16px; color: #5b5560; max-width: 70ch; }
+
 /* ---- the first step, already open ---- */
 .sl-cta { position: relative; min-height: 90svh; background: var(--blue); padding: 120px var(--m) 40px; display: grid; grid-template-columns: 5fr 1fr 5fr; gap: 24px; align-items: center; }
 .sl-cta-copy { grid-column: 1; align-self: end; display: grid; gap: 18px; }
@@ -228,6 +245,16 @@
   .sl-cmd-item .name { font-size: 9vw; }
   .sl-cmd-item .keys { display: none; }
   .sl-cmd-item .say { font-size: 18px; }
+  .sl-plans { padding: 96px 16px 104px; gap: 28px; }
+  .sl-plans-intro { grid-template-columns: 1fr; }
+  .sl-plans-intro h2 { font-size: 11vw; }
+  .sl-plans-intro p { font-size: 18px; }
+  .sl-plan { grid-template-columns: 1fr auto; gap: 8px 16px; padding: 22px 0; }
+  .sl-plan h3 { font-size: 34px; }
+  .sl-plan-boxes { grid-column: 1 / -1; grid-row: 2; font-size: 16px; }
+  .sl-plan-price { grid-column: 2; grid-row: 1; text-align: right; }
+  .sl-plan-price b { font-size: 28px; }
+  .sl-plan .sl-btn { grid-column: 1 / -1; justify-self: start; }
   .sl-cta { grid-template-columns: 1fr; padding: 96px 16px 40px; min-height: 84svh; align-content: space-between; }
   .sl-cta-copy, .sl-dialog { grid-column: 1; }
   .sl-cta-copy { align-self: start; }
