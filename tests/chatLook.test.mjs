@@ -12,6 +12,11 @@ test("ids are unique and the default background exists", () => {
   for (const name of ["CHAT_TONES", "CHAT_PAPERS"]) assert.equal(new Set(ids(name)).size, ids(name).length);
   assert.ok(ids("CHAT_PAPERS").includes("dots"));
 });
+test("every theme uses a colour and a background that exist", () => {
+  const themes = [...src.split("export const CHAT_THEMES = [")[1].split("] as const")[0].matchAll(/tone: "([a-z]+)", paper: "([a-z]+)"/g)];
+  assert.ok(themes.length >= 10);
+  for (const [, tone, paper] of themes) assert.ok(ids("CHAT_TONES").includes(tone) && ids("CHAT_PAPERS").includes(paper), tone + " " + paper);
+});
 test("the server checks both lists before saving", () => {
   const server = readFileSync(new URL("../src/convex/conversations.ts", import.meta.url), "utf8");
   assert.ok(server.includes("!CHAT_TONE_IDS.includes(tone)") && server.includes("!CHAT_PAPER_IDS.includes(paper)"));

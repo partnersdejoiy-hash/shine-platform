@@ -22,7 +22,7 @@ import { effectiveStatus, isOnline, presenceDotClass, presenceLabel } from "@/li
 import { prepareAvatarImage, uploadFile } from "@/lib/upload";
 import { cn } from "@/lib/utils";
 import { toneFor } from "@/lib/tone";
-import { CHAT_PAPERS, CHAT_TONES, paperClass, toneColor } from "@/lib/chatLook";
+import { CHAT_PAPERS, CHAT_THEMES, CHAT_TONES, paperClass, toneColor } from "@/lib/chatLook";
 import { useMutation, useQuery } from "convex/react";
 import { motion } from "framer-motion";
 import {
@@ -459,7 +459,7 @@ export function ChatView({
                   <Info className="size-4" /> {detailsOpen ? "Hide chat info" : "Chat info and search"}
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => setLookOpen(true)}>
-                  <Palette className="size-4" /> Background and colour
+                  <Palette className="size-4" /> Chat theme
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setDeleteChatOpen(true)}>
@@ -933,15 +933,40 @@ export function ChatView({
       {/* DELETE CHAT */}
       {/* this chat's own look: only the person choosing sees it */}
       <Dialog open={lookOpen} onOpenChange={setLookOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-xl">
           <DialogHeader>
-            <DialogTitle>Background and colour</DialogTitle>
+            <DialogTitle>Chat theme</DialogTitle>
             <DialogDescription>For this chat only, and only for you. Other chats and other people keep their own.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-5">
+          <div className="-mx-1 max-h-[60dvh] space-y-5 overflow-y-auto px-1 pb-1">
             <fieldset>
-              <legend className="mb-2 text-sm font-semibold">Colour</legend>
-              <div className="flex flex-wrap gap-2.5" role="radiogroup" aria-label="Chat colour">
+              <legend className="mb-2 text-sm font-semibold">Themes</legend>
+              <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-5" role="radiogroup" aria-label="Chat theme">
+                {CHAT_THEMES.map((theme) => {
+                  const on = look?.tone === theme.tone && (look?.paper ?? "dots") === theme.paper;
+                  const color = CHAT_TONES.find((x) => x.id === theme.tone)!.color;
+                  return (
+                    <button
+                      key={theme.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      onClick={() => changeLook({ tone: theme.tone, paper: theme.paper })}
+                      className={cn("overflow-hidden rounded-xl border-2 text-left transition-transform active:scale-95", on ? "border-foreground" : "border-border")}
+                    >
+                      <span className={cn("chat-paper chat-paper-" + theme.paper, "flex h-20 flex-col justify-center gap-1.5 bg-background px-2")} style={{ "--t": color } as CSSProperties}>
+                        <span className="h-3.5 w-9 rounded-full border border-border bg-card" />
+                        <span className="h-3.5 w-11 self-end rounded-full border border-[var(--sticker-border)]" style={{ background: `color-mix(in oklch, ${color} 55%, var(--card))` }} />
+                      </span>
+                      <span className="block truncate px-1.5 py-1 text-[11px] font-semibold">{theme.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend className="mb-2 text-sm font-semibold">Bubble colour</legend>
+              <div className="grid grid-cols-6 gap-2.5 sm:grid-cols-9" role="radiogroup" aria-label="Chat colour">
                 {CHAT_TONES.map((tone) => (
                   <button
                     key={tone.id}
@@ -951,7 +976,7 @@ export function ChatView({
                     aria-label={tone.label}
                     title={tone.label}
                     onClick={() => changeLook({ tone: tone.id })}
-                    className={cn("size-11 rounded-full border-2 transition-transform active:scale-95", look?.tone === tone.id ? "border-foreground ring-2 ring-foreground ring-offset-2 ring-offset-background" : "border-[var(--sticker-border)]")}
+                    className={cn("aspect-square w-full max-w-11 justify-self-center rounded-full border-2 transition-transform active:scale-95", look?.tone === tone.id ? "border-foreground ring-2 ring-foreground ring-offset-2 ring-offset-background" : "border-[var(--sticker-border)]")}
                     style={{ background: tone.color }}
                   />
                 ))}
