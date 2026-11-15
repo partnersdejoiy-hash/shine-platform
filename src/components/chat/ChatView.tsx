@@ -12,6 +12,7 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -30,6 +31,7 @@ import {
   FileText,
   Hash,
   Info,
+  MoreVertical,
   Loader2,
   MessageSquarePlus,
   Mic,
@@ -437,18 +439,23 @@ export function ChatView({
             <Button variant="ghost" size="icon" className="size-9 text-muted-foreground" title="Video call" onClick={() => handleCall("video")}>
               <Video className="size-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="size-9 text-muted-foreground" title="Delete chat" aria-label="Delete chat" onClick={() => setDeleteChatOpen(true)}>
-              <Trash2 className="size-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn("size-9", detailsOpen ? "text-primary" : "text-muted-foreground")}
-              title="Details"
-              onClick={() => setDetailsOpen((v) => !v)}
-            >
-              <Info className="size-4" />
-            </Button>
+            {/* everything that is not a call lives in one menu, so a slip of the thumb never lands on Delete */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className={cn("size-9", detailsOpen ? "text-primary" : "text-muted-foreground")} title="More" aria-label="More chat options">
+                  <MoreVertical className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem onSelect={() => setDetailsOpen((v) => !v)}>
+                  <Info className="size-4" /> {detailsOpen ? "Hide chat info" : "Chat info and search"}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setDeleteChatOpen(true)}>
+                  <Trash2 className="size-4" /> Delete chat
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
@@ -473,7 +480,7 @@ export function ChatView({
         )}
 
         {/* messages */}
-        <div ref={scrollRef} onScroll={onScroll} className="min-h-0 flex-1 overflow-y-auto py-4">
+        <div ref={scrollRef} onScroll={onScroll} className="chat-paper min-h-0 flex-1 overflow-y-auto py-4">
           {loadingMore && (
             <div className="flex justify-center py-2">
               <Loader2 className="size-4 animate-spin text-muted-foreground" />
@@ -482,8 +489,9 @@ export function ChatView({
           {messages.map((msg, i) => {
             const prev = messages[i - 1];
             const showDay = !prev || !isSameDay(prev.createdAt, msg.createdAt);
+            // one to one, the name is already at the top of the chat: only groups and channels say who is speaking
             const showHeader =
-              !isOwn(msg, myId) && (showDay || !prev || prev.senderId !== msg.senderId || prev.kind === "system");
+              !other && !isOwn(msg, myId) && (showDay || !prev || prev.senderId !== msg.senderId || prev.kind === "system");
             return (
               <div key={msg._id}>
                 {showDay && (

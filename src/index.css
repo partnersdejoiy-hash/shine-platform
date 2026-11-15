@@ -320,3 +320,10 @@
     font-size: max(16px, 1em);
   }
 }
+
+/* The chat's paper: Shine's own dots, so an empty stretch of conversation is not a blank wall. */
+.chat-paper {
+  background-image: radial-gradient(color-mix(in oklab, var(--foreground) 9%, transparent) 1px, transparent 1.4px);
+  background-size: 22px 22px;
+  background-position: 11px 11px;
+}
