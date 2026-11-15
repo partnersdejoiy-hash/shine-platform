@@ -226,17 +226,29 @@ export const widgetToken = action({
 });
 
 export async function askJoi(turns: Array<{ role: string; content: string }>, task: string): Promise<string | null> {
+  return (await askJoiOrWhy(turns, task)).text ?? null;
+}
+
+/** Joi's answer, or in plain words why there is none (so a silent Joi can be traced). */
+export async function askJoiOrWhy(turns: Array<{ role: string; content: string }>, task: string): Promise<{ text?: string; why?: string }> {
   const url = process.env.JOI_API_URL?.replace(/\/+$/, "");
   const secret = process.env.JOI_APP_SECRET;
-  if (!url || !secret) return null;
-  const res = await fetch(`${url}/api/bots/reply`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ appId: "shine", appToken: await signForJoi(secret), messages: turns, task }),
-  });
-  if (!res.ok) return null;
-  const { text } = (await res.json()) as { text?: string };
-  return text?.trim() || null;
+  if (!url || !secret) return { why: "Shine is not connected to me yet (JOI_API_URL or JOI_APP_SECRET is not set on Shine's server)." };
+  let res: Response;
+  try {
+    res = await fetch(`${url}/api/bots/reply`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ appId: "shine", appToken: await signForJoi(secret), messages: turns, task }),
+    });
+  } catch {
+    return { why: "Shine could not reach my server." };
+  }
+  if (res.status === 401) return { why: "my server did not accept Shine (Shine is switched off in my app list, or the secret differs)." };
+  if (res.status === 503) return { why: "my AI did not answer (it may be busy or out of credit)." };
+  if (!res.ok) return { why: `my server answered ${res.status}.` };
+  const { text } = (await res.json().catch(() => ({}))) as { text?: string };
+  return text?.trim() ? { text: text.trim() } : { why: "my server sent an empty answer." };
 }
 
 export const reply = internalAction({
@@ -245,7 +257,14 @@ export const reply = internalAction({
     const c = await ctx.runQuery(internal.joi.context, { conversationId, messageId });
     let text: string | null = null;
     if (c && c.turns.length) {
-      text = await askJoi(c.turns, `You're replying in ${c.where} on Shine, DEJOIY's team chat.`).catch(() => null);
+      const out = await askJoiOrWhy(c.turns, `You're replying in ${c.where} on Shine, DEJOIY's team chat.`)
+        .catch((e) => ({ text: undefined, why: "something went wrong (" + String(e).slice(0, 120) + ")." }));
+      if (out.text) text = out.text;
+      else {
+        // never leave the person waiting in silence: say so in the chat, and leave the reason in the server log
+        console.error("Joi did not reply:", out.why);
+        text = `Sorry, I couldn't answer just now: ${out.why} Please try again in a minute.`;
+      }
     }
     await ctx.runMutation(internal.joi.post, {
       conversationId,
