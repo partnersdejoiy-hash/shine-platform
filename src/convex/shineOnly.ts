@@ -129,7 +129,8 @@ export const overview = query({
       state, ends, daysLeft: Math.max(0, Math.ceil((ends - now) / DAY)),
       price: SHINE_PRICE, payReady: !!(process.env.DEJOIY_PAY_KEY_ID && process.env.DEJOIY_PAY_KEY_SECRET),
       payMode: (process.env.DEJOIY_PAY_KEY_ID ?? "").startsWith("dp_live_") ? "live" : "test",
-      payments: payments.map((p) => ({ id: p.orderId, amount: p.amount, seats: p.seats ?? null, period: p.period ?? null, status: p.status, url: p.status === "created" ? p.url : undefined, createdAt: p.createdAt })),
+      renewing: payments.some((p) => p.orderId.startsWith("sub_") && p.method === "autopay"),
+      payments: payments.map((p) => ({ id: p.orderId, amount: p.amount, seats: p.seats ?? null, period: p.period ?? null, status: p.status, auto: p.orderId.startsWith("sub_") ? (p.method ?? null) : null, charges: p.receipt ? Number(p.receipt) : null, url: p.status === "created" ? p.url : undefined, createdAt: p.createdAt })),
     };
   },
 });
@@ -181,7 +182,8 @@ export const orgForCheckout = internalQuery({
     if (!mine) return null;
     const user = await ctx.db.get(userId);
     const people = (await ctx.db.query("organizationMembers").withIndex("by_org", (q: any) => q.eq("orgId", mine.org._id)).collect()).length;
-    return { org: mine.org, admin: isOrgAdmin(mine.member), people, email: user?.email ?? "", name: user?.name ?? "" };
+    const renewing = (await ctx.db.query("payments").collect()).find((p) => p.orgId === mine.org._id && p.orderId.startsWith("sub_") && p.status === "paid" && p.method === "autopay");
+    return { org: mine.org, admin: isOrgAdmin(mine.member), people, email: user?.email ?? "", name: user?.name ?? "", renewing: renewing?.orderId ?? null };
   },
 });
 
@@ -205,25 +207,27 @@ export const checkout = action({
     if (!info || !info.admin) throw new ConvexError("Only your company's Shine admin can pay.");
     if (!Number.isInteger(seats) || seats < info.people || seats > 5000) throw new ConvexError(`Pay for at least the ${info.people} people already on Shine.`);
     const amount = shinePrice(seats, period);
-    const link = await pay("/payment_links", "POST", {
-      title: `Shine · ${seats} ${seats === 1 ? "person" : "people"} (${period === "year" ? "yearly" : "monthly"})`,
-      description: `${info.org.name} · ${info.org.domain} · ₹${SHINE_PRICE[period]} a person + 18% GST`,
-      amount, currency: "INR", reference_id: `sh-${Math.random().toString(36).slice(2, 12)}`,
-      customer: { email: info.email, name: info.name }, expire_by: Math.floor(Date.now() / 1000) + 48 * 3600,
-      notify: { email: true, sms: false }, reminder_enable: false,
+    if (info.renewing) throw new ConvexError("Your plan already renews by itself. Turn auto-renew off first to change people or period.");
+    // auto-renewing: the admin approves UPI AutoPay or a card once, then every month or year is charged by itself
+    const sub = await pay("/subscriptions", "POST", {
+      plan: { name: `Shine · ${seats} ${seats === 1 ? "person" : "people"} (${period === "year" ? "yearly" : "monthly"})`, amount, period: period === "year" ? "yearly" : "monthly" },
+      customer: { email: info.email, name: info.name }, reference_id: `sh-${Math.random().toString(36).slice(2, 12)}`,
       notes: { product: "shine", org: String(info.org._id), seats: String(seats), period },
     });
-    if (!String(link?.id ?? "").startsWith("plink_") || !String(link?.short_url ?? "").startsWith("https://")) throw new ConvexError("Dejoiy Pay sent back something unexpected. Try again.");
-    await ctx.runMutation(internal.shineOnly.recordLink, { userId, orgId: info.org._id, linkId: link.id, url: link.short_url, amount, seats, period });
-    return { url: link.short_url };
+    if (!String(sub?.id ?? "").startsWith("sub_") || !String(sub?.short_url ?? "").startsWith("https://")) throw new ConvexError("Dejoiy Pay sent back something unexpected. Try again.");
+    await ctx.runMutation(internal.shineOnly.recordLink, { userId, orgId: info.org._id, linkId: sub.id, url: sub.short_url, amount, seats, period });
+    return { url: sub.short_url };
   },
 });
 
 export const openLinks = internalQuery({
   args: { orgId: v.optional(v.id("organizations")), linkId: v.optional(v.string()) },
   handler: async (ctx, { orgId, linkId }) => {
-    if (linkId) return (await ctx.db.query("payments").withIndex("by_order", (q) => q.eq("orderId", linkId)).collect()).filter((p) => p.status === "created").map((p) => p.orderId);
-    return (await ctx.db.query("payments").collect()).filter((p) => p.orgId === orgId && p.status === "created" && p.orderId.startsWith("plink_")).map((p) => p.orderId);
+    if (linkId) return (await ctx.db.query("payments").withIndex("by_order", (q) => q.eq("orderId", linkId)).collect()).filter((p) => p.status === "created" || p.method === "autopay").map((p) => p.orderId);
+    // links still waiting, and subscriptions that may have charged again since
+    return (await ctx.db.query("payments").collect())
+      .filter((p) => p.orgId === orgId && ((p.status === "created" && p.orderId.startsWith("plink_")) || (p.orderId.startsWith("sub_") && (p.status === "created" || p.method === "autopay"))))
+      .map((p) => p.orderId);
   },
 });
 
@@ -242,10 +246,40 @@ export const markLinkPaid = internalMutation({
   },
 });
 
-/** Ask Dejoiy Pay about open links (the page calls this; the webhook does the same). */
+/** Dejoiy Pay's view of one subscription: paid until current_end; method "autopay" while it renews, "off" once turned off. */
+export const applySubscription = internalMutation({
+  args: { subId: v.string(), status: v.string(), autoRenew: v.boolean(), paidCount: v.number(), currentEnd: v.union(v.number(), v.null()) },
+  handler: async (ctx, a) => {
+    const p = await ctx.db.query("payments").withIndex("by_order", (q) => q.eq("orderId", a.subId)).first();
+    if (!p || !p.orgId) return false;
+    const live = a.status === "active" || a.status === "authenticated";
+    if (!a.paidCount) {
+      if (!live && a.status !== "created") await ctx.db.patch(p._id, { status: "failed" });
+      return false;
+    }
+    await ctx.db.patch(p._id, { status: "paid", method: live && a.autoRenew ? "autopay" : "off", receipt: String(a.paidCount) });
+    const org = await ctx.db.get(p.orgId);
+    if (org && a.currentEnd) await ctx.db.patch(org._id, { paidUntil: Math.max(org.paidUntil ?? 0, a.currentEnd * 1000), seats: p.seats ?? org.seats });
+    return true;
+  },
+});
+
+async function syncSubscription(ctx: any, id: string) {
+  const sub = await pay(`/subscriptions/${id}`).catch(() => null);
+  if (!sub) return false;
+  return await ctx.runMutation(internal.shineOnly.applySubscription, {
+    subId: id, status: String(sub.status), autoRenew: sub.auto_renew !== false, paidCount: Number(sub.paid_count || 0), currentEnd: sub.current_end ?? null,
+  });
+}
+
+/** Ask Dejoiy Pay about open links and subscriptions (the page calls this; the webhook does the same). */
 async function settle(ctx: any, ids: string[]) {
   let paid = 0;
   for (const id of ids.slice(0, 3)) {
+    if (id.startsWith("sub_")) {
+      if (await syncSubscription(ctx, id)) paid++;
+      continue;
+    }
     const link = await pay(`/payment_links/${id}`).catch(() => null);
     if (link?.status === "paid" && (await ctx.runMutation(internal.shineOnly.markLinkPaid, { linkId: id }))) paid++;
   }
@@ -260,6 +294,20 @@ export const refresh = action({
     const info = await ctx.runQuery(internal.shineOnly.orgForCheckout, { userId });
     if (!info) return 0;
     return await settle(ctx, await ctx.runQuery(internal.shineOnly.openLinks, { orgId: info.org._id }));
+  },
+});
+
+/** An admin turns auto-renew off: nothing more is charged, the paid time runs out. */
+export const cancelAutoRenew = action({
+  args: {},
+  handler: async (ctx): Promise<boolean> => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new ConvexError("Sign in first.");
+    const info = await ctx.runQuery(internal.shineOnly.orgForCheckout, { userId });
+    if (!info?.admin) throw new ConvexError("Only your company's Shine admin can change billing.");
+    if (!info.renewing) throw new ConvexError("Nothing renews by itself right now.");
+    await pay(`/subscriptions/${info.renewing}/cancel`, "POST", {});
+    return await syncSubscription(ctx, info.renewing);
   },
 });
 

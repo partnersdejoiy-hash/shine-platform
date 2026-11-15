@@ -220,7 +220,9 @@ http.route({
     let note: any = null;
     try { note = JSON.parse(raw); } catch { return json(400, { error: "Not JSON" }); }
     const payment = note?.payload;
-    if (note?.event !== "payment.captured" || payment?.source !== "link" || !String(payment?.source_id ?? "").startsWith("plink_")) return json(200, { ok: true, used: false });
+    const source = String(payment?.source_id ?? "");
+    const ours = (payment?.source === "link" && source.startsWith("plink_")) || (payment?.source === "subscription" && source.startsWith("sub_"));
+    if (note?.event !== "payment.captured" || !ours) return json(200, { ok: true, used: false });
     const used = await ctx.runAction(internal.shineOnly.fromWebhook, { linkId: String(payment.source_id) });
     return json(200, { ok: true, used: used > 0 });
   }),

@@ -85,6 +85,7 @@ function ShineOnlyPlan({ o }: { o: NonNullable<ReturnType<typeof useOverview>> }
   const checkout = useAction(api.shineOnly.checkout);
   const refresh = useAction(api.shineOnly.refresh);
   const invite = useMutation(api.shineOnly.invite);
+  const stop = useAction(api.shineOnly.cancelAutoRenew);
   const [period, setPeriod] = useState<"month" | "year">("year");
   const [seats, setSeats] = useState(Math.max(o.people, o.seats ?? 0, 1));
   const [busy, setBusy] = useState(false);
@@ -136,13 +137,22 @@ function ShineOnlyPlan({ o }: { o: NonNullable<ReturnType<typeof useOverview>> }
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm">
-            {o.state === "active" ? `Paid until ${day(o.ends / 1000)}.` : o.state === "trial" ? `The free trial ends ${day(o.ends / 1000)}; paid time starts after it.` : `Ended on ${day(o.ends / 1000)}.`}
+            {o.state === "active" ? (o.renewing ? `Renews by itself on ${day(o.ends / 1000)} (AutoPay).` : `Paid until ${day(o.ends / 1000)}. Auto-renew is off.`) : o.state === "trial" ? `The free trial ends ${day(o.ends / 1000)}; paid time starts after it.` : `Ended on ${day(o.ends / 1000)}.`}
           </p>
           {o.payMode === "test" && o.payReady && <p className="rounded-xl bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-600">Test mode: payments are simulated and no money moves.</p>}
+          {o.renewing && o.admin && (
+            <p className="flex flex-wrap items-center gap-2 text-sm">
+              <Badge className="bg-emerald-500/15 text-emerald-600">Auto-renew on</Badge> Charged every period until you stop it.
+              <Button size="sm" variant="outline" onClick={async () => {
+                if (!confirm("Turn off auto-renew? Nothing more is charged; the time already paid still runs.")) return;
+                try { await stop({}); toast.success("Auto-renew is off."); } catch (e) { toast.error(errText(e)); }
+              }}>Turn off auto-renew</Button>
+            </p>
+          )}
           {waiting && (
             <p className="flex flex-wrap items-center gap-2 text-sm">
               A payment of {inr(waiting.amount)} is waiting.
-              {waiting.url && <a className="font-semibold underline" href={waiting.url} target="_blank" rel="noopener">Pay on Dejoiy Pay</a>}
+              {waiting.url && <a className="font-semibold underline" href={waiting.url} target="_blank" rel="noopener">Set up AutoPay and pay</a>}
             </p>
           )}
           {o.admin ? (
@@ -161,11 +171,12 @@ function ShineOnlyPlan({ o }: { o: NonNullable<ReturnType<typeof useOverview>> }
                 </div>
               </div>
               <p className="text-sm">
-                <b className="text-xl">{inr(shinePrice(seats, period))}</b> a {period} for {seats} {seats === 1 ? "person" : "people"}, GST included.
+                <b className="text-xl">{inr(shinePrice(seats, period))}</b> a {period} for {seats} {seats === 1 ? "person" : "people"}, GST included. Approve UPI AutoPay or a card once; it renews by itself.
               </p>
-              <Button size="sm" onClick={pay} disabled={busy || !o.payReady || seats < o.people}>
-                {busy && <Loader2 className="size-3.5 animate-spin" />} Pay on Dejoiy Pay
+              <Button size="sm" onClick={pay} disabled={busy || !o.payReady || seats < o.people || o.renewing}>
+                {busy && <Loader2 className="size-3.5 animate-spin" />} Subscribe on Dejoiy Pay
               </Button>
+              {o.renewing && <p className="text-xs text-muted-foreground">To change people or period, turn auto-renew off first.</p>}
               {!o.payReady && <p className="text-xs text-muted-foreground">Payments aren't switched on for Shine yet.</p>}
             </div>
           ) : (
@@ -195,7 +206,7 @@ function ShineOnlyPlan({ o }: { o: NonNullable<ReturnType<typeof useOverview>> }
             {o.payments.map((p) => (
               <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
                 <span>{new Date(p.createdAt).toLocaleDateString()} · {p.seats} people · {p.period === "year" ? "yearly" : "monthly"}</span>
-                <span className="font-semibold">{inr(p.amount)} · {p.status === "paid" ? "Paid" : p.status === "created" ? "Waiting" : p.status}</span>
+                <span className="font-semibold">{inr(p.amount)} · {p.auto === "autopay" ? `AutoPay · ${p.charges} paid` : p.auto === "off" ? `Auto-renew off · ${p.charges} paid` : p.status === "paid" ? "Paid" : p.status === "created" ? "Waiting" : p.status}</span>
               </div>
             ))}
           </CardContent>
