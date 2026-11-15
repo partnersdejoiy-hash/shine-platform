@@ -11,4 +11,5 @@ test("the reply posts the reason and logs it", () => {
   const reply = src.split("export const reply = internalAction")[1].split("export const post")[0];
   assert.ok(reply.includes('console.error("Joi did not reply:"'));
   assert.ok(reply.includes("Sorry, I couldn't answer just now"));
+  assert.ok(reply.includes("An admin needs to reconnect me"));
 });

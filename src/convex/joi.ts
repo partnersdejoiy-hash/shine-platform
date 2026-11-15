@@ -263,7 +263,9 @@ export const reply = internalAction({
       else {
         // never leave the person waiting in silence: say so in the chat, and leave the reason in the server log
         console.error("Joi did not reply:", out.why);
-        text = `Sorry, I couldn't answer just now: ${out.why} Please try again in a minute.`;
+        // a settings problem does not go away by asking again: say who can fix it
+        const settings = /not connected|did not accept/.test(out.why ?? "");
+        text = `Sorry, I couldn't answer just now: ${out.why} ${settings ? "An admin needs to reconnect me to Shine (connect-joi.sh); asking again won't help until then." : "Please try again in a minute."}`;
       }
     }
     await ctx.runMutation(internal.joi.post, {
