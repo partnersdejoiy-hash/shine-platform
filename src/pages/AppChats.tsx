@@ -133,7 +133,7 @@ export function AppChats() {
           title="New chat"
           className={cn(
             "fixed right-4 z-40 size-14 rounded-2xl lg:hidden",
-            isEmbedded() ? "bottom-4" : "bottom-[calc(5.25rem+env(safe-area-inset-bottom))]",
+            isEmbedded() ? "bottom-4" : "bottom-[calc(5.75rem+env(safe-area-inset-bottom))]",
           )}
         >
           <MessageSquarePlus className="size-6" />

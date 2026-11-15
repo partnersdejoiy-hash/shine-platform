@@ -314,9 +314,9 @@ export function AppShell() {
       </nav>
 
       {/* MAIN — pb-14 on mobile for bottom nav, pb-0 on desktop */}
-      <div className={cn("flex min-w-0 flex-1 flex-col", !embed && !fullChat && "pb-[calc(4.25rem+env(safe-area-inset-bottom))] md:pb-0")}>
+      <div className={cn("flex min-w-0 flex-1 flex-col", !embed && !fullChat && "pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0")}>
         {/* TOPBAR */}
-        <header className={cn("flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border bg-card px-4", embed && "hidden", fullChat && "max-md:hidden")}>
+        <header className={cn("flex h-16 shrink-0 items-center justify-between gap-3 border-b border-border bg-card px-4 md:h-14 max-md:border-b-0", embed && "hidden", fullChat && "max-md:hidden")}>
           <div className="flex items-center gap-3">
             {/* Phones: your picture opens your status and profile sheet (like Zoho Cliq, WhatsApp) */}
             <button
@@ -326,7 +326,7 @@ export function AppShell() {
             >
               <UserAvatar user={user} presence={myPresence} size="sm" showStatus />
             </button>
-            <span className="text-lg font-extrabold tracking-[-0.03em]">{pageTitle}</span>
+            <span className="text-[26px] font-extrabold leading-none tracking-[-0.04em] md:text-lg md:tracking-[-0.03em]">{pageTitle}</span>
             <Badge
               variant="outline"
               className="hidden gap-1.5 rounded-full border-[1.5px] px-2.5 py-1 text-[11px] font-semibold text-muted-foreground sm:inline-flex"
@@ -375,26 +375,24 @@ export function AppShell() {
       {/* ===== MOBILE BOTTOM NAV (visible only on mobile/tablet) ===== */}
       {/* docked like a phone app's tab bar (Zoho Cliq, WhatsApp): the active tab gets a pill behind its icon */}
       <nav
-        className={cn("md:hidden fixed inset-x-0 bottom-0 z-50 border-t border-border/80 bg-card pb-[env(safe-area-inset-bottom)]", (embed || fullChat) && "hidden")}
+        className={cn(
+          "md:hidden fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+8px)] z-50 rounded-[28px] border border-border/70 bg-card/85 shadow-[0_10px_30px_-10px_rgb(0_0_0/0.35)] backdrop-blur-xl supports-[backdrop-filter]:bg-card/70",
+          (embed || fullChat) && "hidden",
+        )}
         aria-label="Shine"
       >
-        <div className="flex h-[4.25rem] items-stretch justify-around px-1">
+        <div className="flex h-16 items-stretch justify-around px-1.5 py-1.5">
           {mobileFilteredNav.map((n) => (
             <button
               key={n.to}
               onClick={() => navigate(n.to)}
               aria-current={n.match(location.pathname) ? "page" : undefined}
               className={cn(
-                "group relative flex flex-1 flex-col items-center justify-center gap-1 transition-colors active:scale-95",
-                n.match(location.pathname) ? "font-bold text-foreground" : "text-muted-foreground",
+                "group relative flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-[22px] transition-colors active:scale-95",
+                n.match(location.pathname) ? "bg-primary/15 font-bold text-foreground [&_svg]:text-primary" : "text-muted-foreground",
               )}
             >
-              <span
-                className={cn(
-                  "relative grid h-8 w-14 place-items-center rounded-full transition-colors",
-                  n.match(location.pathname) ? "bg-accent [&_svg]:text-primary" : "group-hover:bg-accent",
-                )}
-              >
+              <span className="relative grid h-7 w-10 place-items-center">
                 <n.icon className="size-[22px]" strokeWidth={n.match(location.pathname) ? 2.4 : 1.9} />
                 {n.to === "/app/chats" && (unread ?? 0) > 0 && (
                   <span className="absolute -top-1 left-[calc(50%+6px)] grid h-[18px] min-w-[18px] place-items-center rounded-full border-2 border-card bg-primary px-1 text-[10px] font-bold text-primary-foreground">
@@ -402,7 +400,7 @@ export function AppShell() {
                   </span>
                 )}
               </span>
-              <span className="text-[11px] leading-none">{n.label}</span>
+              <span className="truncate text-[11px] leading-none">{n.label}</span>
             </button>
           ))}
           {mobileFilteredMore.length > 0 && (
@@ -410,16 +408,11 @@ export function AppShell() {
               <DropdownMenuTrigger asChild>
                 <button
                   className={cn(
-                    "group flex flex-1 flex-col items-center justify-center gap-1 transition-colors active:scale-95",
-                    mobileFilteredMore.some((n) => n.match(location.pathname)) ? "font-bold text-foreground" : "text-muted-foreground",
+                    "group flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-[22px] transition-colors active:scale-95",
+                    mobileFilteredMore.some((n) => n.match(location.pathname)) ? "bg-primary/15 font-bold text-foreground [&_svg]:text-primary" : "text-muted-foreground",
                   )}
                 >
-                  <span
-                    className={cn(
-                      "grid h-8 w-14 place-items-center rounded-full transition-colors",
-                      mobileFilteredMore.some((n) => n.match(location.pathname)) ? "bg-accent [&_svg]:text-primary" : "group-hover:bg-accent",
-                    )}
-                  >
+                  <span className="grid h-7 w-10 place-items-center">
                     <MoreHorizontal className="size-[22px]" />
                   </span>
                   <span className="text-[11px] leading-none">More</span>
