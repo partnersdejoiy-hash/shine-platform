@@ -321,12 +321,16 @@
   }
 }
 
-/* The chat's paper: Shine's own dots, so an empty stretch of conversation is not a blank wall. */
-.chat-paper {
-  background-image: radial-gradient(color-mix(in oklab, var(--foreground) 9%, transparent) 1px, transparent 1.4px);
-  background-size: 22px 22px;
-  background-position: 11px 11px;
-}
+/* The chat's paper: Shine's own patterns, drawn in the chat's colour (--t). Each person picks one per chat. */
+.chat-paper { --ink: color-mix(in oklab, var(--foreground) 9%, transparent); --tint: color-mix(in oklch, var(--t, var(--gold)) 16%, transparent); }
+.chat-paper-dots { background-image: radial-gradient(var(--ink) 1px, transparent 1.4px); background-size: 22px 22px; background-position: 11px 11px; }
+.chat-paper-plain { background-image: none; }
+.chat-paper-grid { background-image: linear-gradient(var(--ink) 1px, transparent 1px), linear-gradient(90deg, var(--ink) 1px, transparent 1px); background-size: 24px 24px; }
+.chat-paper-lines { background-image: linear-gradient(transparent 27px, var(--tint) 27px); background-size: 100% 28px; }
+.chat-paper-checks { background-image: linear-gradient(45deg, var(--tint) 25%, transparent 25% 75%, var(--tint) 75%), linear-gradient(45deg, var(--tint) 25%, transparent 25% 75%, var(--tint) 75%); background-size: 28px 28px; background-position: 0 0, 14px 14px; }
+.chat-paper-confetti { background-image: radial-gradient(var(--tint) 3px, transparent 3.5px), radial-gradient(var(--ink) 1.5px, transparent 2px), radial-gradient(var(--tint) 2px, transparent 2.5px); background-size: 46px 46px, 34px 34px, 58px 58px; background-position: 6px 10px, 20px 26px, 40px 4px; }
+.chat-paper-waves { background-image: repeating-radial-gradient(circle at 0 100%, transparent 0 18px, var(--tint) 18px 20px); }
+.chat-paper-wash { background-image: linear-gradient(160deg, color-mix(in oklch, var(--t, var(--gold)) 26%, transparent), transparent 55%, color-mix(in oklch, var(--t, var(--gold)) 14%, transparent)); }
 
 /* Wide menu on large screens, unless the person folded it to the icon rail (data-rail on <html>). */
 @custom-variant lgx {

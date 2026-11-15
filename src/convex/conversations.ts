@@ -1,4 +1,5 @@
 import { canContact } from "./reach";
+import { CHAT_PAPER_IDS, CHAT_TONE_IDS } from "../lib/chatLook";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { mutation, query } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
@@ -183,6 +184,7 @@ export const detail = query({
     return {
       conversation,
       myRole: membership.role,
+      look: membership.look ?? null,
       members: members.filter((m): m is NonNullable<typeof m> => m !== null),
       pinnedMessages,
       files,
@@ -724,6 +726,26 @@ export const togglePin = mutation({
       .unique();
     if (!membership) throw new ConvexError("Not a member");
     await ctx.db.patch(membership._id, { isPinned: pinned });
+  },
+});
+
+/** The colour and paper this person wants for this chat. Only their own view changes; null puts a part back to the default. */
+export const setLook = mutation({
+  args: { conversationId: v.id("conversations"), tone: v.optional(v.union(v.string(), v.null())), paper: v.optional(v.union(v.string(), v.null())) },
+  handler: async (ctx, { conversationId, tone, paper }) => {
+    const me = await getCurrentUser(ctx);
+    if (!me) throw new ConvexError("Not authenticated");
+    const membership = await ctx.db
+      .query("conversationMembers")
+      .withIndex("by_user_conv", (q) => q.eq("userId", me._id).eq("conversationId", conversationId))
+      .unique();
+    if (!membership) throw new ConvexError("Not a member");
+    if (typeof tone === "string" && !CHAT_TONE_IDS.includes(tone)) throw new ConvexError("Choose a colour from the list.");
+    if (typeof paper === "string" && !CHAT_PAPER_IDS.includes(paper)) throw new ConvexError("Choose a background from the list.");
+    const look = { ...(membership.look ?? {}) };
+    if (tone !== undefined) { if (tone === null) delete look.tone; else look.tone = tone; }
+    if (paper !== undefined) { if (paper === null) delete look.paper; else look.paper = paper; }
+    await ctx.db.patch(membership._id, { look: look.tone || look.paper ? look : undefined });
   },
 });
 

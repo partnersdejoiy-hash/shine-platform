@@ -22,6 +22,7 @@ import { effectiveStatus, isOnline, presenceDotClass, presenceLabel } from "@/li
 import { prepareAvatarImage, uploadFile } from "@/lib/upload";
 import { cn } from "@/lib/utils";
 import { toneFor } from "@/lib/tone";
+import { CHAT_PAPERS, CHAT_TONES, paperClass, toneColor } from "@/lib/chatLook";
 import { useMutation, useQuery } from "convex/react";
 import { motion } from "framer-motion";
 import {
@@ -32,6 +33,7 @@ import {
   Hash,
   Info,
   MoreVertical,
+  Palette,
   Loader2,
   MessageSquarePlus,
   Mic,
@@ -71,6 +73,8 @@ export function ChatView({
   const markRead = useMutation(api.conversations.markRead);
   const deleteChat = useMutation(api.conversations.deleteChat);
   const [deleteChatOpen, setDeleteChatOpen] = useState(false);
+  const setLook = useMutation(api.conversations.setLook);
+  const [lookOpen, setLookOpen] = useState(false);
   const startCall = useMutation(api.calls.start);
 
   const [pages, setPages] = useState<ChatMessage[][]>([]);
@@ -223,6 +227,10 @@ export function ChatView({
   const isChannel = conversation?.kind === "channel";
 
   const myRole = detail?.myRole;
+  const look = (detail as { look?: { tone?: string; paper?: string } | null } | null | undefined)?.look;
+  const changeLook = (change: { tone?: string | null; paper?: string | null }) => {
+    setLook({ conversationId: conversationId as any, ...change }).catch((e) => toast.error(errorMessage(e)));
+  };
   const isGroupAdmin = myRole === "owner" || myRole === "admin";
   const isGroup = conversation?.kind === "chat" && conversation.chatType === "group";
 
@@ -338,7 +346,7 @@ export function ChatView({
   return (
     <div
       className="flex h-full min-w-0"
-      style={{ "--t": toneFor(other?._id ?? conversation._id, conversation.kind) } as CSSProperties}
+      style={{ "--t": toneColor(look) ?? toneFor(other?._id ?? conversation._id, conversation.kind) } as CSSProperties}
     >
       {/* MAIN THREAD */}
       <div className="flex min-w-0 flex-1 flex-col">
@@ -450,6 +458,9 @@ export function ChatView({
                 <DropdownMenuItem onSelect={() => setDetailsOpen((v) => !v)}>
                   <Info className="size-4" /> {detailsOpen ? "Hide chat info" : "Chat info and search"}
                 </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setLookOpen(true)}>
+                  <Palette className="size-4" /> Background and colour
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setDeleteChatOpen(true)}>
                   <Trash2 className="size-4" /> Delete chat
@@ -480,7 +491,7 @@ export function ChatView({
         )}
 
         {/* messages */}
-        <div ref={scrollRef} onScroll={onScroll} className="chat-paper min-h-0 flex-1 overflow-y-auto py-4">
+        <div ref={scrollRef} onScroll={onScroll} className={cn(paperClass(look), "min-h-0 flex-1 overflow-y-auto py-4")}>
           {loadingMore && (
             <div className="flex justify-center py-2">
               <Loader2 className="size-4 animate-spin text-muted-foreground" />
@@ -920,6 +931,63 @@ export function ChatView({
       </Dialog>
 
       {/* DELETE CHAT */}
+      {/* this chat's own look: only the person choosing sees it */}
+      <Dialog open={lookOpen} onOpenChange={setLookOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Background and colour</DialogTitle>
+            <DialogDescription>For this chat only, and only for you. Other chats and other people keep their own.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-5">
+            <fieldset>
+              <legend className="mb-2 text-sm font-semibold">Colour</legend>
+              <div className="flex flex-wrap gap-2.5" role="radiogroup" aria-label="Chat colour">
+                {CHAT_TONES.map((tone) => (
+                  <button
+                    key={tone.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={look?.tone === tone.id}
+                    aria-label={tone.label}
+                    title={tone.label}
+                    onClick={() => changeLook({ tone: tone.id })}
+                    className={cn("size-11 rounded-full border-2 transition-transform active:scale-95", look?.tone === tone.id ? "border-foreground ring-2 ring-foreground ring-offset-2 ring-offset-background" : "border-[var(--sticker-border)]")}
+                    style={{ background: tone.color }}
+                  />
+                ))}
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend className="mb-2 text-sm font-semibold">Background</legend>
+              <div className="grid grid-cols-4 gap-2.5" role="radiogroup" aria-label="Chat background">
+                {CHAT_PAPERS.map((paper) => {
+                  const on = (look?.paper ?? "dots") === paper.id;
+                  return (
+                    <button
+                      key={paper.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      onClick={() => changeLook({ paper: paper.id })}
+                      className={cn("overflow-hidden rounded-xl border-2 text-left transition-transform active:scale-95", on ? "border-foreground" : "border-border")}
+                    >
+                      <span className={cn("chat-paper chat-paper-" + paper.id, "block h-14 bg-background")} style={{ "--t": toneColor(look) ?? "var(--gold)" } as CSSProperties} />
+                      <span className="block truncate px-1.5 py-1 text-[11px] font-semibold">{paper.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
+          </div>
+          <div className="mt-2 flex justify-between gap-2">
+            <Button variant="ghost" onClick={() => changeLook({ tone: null, paper: null })} disabled={!look?.tone && !look?.paper}>
+              Back to default
+            </Button>
+            <Button onClick={() => setLookOpen(false)}>Done</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <AlertDialog open={deleteChatOpen} onOpenChange={setDeleteChatOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

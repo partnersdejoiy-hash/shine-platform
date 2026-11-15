@@ -267,6 +267,8 @@ const schema = defineSchema(
       isPinned: v.optional(v.boolean()),
       // "Delete chat": this person no longer sees the chat's messages up to this time (everyone else still does)
       clearedAt: v.optional(v.number()),
+      // this person's own look for this chat (ids from src/lib/chatLook.ts); nobody else sees it
+      look: v.optional(v.object({ tone: v.optional(v.string()), paper: v.optional(v.string()) })),
       joinedAt: v.number(),
     })
       .index("by_conversation", ["conversationId"])

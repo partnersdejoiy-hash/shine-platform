@@ -7,6 +7,7 @@ import { displayName, formatTime, timeAgo } from "@/lib/format";
 import { effectiveStatus, isOnline, type PresenceLike } from "@/lib/presence";
 import { cn } from "@/lib/utils";
 import { toneFor } from "@/lib/tone";
+import { toneColor } from "@/lib/chatLook";
 import { motion } from "framer-motion";
 import { api } from "@/convex/_generated/api";
 import { CheckCheck, Hash, MessageSquarePlus, Mic, Pin, PinOff, Search, Volume2, VolumeX, Archive, ArchiveRestore, Trash2 } from "lucide-react";
@@ -25,7 +26,7 @@ export interface ConversationItem {
     image?: string | null;
     isMeeting?: boolean;
   };
-  membership: { isMuted?: boolean; isPinned?: boolean; isArchived?: boolean };
+  membership: { isMuted?: boolean; isPinned?: boolean; isArchived?: boolean; look?: { tone?: string; paper?: string } | null };
   members: ({ _id: string; name?: string | null; image?: string | null } | null)[];
   lastMessage: {
     _id: string;
@@ -216,7 +217,7 @@ export function ConversationList({
                   muted: !!item.membership.isMuted,
                 });
               }}
-              style={{ "--t": toneFor(other?._id ?? item.conversation._id, item.conversation.kind) } as CSSProperties}
+              style={{ "--t": toneColor(item.membership.look) ?? toneFor(other?._id ?? item.conversation._id, item.conversation.kind) } as CSSProperties}
               aria-current={active ? "true" : undefined}
               className={cn(
                 // a plain app row, like WhatsApp and Zoho Cliq: avatar, then name/time over the last message, hairline below
