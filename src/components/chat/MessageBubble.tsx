@@ -23,7 +23,7 @@ import {
   Send,
   Trash2,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, createContext, useContext, useMemo } from "react";
 import { toast } from "sonner";
 
 export interface ChatMessage {
@@ -71,7 +71,31 @@ interface Props {
   onPreview: (url: string, name: string) => void;
 }
 
-function renderBody(text: string): React.ReactNode[] {
+/** People a message can @mention, and what tapping one does. ChatView provides it; without it a mention is plain. */
+export type MentionPerson = { _id: string; name?: string | null };
+export const MentionContext = createContext<{ people: MentionPerson[]; myId?: string; open: (userId: string) => void } | null>(null);
+
+type Mentions = { pattern: RegExp; byName: Map<string, MentionPerson>; myId?: string; open: (userId: string) => void } | null;
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+/** "@Jyoti Sharma" is one mention only when Jyoti Sharma is someone here: names are matched whole, longest first. */
+function mentionMatcher(ctx: React.ContextType<typeof MentionContext>): Mentions {
+  if (!ctx) return null;
+  const byName = new Map<string, MentionPerson>();
+  for (const p of ctx.people) {
+    const name = (p.name ?? "").trim();
+    if (name.length >= 2 && !byName.has(name.toLowerCase())) byName.set(name.toLowerCase(), p);
+    const first = name.split(/\s+/)[0];   // "@Jyoti" also finds Jyoti Sharma, when only one person has that first name
+    if (first && first.length >= 2 && first !== name) {
+      const key = first.toLowerCase();
+      byName.set(key, byName.has(key) && byName.get(key)!._id !== p._id ? { _id: "", name: first } : byName.get(key) ?? p);
+    }
+  }
+  const names = [...byName.keys()].sort((a, b) => b.length - a.length).map(escapeRe);
+  const alternatives = [...names, "all", "everyone", "here"].join("|");
+  return { pattern: new RegExp(`(@(?:${alternatives})(?![\\w]))`, "i"), byName, myId: ctx.myId, open: ctx.open };
+}
+
+function renderBody(text: string, mentions: Mentions = null): React.ReactNode[] {
   const out: React.ReactNode[] = [];
   const segments = text.split(/```/);
   segments.forEach((seg, i) => {
@@ -80,13 +104,13 @@ function renderBody(text: string): React.ReactNode[] {
       const code = (nl === -1 ? seg : seg.slice(nl + 1)).trimEnd();
       out.push(<CodeBlock key={`c${i}`} code={code} />);
     } else if (seg) {
-      out.push(...renderProse(seg, `p${i}`));
+      out.push(...renderProse(seg, `p${i}`, mentions));
     }
   });
   return out;
 }
 
-function renderProse(block: string, keyPrefix: string): React.ReactNode[] {
+function renderProse(block: string, keyPrefix: string, mentions: Mentions): React.ReactNode[] {
   const lines = block.split("\n");
   const out: React.ReactNode[] = [];
   lines.forEach((line, i) => {
@@ -102,7 +126,7 @@ function renderProse(block: string, keyPrefix: string): React.ReactNode[] {
             heading[1].length === 1 ? "text-base" : heading[1].length === 2 ? "text-sm" : "text-[13px]",
           )}
         >
-          {renderInline(heading[2])}
+          {renderInline(heading[2], mentions)}
         </div>,
       );
       return;
@@ -110,7 +134,7 @@ function renderProse(block: string, keyPrefix: string): React.ReactNode[] {
     if (line.startsWith("> ")) {
       out.push(
         <div key={key} className="mb-1 border-l-2 border-primary/40 pl-2 text-muted-foreground italic">
-          {renderInline(line.slice(2))}
+          {renderInline(line.slice(2), mentions)}
         </div>,
       );
       return;
@@ -120,25 +144,41 @@ function renderProse(block: string, keyPrefix: string): React.ReactNode[] {
       out.push(
         <div key={key} className="mb-0.5 flex gap-2">
           <span className="text-primary">•</span>
-          <span>{renderInline(listItem[1])}</span>
+          <span>{renderInline(listItem[1], mentions)}</span>
         </div>,
       );
       return;
     }
-    out.push(<div key={key} className="min-h-[1.4em]">{renderInline(line)}</div>);
+    out.push(<div key={key} className="min-h-[1.4em]">{renderInline(line, mentions)}</div>);
   });
   return out;
 }
 
-function renderInline(text: string): React.ReactNode[] {
-  const parts = text.split(/(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*|https?:\/\/[^\s]+|@[\w][\w .-]*)/g);
+function renderInline(text: string, mentions: Mentions = null): React.ReactNode[] {
+  // without a list of people, a mention is one word ("@joi"), never the rest of the sentence
+  const mention = mentions ? mentions.pattern.source.slice(1, -1) : "@[\\w][\\w.-]*";
+  // emails come before mentions, so "test@corp.dejoiy.com" stays one email and never a "@corp" mention
+  const parts = text.split(new RegExp("(`[^`]+`|\\*\\*[^*]+\\*\\*|\\*[^*]+\\*|(?:https?:\\/\\/|www\\.)[^\\s<]+|[\\w.+-]+@[\\w-]+(?:\\.[\\w-]+)+|" + mention + ")", mentions ? "gi" : "g"));
   return parts.map((part, i) => {
     if (part.startsWith("@") && part.length > 1) {
+      const person = mentions?.byName.get(part.slice(1).toLowerCase());
+      const chip = "mx-0.5 inline-block rounded-md bg-primary/15 px-1.5 py-px font-medium text-primary";
+      // a real person, not you: tap opens (or starts) your chat with them
+      if (person?._id && mentions && person._id !== mentions.myId) {
+        return (
+          <button
+            key={i}
+            type="button"
+            onClick={(e) => { e.stopPropagation(); mentions.open(person._id); }}
+            title={"Message " + (person.name ?? "")}
+            className={cn(chip, "cursor-pointer underline-offset-2 hover:bg-primary/25 hover:underline")}
+          >
+            {part}
+          </button>
+        );
+      }
       return (
-        <span
-          key={i}
-          className="mx-0.5 inline-block rounded-md bg-primary/15 px-1.5 py-px font-medium text-primary"
-        >
+        <span key={i} className={chip}>
           {part}
         </span>
       );
@@ -164,17 +204,29 @@ function renderInline(text: string): React.ReactNode[] {
         </em>
       );
     }
-    if (/^https?:\/\//.test(part)) {
+    if (/^[\w.+-]+@[\w-]+(\.[\w-]+)+$/.test(part)) {
       return (
-        <a
-          key={i}
-          href={part}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary"
-        >
+        <a key={i} href={"mailto:" + part} className="text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary">
           {part}
         </a>
+      );
+    }
+    if (/^(https?:\/\/|www\.)/i.test(part)) {
+      // a full stop or bracket right after a link belongs to the sentence, not the address
+      const tail = part.match(/[.,!?;:)\]'"]+$/)?.[0] ?? "";
+      const url = tail ? part.slice(0, -tail.length) : part;
+      return (
+        <span key={i}>
+        <a
+          href={/^www\./i.test(url) ? "https://" + url : url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="[overflow-wrap:anywhere] text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary"
+        >
+          {url}
+        </a>
+        {tail}
+        </span>
       );
     }
     return <span key={i}>{part}</span>;
@@ -222,6 +274,8 @@ export function MessageBubble({
   onEdit,
   onPreview,
 }: Props) {
+  const mentionCtx = useContext(MentionContext);
+  const mentions = useMemo(() => mentionMatcher(mentionCtx), [mentionCtx]);
   const { user } = useAuth();
   const react = useMutation(api.messages.react);
   const pin = useMutation(api.messages.pin);
@@ -475,7 +529,7 @@ export function MessageBubble({
             />
           )}
 
-          {message.body && <div className="break-words">{renderBody(message.body)}</div>}
+          {message.body && <div className="break-words">{renderBody(message.body, mentions)}</div>}
 
           <div
             className={cn(

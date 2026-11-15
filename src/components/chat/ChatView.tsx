@@ -8,6 +8,7 @@ import {
   type ChatMessage,
 } from "@/components/chat/MessageBubble";
 import { MessageComposer } from "@/components/chat/MessageComposer";
+import { MentionContext } from "@/components/chat/MessageBubble";
 import { UserAvatar } from "@/components/UserAvatar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -87,6 +88,8 @@ export function ChatView({
   const [deleteChatOpen, setDeleteChatOpen] = useState(false);
   const setLook = useMutation(api.conversations.setLook);
   const setMutedChat = useMutation(api.conversations.setMuted);
+  const openDirect = useMutation(api.conversations.openDirectChat);
+  const company = useQuery(api.users.directory);
   const [lookOpen, setLookOpen] = useState(false);
   const startCall = useMutation(api.calls.start);
 
@@ -348,6 +351,23 @@ export function ChatView({
 
   // ---- render --------------------------------------------------------------
 
+  // @mentions in messages: people in this chat or the company; tapping one opens (or starts) your chat with them
+  const mentionValue = useMemo(() => {
+    const seen = new Map<string, { _id: string; name?: string | null }>();
+    for (const p of [...members, ...((company ?? []) as { _id: string; name?: string | null }[])]) if (p && !seen.has(p._id)) seen.set(p._id, p);
+    return {
+      people: [...seen.values()],
+      myId,
+      open: (userId: string) => {
+        if (other && userId === other._id) return;   // already here
+        openDirect({ userId: userId as any })
+          .then((id) => navigate(`/app/chats/${id}`))
+          .catch((e) => toast.error(errorMessage(e)));
+      },
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [members, company, myId, other?._id]);
+
   if (!conversation) {
     return (
       <div className="grid h-full place-items-center text-sm text-muted-foreground">
@@ -514,6 +534,7 @@ export function ChatView({
               <Loader2 className="size-4 animate-spin text-muted-foreground" />
             </div>
           )}
+          <MentionContext.Provider value={mentionValue}>
           {messages.map((msg, i) => {
             const prev = messages[i - 1];
             const showDay = !prev || !isSameDay(prev.createdAt, msg.createdAt);
@@ -542,6 +563,7 @@ export function ChatView({
               </div>
             );
           })}
+          </MentionContext.Provider>
           <div ref={bottomRef} className="h-2" />
         </div>
 
