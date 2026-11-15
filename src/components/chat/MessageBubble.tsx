@@ -23,7 +23,7 @@ import {
   Send,
   Trash2,
 } from "lucide-react";
-import { useState, createContext, useContext, useMemo } from "react";
+import { useState, createContext, useContext, useMemo, useRef, useEffect } from "react";
 import { toast } from "sonner";
 
 export interface ChatMessage {
@@ -282,6 +282,19 @@ export function MessageBubble({
   const toggleBookmark = useMutation(api.messages.toggleBookmark);
   const votePoll = useMutation(api.messages.votePoll);
   const [menuOpen, setMenuOpen] = useState(false);
+  // Touch: a tap is for the links and mentions inside; press and hold (about half a second) brings the actions.
+  // Mouse: hover, as before. Right-click opens them too.
+  const rowRef = useRef<HTMLDivElement>(null);
+  const hold = useRef<{ timer: number; x: number; y: number } | null>(null);
+  const stopHold = () => { if (hold.current) { window.clearTimeout(hold.current.timer); hold.current = null; } };
+  useEffect(() => {
+    if (!menuOpen || !touchScreen) return;
+    // the next touch anywhere else puts the actions away
+    const away = (e: PointerEvent) => { if (!rowRef.current?.contains(e.target as Node)) setMenuOpen(false); };
+    document.addEventListener("pointerdown", away);
+    return () => document.removeEventListener("pointerdown", away);
+  }, [menuOpen]);
+  useEffect(() => stopHold, []);
   // swipe right to reply, like WhatsApp (touch screens only, so desktop text selection still works)
   const swipeX = useMotionValue(0);
   const replyHint = useTransform(swipeX, [0, SWIPE_REPLY], [0, 1]);
@@ -333,10 +346,13 @@ export function MessageBubble({
   const menu = (
     <div
       className={cn(
-        "absolute top-0 z-20 flex items-center gap-0.5 rounded-xl border border-border bg-popover p-1 shadow-xl",
-        isOwn ? "left-2" : "right-2",
+        "absolute z-20 flex items-center gap-0.5 rounded-xl border border-border bg-popover p-1 shadow-xl",
+        // phones: inside the screen, just above the message, scrolling sideways if it is wide
+        touchScreen ? "inset-x-3 bottom-full mb-1 overflow-x-auto no-scrollbar" : cn("top-0", isOwn ? "left-2" : "right-2"),
         menuOpen ? "opacity-100" : "pointer-events-none opacity-0",
       )}
+      // on a phone, picking an action (or an emoji) puts the bar away
+      onClick={() => { if (touchScreen) setMenuOpen(false); }}
     >
       <QuickReactionRow onPick={(e) => react({ messageId: message._id as any, emoji: e }).catch(() => {})} />
       <MenuDivider />
@@ -408,9 +424,19 @@ export function MessageBubble({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2 }}
-      className={cn("group relative my-0.5 flex px-4", isOwn ? "justify-end" : "justify-start")}
-      onMouseEnter={() => setMenuOpen(true)}
-      onMouseLeave={() => setMenuOpen(false)}
+      className={cn("group relative my-0.5 flex px-4 [@media(pointer:coarse)]:select-none [@media(pointer:coarse)]:[-webkit-touch-callout:none]", isOwn ? "justify-end" : "justify-start")}
+      ref={rowRef}
+      onPointerEnter={(e) => { if (e.pointerType === "mouse") setMenuOpen(true); }}
+      onPointerLeave={(e) => { if (e.pointerType === "mouse") setMenuOpen(false); }}
+      onPointerDown={(e) => {
+        if (e.pointerType === "mouse" || (e.target as HTMLElement).closest("a, button, [role=button]")) return;
+        stopHold();
+        hold.current = { x: e.clientX, y: e.clientY, timer: window.setTimeout(() => { hold.current = null; setMenuOpen(true); navigator.vibrate?.(12); }, 450) };
+      }}
+      onPointerMove={(e) => { if (hold.current && Math.hypot(e.clientX - hold.current.x, e.clientY - hold.current.y) > 10) stopHold(); }}
+      onPointerUp={stopHold}
+      onPointerCancel={stopHold}
+      onContextMenu={(e) => { if ((e.target as HTMLElement).closest("a")) return; e.preventDefault(); setMenuOpen(true); }}
     >
       {menu}
       {touchScreen && (
