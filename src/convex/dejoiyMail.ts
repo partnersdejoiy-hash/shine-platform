@@ -25,7 +25,9 @@ async function applyMail(
 ) {
   const role = roleFromMail(isSuperAdminEmail(c.email), c.admin, user.role) as Role;
   const patch: Partial<Doc<"users">> = {};
-  if (!user.name && c.name) patch.name = c.name;
+  // no name yet, or only the start of their address standing in for one: take the name on the mailbox
+  const standIn = !user.name || user.name === c.email || user.name === c.email.split("@")[0];
+  if (standIn && c.name && c.name !== user.name) patch.name = c.name;
   // a photo uploaded in Shine wins; otherwise show the Dejoiy Mail one (or none once it's removed there)
   if (!user.avatarStorageId && user.source !== "joi") {
     const image = c.photo || (user.image && MAIL_PHOTO.test(user.image) ? undefined : user.image);
