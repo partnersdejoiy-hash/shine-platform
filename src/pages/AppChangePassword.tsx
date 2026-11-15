@@ -42,7 +42,8 @@ export function AppChangePassword() {
     setBusy(true);
     try {
       if (codeMode) {
-        await setMyPasswordWithCode({ code, newPassword: next });
+        const res = await setMyPasswordWithCode({ code, newPassword: next });
+        if (!res.ok) throw new Error(res.error);
       } else {
         await setMyPassword({ currentPassword: current, newPassword: next });
       }

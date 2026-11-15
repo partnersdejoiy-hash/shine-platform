@@ -1,7 +1,8 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import bcrypt from "bcryptjs";
 import { api } from "./_generated/api";
-import { internalMutation, mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query, type MutationCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
 import { v, ConvexError } from "convex/values";
 import {
   getCurrentUser,
@@ -49,13 +50,52 @@ export function generateTempPassword(): string {
 
 /** Generate a random 6-digit verification code (email-verified fallback). */
 function generateCode(): string {
-  let out = "";
-  for (let i = 0; i < 6; i++) out += Math.floor(Math.random() * 10).toString();
-  return out;
+  // crypto, not Math.random: the code stands in for a password
+  return (crypto.getRandomValues(new Uint32Array(1))[0] % 1_000_000).toString().padStart(6, "0");
 }
 
 /** How long a temp auth code stays valid before it expires. */
 const TEMP_CODE_TTL_MS = 10 * 60 * 1000;
+const CODE_TRIES = 5;
+
+/** A new one-time code for this person (any earlier one stops working). Kept off the user's own row. */
+async function issueCode(ctx: MutationCtx, userId: Id<"users">): Promise<string> {
+  await clearAuthCode(ctx, userId);
+  const code = generateCode();
+  await ctx.db.insert("authCodes", { userId, code, expiresAt: Date.now() + TEMP_CODE_TTL_MS, tries: 0 });
+  return code;
+}
+
+/** Removes this person's code, and any code an older version left on their row. */
+export async function clearAuthCode(ctx: MutationCtx, userId: Id<"users">) {
+  for (const row of await ctx.db.query("authCodes").withIndex("by_user", (q) => q.eq("userId", userId)).collect()) {
+    await ctx.db.delete(row._id);
+  }
+  const user = await ctx.db.get(userId);
+  if (user && (user.tempAuthCode !== undefined || user.tempAuthCodeExpiresAt !== undefined)) {
+    await ctx.db.patch(userId, { tempAuthCode: undefined, tempAuthCodeExpiresAt: undefined });
+  }
+}
+
+/** null when the code is right (and it is used up); otherwise what to tell the person.
+ *  A wrong try is counted, so the caller must return this message rather than throw (a throw would undo the count). */
+async function checkCode(ctx: MutationCtx, userId: Id<"users">, code: string): Promise<string | null> {
+  const row = await ctx.db.query("authCodes").withIndex("by_user", (q) => q.eq("userId", userId)).first();
+  if (!row || Date.now() > row.expiresAt) {
+    if (row) await ctx.db.delete(row._id);
+    return "The verification code is invalid or has expired — request a new one.";
+  }
+  if (code.trim() !== row.code) {
+    if (row.tries + 1 >= CODE_TRIES) {
+      await ctx.db.delete(row._id);
+      return "Too many wrong codes. Request a new one.";
+    }
+    await ctx.db.patch(row._id, { tries: row.tries + 1 });
+    return "The verification code you entered is incorrect.";
+  }
+  await ctx.db.delete(row._id);
+  return null;
+}
 
 /** Roles that never receive temporary passwords — they own their credentials. */
 const PRIVILEGED_ROLES = [
@@ -401,11 +441,7 @@ export const requestTempAuthCode = mutation({
     if (!me) throw new ConvexError("Not authenticated");
     if (!me.email) throw new ConvexError("No email is attached to this account");
 
-    const code = generateCode();
-    await ctx.db.patch(userId, {
-      tempAuthCode: code,
-      tempAuthCodeExpiresAt: Date.now() + TEMP_CODE_TTL_MS,
-    });
+    const code = await issueCode(ctx, userId);
 
     // Queue the code email to the action runner (mutations can't fetch).
     ctx.scheduler.runAfter(0, api.emailActions.sendVerificationCode, {
@@ -430,19 +466,11 @@ export const setMyPasswordWithCode = mutation({
     const me = await ctx.db.get(userId);
     if (!me) throw new ConvexError("Not authenticated");
 
-    const stored = me.tempAuthCode;
-    const expires = me.tempAuthCodeExpiresAt;
-    if (!stored || !expires || Date.now() > expires) {
-      throw new ConvexError(
-        "The verification code is invalid or has expired — request a new one.",
-      );
-    }
-    if (code.trim() !== stored) {
-      throw new ConvexError("The verification code you entered is incorrect.");
-    }
-
+    // the new password is checked first, so a weak one does not use up the code
     validateNewPassword(newPassword);
     await assertNotReused(ctx, userId, newPassword);
+    const wrong = await checkCode(ctx, userId, code);
+    if (wrong) return { ok: false as const, error: wrong };
 
     const hash = bcrypt.hashSync(newPassword, 10);
     await upsertPassword(ctx, userId, hash);
@@ -459,7 +487,7 @@ export const setMyPasswordWithCode = mutation({
       "users",
       String(userId),
     );
-    return true;
+    return { ok: true as const };
   },
 });
 
@@ -481,11 +509,7 @@ export const requestPasswordResetCode = mutation({
       return { ok: true };
     }
 
-    const code = generateCode();
-    await ctx.db.patch(target._id, {
-      tempAuthCode: code,
-      tempAuthCodeExpiresAt: Date.now() + TEMP_CODE_TTL_MS,
-    });
+    const code = await issueCode(ctx, target._id);
     ctx.scheduler.runAfter(0, api.emailActions.sendVerificationCode, {
       to: target.email,
       name: target.name,
@@ -520,19 +544,10 @@ export const resetPasswordWithCode = mutation({
       throw new ConvexError("This account has been deactivated. Contact your administrator.");
     }
 
-    const stored = target.tempAuthCode;
-    const expires = target.tempAuthCodeExpiresAt;
-    if (!stored || !expires || Date.now() > expires) {
-      throw new ConvexError(
-        "The verification code is invalid or has expired — request a new one.",
-      );
-    }
-    if (code.trim() !== stored) {
-      throw new ConvexError("The verification code you entered is incorrect.");
-    }
-
     validateNewPassword(newPassword);
     await assertNotReused(ctx, target._id, newPassword);
+    const wrong = await checkCode(ctx, target._id, code);
+    if (wrong) return { ok: false as const, error: wrong };
 
     const hash = bcrypt.hashSync(newPassword, 10);
     await upsertPassword(ctx, target._id, hash);
@@ -549,7 +564,7 @@ export const resetPasswordWithCode = mutation({
       "users",
       String(target._id),
     );
-    return true;
+    return { ok: true as const };
   },
 });
 

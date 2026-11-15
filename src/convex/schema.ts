@@ -275,6 +275,15 @@ const schema = defineSchema(
       .index("by_user", ["userId"])
       .index("by_user_conv", ["userId", "conversationId"]),
 
+    // One-time sign-in codes, in their own table: a user's own row goes out to everyone they chat with,
+    // so a code kept there could be read by them. Five wrong tries and the code is gone.
+    authCodes: defineTable({
+      userId: v.id("users"),
+      code: v.string(),
+      expiresAt: v.number(),
+      tries: v.number(),
+    }).index("by_user", ["userId"]),
+
     // ---- Messages -----------------------------------------------------------
     messages: defineTable({
       conversationId: v.id("conversations"),

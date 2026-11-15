@@ -16,6 +16,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/hooks/use-auth";
 import { displayName, formatBytes, formatDayLabel, isSameDay } from "@/lib/format";
 import { effectiveStatus, isOnline, presenceDotClass, presenceLabel } from "@/lib/presence";
@@ -26,6 +27,17 @@ import { CHAT_PAPERS, CHAT_THEMES, CHAT_TONES, paperClass, toneColor } from "@/l
 import { useMutation, useQuery } from "convex/react";
 import { motion } from "framer-motion";
 import {
+  Mail,
+  Briefcase,
+  Building2,
+  MapPin,
+  Clock,
+  IdCard,
+  Copy,
+  Search,
+  BellOff,
+  Bell,
+  Link2,
   ArrowDown,
   Camera,
   Crown,
@@ -74,6 +86,7 @@ export function ChatView({
   const deleteChat = useMutation(api.conversations.deleteChat);
   const [deleteChatOpen, setDeleteChatOpen] = useState(false);
   const setLook = useMutation(api.conversations.setLook);
+  const setMutedChat = useMutation(api.conversations.setMuted);
   const [lookOpen, setLookOpen] = useState(false);
   const startCall = useMutation(api.calls.start);
 
@@ -368,12 +381,15 @@ export function ChatView({
                 onPick={() => avatarInputRef.current?.click()}
               />
             ) : (
-              <UserAvatar
-                user={other ?? undefined}
-                presence={otherPresence}
-                size="md"
-                showStatus={!!other}
-              />
+              // like any messenger: tap the person to see who they are
+              <button type="button" onClick={() => setDetailsOpen(true)} aria-label="Contact info" className="shrink-0 rounded-full">
+                <UserAvatar
+                  user={other ?? undefined}
+                  presence={otherPresence}
+                  size="md"
+                  showStatus={!!other}
+                />
+              </button>
             )}
             <input
               ref={avatarInputRef}
@@ -407,10 +423,11 @@ export function ChatView({
                   <span
                     className={cn(
                       "truncate text-sm font-semibold",
-                      (isGroup || isChannel) && isGroupAdmin && "cursor-pointer hover:text-primary transition-colors",
+                      ((isGroup || isChannel) && isGroupAdmin || other) && "cursor-pointer hover:text-primary transition-colors",
                     )}
                     onClick={() => {
-                      if ((isGroup || isChannel) && isGroupAdmin) {
+                      if (other) setDetailsOpen(true);
+                      else if ((isGroup || isChannel) && isGroupAdmin) {
                         setRenameValue(conversation.name);
                         setRenaming(true);
                       }
@@ -597,15 +614,31 @@ export function ChatView({
           initial={{ x: 320 }}
           animate={{ x: 0 }}
           transition={{ type: "spring", damping: 30, stiffness: 300 }}
-          className="hidden w-80 shrink-0 flex-col overflow-y-auto border-l border-border/70 bg-card lg:flex"
+          className="fixed inset-0 z-50 flex w-full shrink-0 flex-col overflow-y-auto bg-card lg:static lg:z-auto lg:w-80 lg:border-l lg:border-border/70"
         >
-          <div className="flex items-center justify-between border-b border-border/70 px-4 py-3">
-            <span className="text-sm font-semibold">Details</span>
-            <Button variant="ghost" size="icon-sm" onClick={() => setDetailsOpen(false)}>
+          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border/70 bg-card px-4 py-3">
+            <span className="text-sm font-semibold">{other ? "Contact info" : isChannel ? "Channel info" : "Group info"}</span>
+            <Button variant="ghost" size="icon-sm" onClick={() => setDetailsOpen(false)} aria-label="Close">
               <X className="size-4" />
             </Button>
           </div>
           <div className="space-y-6 p-4">
+            {other && (
+              <ContactInfo
+                person={other}
+                status={statusLine}
+                muted={!!members.find((m) => m._id === myId)?.isMuted}
+                onCall={handleCall}
+                onSearch={() => {
+                  const box = document.getElementById("chat-search");
+                  box?.scrollIntoView({ block: "center", behavior: "smooth" });
+                  box?.focus({ preventScroll: true });
+                }}
+                onMute={(muted) => setMutedChat({ conversationId: conversationId as any, muted }).catch((e) => toast.error(errorMessage(e)))}
+                onTheme={() => setLookOpen(true)}
+                onDelete={() => setDeleteChatOpen(true)}
+              />
+            )}
             {(isGroup || isChannel) && (
               <>
               <section>
@@ -849,6 +882,7 @@ export function ChatView({
                   setSearchQ(e.target.value);
                   setSearchHits((searchResults as unknown as ChatMessage[] | null | undefined) ?? null);
                 }}
+                id="chat-search"
                 placeholder="Type to search…"
                 className="h-9 text-sm"
               />
@@ -1147,5 +1181,133 @@ function ThreadComposer({ onSend }: { onSend: (body: string) => void }) {
         <Send className="size-4" />
       </Button>
     </div>
+  );
+}
+
+/** A one-to-one chat's info: who this person is, as they fill it in on their own Shine profile. */
+function ContactInfo({ person, status, muted, onCall, onSearch, onMute, onTheme, onDelete }: {
+  person: {
+    _id: string; name?: string | null; email?: string | null; image?: string | null; phone?: string | null; bio?: string | null;
+    designation?: string | null; department?: string | null; company?: string | null; location?: string | null; timezone?: string | null;
+    employeeId?: string | null; skills?: string[] | null; socialLinks?: { platform: string; url: string }[] | null; customStatus?: string | null; source?: string | null;
+  };
+  status: string;
+  muted: boolean;
+  onCall: (kind: "audio" | "video") => void;
+  onSearch: () => void;
+  onMute: (muted: boolean) => void;
+  onTheme: () => void;
+  onDelete: () => void;
+}) {
+  // their own clock, when they told Shine their time zone
+  let localTime = "";
+  if (person.timezone) {
+    try { localTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", timeZone: person.timezone }); } catch { localTime = ""; }
+  }
+  const copy = (text: string, what: string) =>
+    navigator.clipboard.writeText(text).then(() => toast.success(what + " copied"), () => toast.error("Could not copy"));
+  const work = [person.designation, person.department].filter(Boolean).join(" · ");
+  const rows: { icon: typeof Mail; label: string; value: string; href?: string; copyAs?: string }[] = [
+    ...(person.email ? [{ icon: Mail, label: "Email", value: person.email, href: "mailto:" + person.email, copyAs: "Email" }] : []),
+    ...(person.phone ? [{ icon: Phone, label: "Phone", value: person.phone, href: "tel:" + person.phone.replace(/[^+\d]/g, ""), copyAs: "Phone number" }] : []),
+    ...(work ? [{ icon: Briefcase, label: "Work", value: work }] : []),
+    ...(person.company ? [{ icon: Building2, label: "Company", value: person.company }] : []),
+    ...(person.employeeId ? [{ icon: IdCard, label: "Employee ID", value: person.employeeId, copyAs: "Employee ID" }] : []),
+    ...(person.location ? [{ icon: MapPin, label: "Location", value: person.location }] : []),
+    ...(localTime ? [{ icon: Clock, label: "Local time", value: localTime + " · " + person.timezone }] : []),
+  ];
+  // only web links: a profile link is never allowed to run script
+  const links = (person.socialLinks ?? []).filter((l) => /^https?:\/\//i.test(l.url));
+  const quick = [
+    { icon: Phone, label: "Voice", run: () => onCall("audio") },
+    { icon: Video, label: "Video", run: () => onCall("video") },
+    { icon: Search, label: "Search", run: onSearch },
+    ...(person.email ? [{ icon: Mail, label: "Mail", run: () => { window.location.href = "mailto:" + person.email; } }] : []),
+  ];
+  return (
+    <section aria-label="Contact" className="space-y-4">
+      <div className="flex flex-col items-center text-center">
+        <UserAvatar user={person as any} size="xl" />
+        <h2 className="mt-3 text-lg font-bold leading-tight">{displayName(person as any)}</h2>
+        {person.email && <p className="mt-0.5 break-all text-sm text-muted-foreground">{person.email}</p>}
+        {status && <p className="mt-1 text-xs text-muted-foreground">{status}</p>}
+      </div>
+      <div className={cn("grid gap-2", quick.length === 4 ? "grid-cols-4" : "grid-cols-3")}>
+        {quick.map((q) => (
+          <button
+            key={q.label}
+            type="button"
+            onClick={q.run}
+            className="flex min-h-16 flex-col items-center justify-center gap-1 rounded-2xl border border-border/70 bg-background text-xs font-semibold transition-colors hover:border-primary/50 active:scale-[0.98]"
+          >
+            <q.icon className="size-5 text-primary" /> {q.label}
+          </button>
+        ))}
+      </div>
+      {person.bio && (
+        <div className="rounded-2xl border border-border/70 bg-background p-3">
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">About</div>
+          <p className="mt-1 whitespace-pre-line break-words text-sm">{person.bio}</p>
+        </div>
+      )}
+      {rows.length > 0 && (
+        <ul className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/70 bg-background">
+          {rows.map((r) => (
+            <li key={r.label} className="flex items-center gap-3 px-3 py-2.5">
+              <r.icon className="size-4 shrink-0 text-muted-foreground" />
+              <div className="min-w-0 flex-1">
+                <div className="text-[11px] text-muted-foreground">{r.label}</div>
+                {r.href ? (
+                  <a href={r.href} className="block break-all text-sm font-medium hover:text-primary">{r.value}</a>
+                ) : (
+                  <div className="break-words text-sm font-medium">{r.value}</div>
+                )}
+              </div>
+              {r.copyAs && (
+                <button type="button" onClick={() => copy(r.value, r.copyAs!)} className="grid size-9 shrink-0 place-items-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground" aria-label={"Copy " + r.copyAs.toLowerCase()}>
+                  <Copy className="size-4" />
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {(person.skills?.length ?? 0) > 0 && (
+        <div>
+          <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Skills</div>
+          <div className="flex flex-wrap gap-1.5">
+            {person.skills!.map((s) => <span key={s} className="rounded-full bg-accent px-2.5 py-1 text-xs font-medium">{s}</span>)}
+          </div>
+        </div>
+      )}
+      {links.length > 0 && (
+        <ul className="space-y-1">
+          {links.map((l) => (
+            <li key={l.url}>
+              <a href={l.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-xl px-2 py-2 text-sm hover:bg-accent">
+                <Link2 className="size-4 text-muted-foreground" /> <span className="font-medium">{l.platform}</span>
+                <span className="min-w-0 truncate text-xs text-muted-foreground">{l.url.replace(/^https?:\/\//i, "")}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+      {!person.bio && rows.length <= 1 && !(person.skills?.length) && links.length === 0 && (
+        <p className="text-center text-xs text-muted-foreground">They have not added more to their profile yet.</p>
+      )}
+      <div className="overflow-hidden rounded-2xl border border-border/70 bg-background">
+        <label className="flex cursor-pointer items-center gap-3 px-3 py-3 text-sm font-medium">
+          {muted ? <BellOff className="size-4 text-muted-foreground" /> : <Bell className="size-4 text-muted-foreground" />}
+          <span className="flex-1">Mute notifications</span>
+          <Switch checked={muted} onCheckedChange={onMute} aria-label="Mute notifications" />
+        </label>
+        <button type="button" onClick={onTheme} className="flex w-full items-center gap-3 border-t border-border/70 px-3 py-3 text-left text-sm font-medium hover:bg-accent">
+          <Palette className="size-4 text-muted-foreground" /> <span className="flex-1">Chat theme</span>
+        </button>
+        <button type="button" onClick={onDelete} className="flex w-full items-center gap-3 border-t border-border/70 px-3 py-3 text-left text-sm font-medium text-destructive hover:bg-destructive/10">
+          <Trash2 className="size-4" /> Delete chat
+        </button>
+      </div>
+    </section>
   );
 }

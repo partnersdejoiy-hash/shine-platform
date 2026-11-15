@@ -1,4 +1,5 @@
 import { mutation, query } from "./_generated/server";
+import { clearAuthCode } from "./passwords";
 import { MAIL_MANAGED_ROLES } from "./lib/adminRoles";
 import { v, ConvexError } from "convex/values";
 import { Id } from "./_generated/dataModel";
@@ -833,9 +834,8 @@ export const sendTempPasswordForTicket = mutation({
     await ctx.db.patch(requester._id, {
       mustChangePassword: true,
       passwordChangedAt: undefined,
-      tempAuthCode: undefined,
-      tempAuthCodeExpiresAt: undefined,
     });
+    await clearAuthCode(ctx, requester._id); // a new temporary password retires any emailed code
 
     // Queue the temp-password email (action runner — mutations can't fetch).
     ctx.scheduler.runAfter(0, api.emailActions.sendTempPassword, {
