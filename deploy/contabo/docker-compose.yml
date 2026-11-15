@@ -39,5 +39,20 @@ services:
       backend:
         condition: service_healthy
 
+  # Calls and meetings (open source LiveKit media server). Only with --profile calls, after setup-calls.sh
+  # wrote /etc/shine/livekit.yaml. Signalling stays on 127.0.0.1 (nginx serves it at /livekit on the app
+  # host); the media ports are public: 7881/tcp and 7882/udp.
+  livekit:
+    profiles: [calls]
+    image: livekit/livekit-server:v1.13.10
+    restart: unless-stopped
+    command: --config /etc/livekit.yaml
+    ports:
+      - "127.0.0.1:7880:7880"
+      - "7881:7881"
+      - "7882:7882/udp"
+    volumes:
+      - /etc/shine/livekit.yaml:/etc/livekit.yaml:ro
+
 volumes:
   data:

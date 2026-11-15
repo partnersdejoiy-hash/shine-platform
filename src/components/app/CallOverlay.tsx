@@ -2,7 +2,7 @@ import { api } from "@/convex/_generated/api";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { useRtc } from "@/hooks/use-rtc";
+import { useCallMedia } from "@/hooks/use-call-media";
 import { displayName } from "@/lib/format";
 import { playCallConnect, playCallEnd } from "@/lib/sound";
 import { cn } from "@/lib/utils";
@@ -84,7 +84,8 @@ export function CallOverlay() {
   }, [localStream]);
 
   // Webrtc mesh for the active call
-  const { replaceVideoTrack } = useRtc({
+  const { replaceVideoTrack } = useCallMedia({
+    room: activeCallId ? { kind: "call", id: activeCallId } : null,
     enabled: !!active && !!localStream,
     myId,
     peerIds: peerId ? [peerId] : [],

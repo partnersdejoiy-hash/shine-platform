@@ -18,7 +18,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAuth } from "@/hooks/use-auth";
-import { useRtc, type RtcSignal } from "@/hooks/use-rtc";
+import { type RtcSignal } from "@/hooks/use-rtc";
+import { useCallMedia } from "@/hooks/use-call-media";
 import { displayName, formatDuration, meetingUrl } from "@/lib/format";
 import { meetingSiteBase } from "@/pages/MeetHome";
 import { QUICK_REACTIONS } from "@/lib/emoji";
@@ -83,6 +84,7 @@ export function MeetingRoom() {
   const detail = useQuery(api.meetings.detail, id ? { meetingId: id as any } : "skip");
   const signals = useQuery(api.calls.meetingSignalsFor, id ? { meetingId: id as any } : "skip");
   const rtcConfig = useQuery(api.rtcConfig.rtcConfig);
+  const mediaServer = useQuery(api.liveKit.enabled);
   const messagesPage = useQuery(
     api.messages.list,
     detail?.conversationId ? { conversationId: detail.conversationId as any } : "skip",
@@ -193,7 +195,8 @@ export function MeetingRoom() {
   const amWaiting = myParticipant?.status === "waiting";
   const amDenied = myParticipant?.status === "denied";
 
-  const rtc = useRtc({
+  const rtc = useCallMedia({
+    room: id ? { kind: "meeting", id } : null,
     enabled: joined,
     myId,
     peerIds,
@@ -956,7 +959,7 @@ export function MeetingRoom() {
                     </span>
                   )}
                 </div>
-                {rtcConfig?.iceServers?.length === 0 && (
+                {mediaServer === false && rtcConfig?.iceServers?.length === 0 && (
                   <p className="rounded-lg border border-primary/25 bg-primary/10 px-3 py-2 text-[11px] text-primary">
                     TURN relay not configured — calls work best on open networks. Add
                     TURN_URL / TURN_USERNAME / TURN_PASSWORD in Keys for full NAT traversal.

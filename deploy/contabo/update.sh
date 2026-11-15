@@ -9,12 +9,15 @@ DIR=${DIR:-/opt/shine}
 DMAIL_ENV=${DMAIL_ENV:-/etc/dmail/adapter.env}
 SSO_SECRET=${SSO_SECRET:-$(grep '^SHINE_SSO_SECRET=' "$DMAIL_ENV" | tail -1 | cut -d= -f2-)}
 cd "$DIR"
+# calls and meetings through the media server, once setup-calls.sh has run
+CALLS=(); LIVEKIT_ENV=()
+[ -f /etc/shine/livekit.yaml ] && CALLS=(--profile calls) && LIVEKIT_ENV=(--env-file /etc/shine/livekit.env)
 if [ -z "${FIRST:-}" ]; then
   echo "== Updating code"
   git fetch -q origin "$BRANCH" && git checkout -q "$BRANCH" && git pull -q --ff-only origin "$BRANCH"
   # a new Convex server version restarts the backend (everyone sees "temporarily unavailable"): only when asked
   [ -n "${CONVEX_UPGRADE:-}" ] && docker compose -p shine -f deploy/contabo/docker-compose.yml --env-file /etc/shine/convex.env pull -q
-  docker compose -p shine -f deploy/contabo/docker-compose.yml --env-file /etc/shine/convex.env up -d
+  docker compose -p shine "${CALLS[@]}" -f deploy/contabo/docker-compose.yml --env-file /etc/shine/convex.env up -d
 fi
 git log --oneline -1
 
@@ -22,7 +25,7 @@ git log --oneline -1
 # Joi in Shine (optional): JOI_API_URL and JOI_APP_SECRET in /etc/shine/joi.env
 JOI_ENV=()
 [ -f /etc/shine/joi.env ] && JOI_ENV=(--env-file /etc/shine/joi.env)
-docker run --rm --network host "${JOI_ENV[@]}" -v "$DIR":/app -v /etc/shine:/etc/shine -w /app \
+docker run --rm --network host "${JOI_ENV[@]}" "${LIVEKIT_ENV[@]}" -v "$DIR":/app -v /etc/shine:/etc/shine -w /app \
   -e CONVEX_SELF_HOSTED_URL=http://127.0.0.1:3210 \
   -e CONVEX_SELF_HOSTED_ADMIN_KEY="$(cat /etc/shine/admin-key)" \
   -e SHINE_APP_URL="https://$APP_HOST" -e SHINE_SSO_SECRET="$SSO_SECRET" \
@@ -43,4 +46,5 @@ find /var/www/shine/assets -type f -mtime +14 -delete 2>/dev/null || true
 echo "== Check"
 curl -fsS -o /dev/null -w "https://$APP_HOST -> %{http_code}\n" "https://$APP_HOST/"
 curl -fsS -o /dev/null -w "https://$API_HOST/version -> %{http_code}\n" "https://$API_HOST/version"
+[ ${#CALLS[@]} -gt 0 ] && curl -fsS -o /dev/null -w "https://$APP_HOST/livekit/ (calls) -> %{http_code}\n" "https://$APP_HOST/livekit/" || true
 echo "Done. Open https://mail.dejoiy.com, press Ctrl+F5 and click Chat."
