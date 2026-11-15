@@ -266,7 +266,7 @@ export function AppContacts() {
                     ? `${everyone.length} employee${everyone.length === 1 ? "" : "s"} found for “${q.trim()}”`
                     : `No employees match “${q.trim()}”`}
                 </div>
-                <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
                   {everyone.map((u, i) => {
                     const isContact = known.has(u._id);
                     return (
@@ -311,7 +311,7 @@ export function AppContacts() {
                 </div>
               </>
             ) : (
-              <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
                 {filtered.map((c, i) => (
                   <PersonCard
                     key={c.contact.contactId}
@@ -595,7 +595,7 @@ function StatusTab({ onOpenChat }: { onOpenChat: (userId: string) => void }) {
             No statuses yet — be the first to share something.
           </div>
         ) : (
-          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
             {rows.map(({ status, user: su }) => (
               <StatusCard
                 key={status._id}
@@ -652,7 +652,7 @@ function StatusCard({
 }
 
 function Grid({ children }: { children: React.ReactNode }) {
-  return <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">{children}</div>;
+  return <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">{children}</div>;
 }
 
 function Empty({ text }: { text: string }) {
@@ -685,22 +685,19 @@ function PersonCard({
       transition={{ delay: delay ?? 0 }}
       onClick={selectable ? onToggle : undefined}
       className={cn(
-        "glass hairline flex items-center gap-3 rounded-2xl p-3.5 transition-colors",
+        "glass hairline flex min-w-0 items-center gap-3 rounded-2xl p-3.5 transition-colors",
         selectable && "cursor-pointer hover:border-primary/40",
         selected && "border-primary/50 bg-primary/5",
       )}
     >
       <UserAvatar user={user} presence={presence as any} size="lg" showStatus />
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="truncate text-sm font-semibold">{displayName(user)}</span>
-          {isOnline(presence as any) && (
-            <Badge className="bg-emerald-400/15 text-emerald-400 hover:bg-emerald-400/20">
-              {presenceLabel(presence as any)}
-            </Badge>
-          )}
+        {/* the name gets the whole line; whether they are around sits under it, like a chat list */}
+        <div className="truncate text-sm font-semibold">{displayName(user)}</div>
+        <div className="mt-0.5 truncate text-xs text-muted-foreground">
+          {isOnline(presence as any) && <span className="font-semibold text-foreground">{presenceLabel(presence as any)} · </span>}
+          {sub}
         </div>
-        <div className="mt-0.5 truncate text-xs text-muted-foreground">{sub}</div>
       </div>
       {selectable ? (
         <div
