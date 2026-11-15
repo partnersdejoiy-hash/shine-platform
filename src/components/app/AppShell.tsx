@@ -27,7 +27,7 @@ import { isEmbedded, tellMail } from "@/lib/embed";
 import { JOI_AVATAR, openJoi } from "@/lib/joi";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
-import {
+import { PanelLeftClose, PanelLeftOpen,
   Building2,
   CalendarDays,
   FileStack,
@@ -72,6 +72,12 @@ const MOBILE_MORE_NAV = NAV.slice(5);
 export function AppShell() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  // large screens: the wide menu can be folded to the icon rail; remembered on this device
+  const [rail, setRail] = useState(() => { try { return localStorage.getItem("shine-rail") === "1"; } catch { return false; } });
+  useEffect(() => {
+    if (rail) document.documentElement.dataset.rail = "1"; else delete document.documentElement.dataset.rail;
+    try { localStorage.setItem("shine-rail", rail ? "1" : "0"); } catch { /* private window: the choice lasts until the page closes */ }
+  }, [rail]);
   const location = useLocation();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
@@ -191,22 +197,22 @@ export function AppShell() {
       <PolicyAckGate />
 
       {/* ===== DESKTOP NAV RAIL (hidden on mobile & tablet) ===== */}
-      <nav className={embed ? "hidden" : "hidden md:flex h-full w-[68px] lg:w-[252px] shrink-0 flex-col items-center lg:items-stretch border-r border-border shine-rail"}>
-        <div className="flex shrink-0 items-center py-3 lg:px-5 lg:py-4">
+      <nav className={embed ? "hidden" : "hidden md:flex h-full w-[68px] lgx:w-[252px] shrink-0 flex-col items-center lgx:items-stretch border-r border-border shine-rail"}>
+        <div className="flex shrink-0 items-center py-3 lgx:px-5 lgx:py-4">
           <button onClick={() => navigate("/app")} className="transition-transform hover:scale-105" title="Shine">
-            <ShineLogo size={38} showWordmark={false} className="lg:hidden" />
-            <ShineLogo size={34} className="hidden lg:flex" />
+            <ShineLogo size={38} showWordmark={false} className="lgx:hidden" />
+            <ShineLogo size={34} className="hidden lgx:flex" />
           </button>
         </div>
         {/* like Dejoiy Mail's Compose */}
-        <div className="hidden shrink-0 px-4 pb-4 lg:block">
+        <div className="hidden shrink-0 px-4 pb-4 lgx:block">
           <Button size="lg" className="w-full" onClick={startNewChat}>
             <PenSquare className="size-4" /> New chat
           </Button>
         </div>
 
         {/* Scrollable nav items — hidden scrollbar, smooth wheel scroll */}
-        <div className="flex min-h-0 flex-1 flex-col items-center gap-1.5 overflow-y-auto px-1 pb-2 no-scrollbar lg:items-stretch lg:gap-0.5 lg:px-3">
+        <div className="flex min-h-0 flex-1 flex-col items-center gap-1.5 overflow-y-auto px-1 pb-2 no-scrollbar lgx:items-stretch lgx:gap-0.5 lgx:px-3">
           {filteredNav.map((n) => (
             <Tooltip key={n.to}>
               <TooltipTrigger asChild>
@@ -214,22 +220,22 @@ export function AppShell() {
                   onClick={() => navigate(n.to)}
                   className={cn(
                     "relative grid size-11 shrink-0 place-items-center rounded-2xl border-2 transition-[transform,background-color,box-shadow,color] duration-150 active:translate-x-px active:translate-y-px",
-                    "lg:flex lg:h-11 lg:w-full lg:items-center lg:justify-start lg:gap-3.5 lg:rounded-full lg:border-0 lg:px-4 lg:shadow-none",
+                    "lgx:flex lgx:h-11 lgx:w-full lgx:items-center lgx:justify-start lgx:gap-3.5 lgx:rounded-full lgx:border-0 lgx:px-4 lgx:shadow-none",
                     n.match(location.pathname)
-                      ? "border-[var(--sticker-border)] bg-primary text-primary-foreground shadow-[3px_3px_0_var(--sticker-shadow)] lg:font-bold"
+                      ? "border-[var(--sticker-border)] bg-primary text-primary-foreground shadow-[3px_3px_0_var(--sticker-shadow)] lgx:font-bold"
                       : "border-transparent text-muted-foreground hover:bg-accent hover:text-foreground",
                   )}
                 >
                   <n.icon className="size-5" />
-                  <span className="hidden text-[15px] lg:inline">{n.label}</span>
+                  <span className="hidden text-[15px] lgx:inline">{n.label}</span>
                   {n.to === "/app/chats" && (unread ?? 0) > 0 && (
-                    <span className="absolute -right-1.5 -top-1.5 grid h-[18px] min-w-[18px] place-items-center rounded-full border-2 border-sidebar bg-foreground px-1 text-[10px] font-bold text-background lg:static lg:ml-auto lg:h-auto lg:min-w-0 lg:border-0 lg:bg-transparent lg:text-[13px] lg:text-current">
+                    <span className="absolute -right-1.5 -top-1.5 grid h-[18px] min-w-[18px] place-items-center rounded-full border-2 border-sidebar bg-foreground px-1 text-[10px] font-bold text-background lgx:static lgx:ml-auto lgx:h-auto lgx:min-w-0 lgx:border-0 lgx:bg-transparent lgx:text-[13px] lgx:text-current">
                       {unread}
                     </span>
                   )}
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="right" className="ml-2 lg:hidden">
+              <TooltipContent side="right" className="ml-2 lgx:hidden">
                 {n.label}
               </TooltipContent>
             </Tooltip>
@@ -237,14 +243,27 @@ export function AppShell() {
         </div>
 
         {/* Fixed bottom section: AI + user menu */}
-        <div className="flex shrink-0 flex-col items-center gap-2 border-t border-border/50 pt-2 pb-2 lg:flex-row lg:flex-wrap lg:justify-between lg:px-4 lg:pb-4 lg:pt-3">
-          <div className="hidden w-full items-center gap-2.5 lg:flex">
+        <div className="flex shrink-0 flex-col items-center gap-2 border-t border-border/50 pt-2 pb-2 lgx:flex-row lgx:flex-wrap lgx:justify-between lgx:px-4 lgx:pb-4 lgx:pt-3">
+          <div className="hidden w-full items-center gap-2.5 lgx:flex">
             <ShineMark size={30} />
             <div className="leading-tight">
               <div className="text-[13px] font-bold">Dejoiy workspace</div>
               <div className="text-[11px] text-muted-foreground">Signed in with Dejoiy Mail</div>
             </div>
           </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => setRail((v) => !v)}
+                aria-expanded={!rail}
+                aria-label={rail ? "Open the menu" : "Fold the menu"}
+                className="hidden size-11 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground lg:grid"
+              >
+                {rail ? <PanelLeftOpen className="size-5" /> : <PanelLeftClose className="size-5" />}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right">{rail ? "Open the menu" : "Fold the menu"}</TooltipContent>
+          </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
               <button onClick={askJoi} className="rounded-full transition-transform hover:scale-105 active:scale-95" aria-label="Ask Joi">

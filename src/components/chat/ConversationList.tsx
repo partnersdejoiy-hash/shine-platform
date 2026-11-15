@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { toneFor } from "@/lib/tone";
 import { motion } from "framer-motion";
 import { api } from "@/convex/_generated/api";
-import { Hash, MessageSquarePlus, Mic, Pin, PinOff, Search, Volume2, VolumeX, Archive, ArchiveRestore, Trash2 } from "lucide-react";
+import { CheckCheck, Hash, MessageSquarePlus, Mic, Pin, PinOff, Search, Volume2, VolumeX, Archive, ArchiveRestore, Trash2 } from "lucide-react";
 import { useMutation } from "convex/react";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -33,6 +33,7 @@ export interface ConversationItem {
     kind: string;
     senderId: string;
     createdAt?: number;
+    readBy?: string[];
     sender?: { _id: string; name?: string | null } | null;
   } | null;
   unread: number;
@@ -253,7 +254,14 @@ export function ConversationList({
                     </span>
                   ) : (
                     <span className={cn("truncate text-[13px]", item.unread > 0 ? "font-semibold text-foreground" : "text-muted-foreground")}>
-                      {previewText(item, myId)}
+                      {/* your own last message: a tick instead of "You:", pink once someone has read it */}
+                      {item.lastMessage && item.lastMessage.kind !== "system" && item.lastMessage.senderId === myId && (
+                        <CheckCheck
+                          aria-label={(item.lastMessage.readBy ?? []).some((id) => id !== myId) ? "Read" : "Sent"}
+                          className={cn("mr-1 inline size-4 align-[-3px]", (item.lastMessage.readBy ?? []).some((id) => id !== myId) ? "text-primary" : "text-muted-foreground/70")}
+                        />
+                      )}
+                      {previewText(item)}
                     </span>
                   )}
                   {item.unread > 0 && (
@@ -356,14 +364,12 @@ export function conversationTitle(
   return displayName(other ?? null);
 }
 
-function previewText(item: ConversationItem, myId?: string): string {
+function previewText(item: ConversationItem): string {
   const lm = item.lastMessage;
   if (!lm) return "No messages yet";
   if (lm.kind === "system") return lm.body;
-  const mine = lm.senderId === myId;
-  const prefix = mine ? "You: " : "";
-  if (lm.kind === "file") return `${prefix}📎 Shared a file`;
-  if (lm.kind === "voice") return `${prefix}🎤 Voice message`;
-  if (lm.kind === "poll") return `${prefix}📊 New poll`;
-  return `${prefix}${lm.body}`;
+  if (lm.kind === "file") return "📎 Shared a file";
+  if (lm.kind === "voice") return "🎤 Voice message";
+  if (lm.kind === "poll") return "📊 New poll";
+  return lm.body;
 }

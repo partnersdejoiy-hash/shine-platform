@@ -327,3 +327,12 @@
   background-size: 22px 22px;
   background-position: 11px 11px;
 }
+
+/* Wide menu on large screens, unless the person folded it to the icon rail (data-rail on <html>). */
+@custom-variant lgx {
+  @media (width >= 64rem) {
+    :root:not([data-rail]) & {
+      @slot;
+    }
+  }
+}
