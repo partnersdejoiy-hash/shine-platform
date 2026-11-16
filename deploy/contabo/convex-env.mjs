@@ -16,8 +16,12 @@ else {
   };
   writeFileSync(KEYS, JSON.stringify(keys), { mode: 0o600 });
 }
+// Live spreadsheet feeds (src/convex/feeds.ts): one secret link part, made once and kept like the sign-in keys
+const FEED = "/etc/shine/feed-token";
+if (!existsSync(FEED)) writeFileSync(FEED, (await import("node:crypto")).randomBytes(24).toString("base64url") + "\n", { mode: 0o600 });
 const vars = {
   ...keys,
+  SHINE_FEED_TOKEN: readFileSync(FEED, "utf8").trim(),
   SITE_URL: process.env.SHINE_APP_URL,
   DEJOIY_MAIL_SSO_SECRET: process.env.SHINE_SSO_SECRET,
   DEJOIY_MAIL_URL: "https://mail.dejoiy.com",

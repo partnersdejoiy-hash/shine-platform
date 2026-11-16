@@ -228,4 +228,18 @@ http.route({
   }),
 });
 
+// Live spreadsheet feeds (feeds.ts): /feeds/<SHINE_FEED_TOKEN>/shine.csv and shine-daily.csv. Counts only.
+http.route({
+  pathPrefix: "/feeds/",
+  method: "GET",
+  handler: httpAction(async (ctx, req) => {
+    const [, , token, file] = new URL(req.url).pathname.split("/");
+    const want = process.env.SHINE_FEED_TOKEN ?? "";
+    const name = (file ?? "").replace(/\.csv$/, "");
+    if (!want || !sameSecret(token ?? "", want) || !file?.endsWith(".csv") || !["shine", "shine-daily"].includes(name)) return new Response("Not found", { status: 404 });
+    const body = await ctx.runAction(internal.feeds.build, { name });
+    return new Response(body, { status: 200, headers: { "Content-Type": "text/csv; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex" } });
+  }),
+});
+
 export default http;
