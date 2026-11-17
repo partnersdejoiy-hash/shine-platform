@@ -2,7 +2,7 @@ import { v, ConvexError } from "convex/values";
 import bcrypt from "bcryptjs";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { action, internalAction, internalMutation, internalQuery, mutation, query, type MutationCtx } from "./_generated/server";
-import { internal, api } from "./_generated/api";
+import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { sendResend, SHINE_EMAIL_FROM } from "./emailProvider";
 import { PASSWORD_MIN_LENGTH } from "./passwords";
@@ -155,7 +155,7 @@ export const invite = mutation({
     const temp = Array.from(crypto.getRandomValues(new Uint8Array(12)), (b) => "abcdefghjkmnpqrstuvwxyzACDEFGHJKLMNPQRTUVWXY3479"[b % 48]).join("");
     await ctx.db.insert("passwords", { userId: newId, hash: bcrypt.hashSync(temp, 10), history: [], updatedAt: now });
     await ctx.db.insert("organizationMembers", { orgId: org._id, userId: newId, role: "member", joinedAt: now } as any);
-    await ctx.scheduler.runAfter(0, api.emailActions.sendTempPassword, { to: email, name, tempPassword: temp });
+    await ctx.scheduler.runAfter(0, internal.emailActions.sendTempPassword, { to: email, name, tempPassword: temp });
     return { ok: true };
   },
 });

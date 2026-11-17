@@ -1,6 +1,6 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import bcrypt from "bcryptjs";
-import { api } from "./_generated/api";
+import { internal } from "./_generated/api";
 import { internalMutation, mutation, query, type MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { v, ConvexError } from "convex/values";
@@ -97,15 +97,6 @@ async function checkCode(ctx: MutationCtx, userId: Id<"users">, code: string): P
   return null;
 }
 
-/** Roles that never receive temporary passwords — they own their credentials. */
-const PRIVILEGED_ROLES = [
-  "super_admin",
-  "dejoiy_admin",
-  "admin",
-  "super_it",
-  "it",
-];
-
 /**
  * Queue a (new) temporary password email via the email action.
  *
@@ -119,7 +110,7 @@ function sendTempPasswordEmail(
   tempPassword: string,
 ) {
   if (!target.email) return;
-  ctx.scheduler.runAfter(0, api.emailActions.sendTempPassword, {
+  ctx.scheduler.runAfter(0, internal.emailActions.sendTempPassword, {
     to: target.email,
     name: target.name,
     tempPassword,
@@ -390,41 +381,49 @@ export const resendMyTempPassword = mutation({
   },
 });
 
+/** Signed-out reset requests: at most 3 per email address in 15 minutes. */
+const RESET_WINDOW_MS = 15 * 60 * 1000;
+const RESET_MAX = 3;
+async function allowResetRequest(ctx: MutationCtx, email: string) {
+  const since = Date.now() - RESET_WINDOW_MS;
+  for (const old of await ctx.db.query("resetRequests").withIndex("by_email_at", (q) => q.eq("email", email).lt("at", since)).collect()) {
+    await ctx.db.delete(old._id);
+  }
+  const recent = await ctx.db.query("resetRequests").withIndex("by_email_at", (q) => q.eq("email", email).gte("at", since)).collect();
+  if (recent.length >= RESET_MAX) throw new ConvexError("Too many requests for this email. Try again in 15 minutes.");
+  await ctx.db.insert("resetRequests", { email, at: Date.now() });
+}
+
+/** Emails a reset code to an active account. Its current password keeps working until the code is used. */
+async function sendResetCode(ctx: MutationCtx, email: string, action: string) {
+  const normalized = email.trim().toLowerCase();
+  await allowResetRequest(ctx, normalized);
+  const target = await ctx.db
+    .query("users")
+    .withIndex("email", (q) => q.eq("email", normalized))
+    .unique();
+  // Same answer either way: no account or role leaks to signed-out callers.
+  if (!target || !target.email || target.isActive === false) return { ok: true };
+
+  const code = await issueCode(ctx, target._id);
+  ctx.scheduler.runAfter(0, internal.emailActions.sendVerificationCode, {
+    to: target.email,
+    name: target.name,
+    code,
+  });
+  await logAudit(ctx, target._id, action, "users", String(target._id), "password reset code queued");
+  return { ok: true };
+}
+
 /**
- * Login-page fallback: "Didn't receive your temporary password?". Resends a
- * brand-new temporary password to the email address. Never reveals whether an
- * account exists or its role — always answers the same.
+ * Login-page fallback: "Didn't receive your temporary password?". This used to
+ * replace the password with a new temporary one, so anyone who knew an email
+ * could lock that person out. It now sends a reset code instead, and the
+ * current password keeps working until the code is used (resetPasswordWithCode).
  */
 export const resendTempPasswordByEmail = mutation({
   args: { email: v.string() },
-  handler: async (ctx, { email }) => {
-    const normalized = email.trim().toLowerCase();
-    const target = await ctx.db
-      .query("users")
-      .withIndex("email", (q) => q.eq("email", normalized))
-      .unique();
-    // Generic reply — no account/role leakage to unauthenticated callers.
-    if (!target || !target.email) return { ok: true };
-    if (target.role && PRIVILEGED_ROLES.includes(target.role)) return { ok: true };
-
-    const tempPassword = generateTempPassword();
-    const hash = bcrypt.hashSync(tempPassword, 10);
-    await upsertPassword(ctx, target._id, hash);
-    await ctx.db.patch(target._id, {
-      mustChangePassword: true,
-      passwordChangedAt: undefined,
-    });
-
-    await sendTempPasswordEmail(ctx, target, tempPassword);
-    await logAudit(
-      ctx,
-      target._id,
-      "auth.password_resend_by_email",
-      "users",
-      String(target._id),
-    );
-    return { ok: true };
-  },
+  handler: async (ctx, { email }) => sendResetCode(ctx, email, "auth.password_resend_by_email"),
 });
 
 /**
@@ -444,7 +443,7 @@ export const requestTempAuthCode = mutation({
     const code = await issueCode(ctx, userId);
 
     // Queue the code email to the action runner (mutations can't fetch).
-    ctx.scheduler.runAfter(0, api.emailActions.sendVerificationCode, {
+    ctx.scheduler.runAfter(0, internal.emailActions.sendVerificationCode, {
       to: me.email,
       name: me.name,
       code,
@@ -499,32 +498,7 @@ export const setMyPasswordWithCode = mutation({
  */
 export const requestPasswordResetCode = mutation({
   args: { email: v.string() },
-  handler: async (ctx, { email }) => {
-    const normalized = email.trim().toLowerCase();
-    const target = await ctx.db
-      .query("users")
-      .withIndex("email", (q) => q.eq("email", normalized))
-      .unique();
-    if (!target || !target.email || target.isActive === false) {
-      return { ok: true };
-    }
-
-    const code = await issueCode(ctx, target._id);
-    ctx.scheduler.runAfter(0, api.emailActions.sendVerificationCode, {
-      to: target.email,
-      name: target.name,
-      code,
-    });
-    await logAudit(
-      ctx,
-      target._id,
-      "auth.reset_code_requested",
-      "users",
-      String(target._id),
-      "password reset code queued",
-    );
-    return { ok: true };
-  },
+  handler: async (ctx, { email }) => sendResetCode(ctx, email, "auth.reset_code_requested"),
 });
 
 /**
@@ -544,10 +518,12 @@ export const resetPasswordWithCode = mutation({
       throw new ConvexError("This account has been deactivated. Contact your administrator.");
     }
 
-    validateNewPassword(newPassword);
-    await assertNotReused(ctx, target._id, newPassword);
+    // The code is checked first: a wrong code must learn nothing about this account's old passwords.
+    // If the new password is then refused, the throw undoes the code being used up, so it can be tried again.
     const wrong = await checkCode(ctx, target._id, code);
     if (wrong) return { ok: false as const, error: wrong };
+    validateNewPassword(newPassword);
+    await assertNotReused(ctx, target._id, newPassword);
 
     const hash = bcrypt.hashSync(newPassword, 10);
     await upsertPassword(ctx, target._id, hash);

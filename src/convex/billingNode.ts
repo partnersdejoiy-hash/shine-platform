@@ -3,7 +3,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { createHmac } from "node:crypto";
 import { action } from "./_generated/server";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import { v, ConvexError } from "convex/values";
 import { PLANS, razorpayConfigured } from "./billing";
 
@@ -73,7 +73,7 @@ export const createOrder = action({
       currency: string;
     };
 
-    await ctx.runMutation(api.billing.recordOrder, {
+    await ctx.runMutation(internal.billing.recordOrder, {
       userId,
       orgId: orgId ?? undefined,
       planCode: plan.code,
@@ -124,7 +124,7 @@ export const verifyPayment = action({
     // Mark the payment paid + upgrade the org plan (server-verified, so this
     // is not trusting the client — the signature check above already proves
     // Razorpay captured the payment).
-    await ctx.runMutation(api.billing.markPaid, {
+    await ctx.runMutation(internal.billing.markPaid, {
       orderId: args.orderId,
       paymentId: args.paymentId,
       signature: args.signature,

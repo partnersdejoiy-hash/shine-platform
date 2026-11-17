@@ -1,5 +1,5 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, internalQuery, query } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 
 // =============================================================================
@@ -136,7 +136,7 @@ export const billingOverview = query({
 // ---------------------------------------------------------------------------
 
 /** Internal: create a payments row in `created` state. */
-export const recordOrder = mutation({
+export const recordOrder = internalMutation({
   args: {
     userId: v.id("users"),
     orgId: v.optional(v.id("organizations")),
@@ -164,7 +164,7 @@ export const recordOrder = mutation({
 });
 
 /** Internal: lookup one payment by Razorpay order id. */
-export const paymentByOrder = query({
+export const paymentByOrder = internalQuery({
   args: { orderId: v.string() },
   handler: async (ctx, args) => {
     return await ctx.db
@@ -175,7 +175,7 @@ export const paymentByOrder = query({
 });
 
 /** Internal: mark a payment paid (verified) and upgrade the org plan. */
-export const markPaid = mutation({
+export const markPaid = internalMutation({
   args: {
     orderId: v.string(),
     paymentId: v.optional(v.string()),

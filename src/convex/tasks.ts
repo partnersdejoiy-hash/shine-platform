@@ -1,7 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { mutation, query } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
-import { getCurrentUser } from "./users";
+import { getCurrentUser, inOrg } from "./users";
 
 const ASSIGNEE_ARGS = {
   assigneeId: v.optional(v.id("users")),
@@ -27,6 +27,8 @@ function primaryAssignee(ids: string[]): string | undefined {
 export const listByOrg = query({
   args: { orgId: v.id("organizations") },
   handler: async (ctx, { orgId }) => {
+    const me = await getCurrentUser(ctx);
+    if (!me || !(await inOrg(ctx, me, orgId))) return [];
     const rows = await ctx.db
       .query("tasks")
       .withIndex("by_org", (q) => q.eq("orgId", orgId))

@@ -1,7 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { mutation, query } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
-import { getCurrentUser, logAudit } from "./users";
+import { getCurrentUser, inOrg, logAudit } from "./users";
 
 // ---- Organizations ----------------------------------------------------------
 
@@ -346,8 +346,10 @@ export const createTeam = mutation({
 export const teamDetail = query({
   args: { teamId: v.id("teams") },
   handler: async (ctx, { teamId }) => {
+    const me = await getCurrentUser(ctx);
+    if (!me) return null;
     const team = await ctx.db.get(teamId);
-    if (!team) return null;
+    if (!team || !(await inOrg(ctx, me, team.orgId))) return null;
     const tms = await ctx.db.query("teamMembers").withIndex("by_team", (q) => q.eq("teamId", teamId)).collect();
     const members = await Promise.all(
       tms.map(async (m) => {

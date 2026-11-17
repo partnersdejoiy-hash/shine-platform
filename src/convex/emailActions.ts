@@ -1,6 +1,6 @@
 "use node";
 
-import { action } from "./_generated/server";
+import { internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { sendResend, SHINE_EMAIL_FROM } from "./emailProvider";
 
@@ -9,13 +9,18 @@ import { sendResend, SHINE_EMAIL_FROM } from "./emailProvider";
  *
  * Convex rule: mutations and queries CANNOT make outbound network requests —
  * only actions can. Every mutation that needs to send email must route through
- * one of these actions via `ctx.runAction(api.emailActions.*, …)`.
+ * one of these actions via `ctx.scheduler.runAfter(0, internal.emailActions.*, …)`.
+ * They are internal: the browser cannot call them, so nobody can send mail from Shine's domain.
  *
  * Actions return { ok, id?, error? } and never throw (see emailProvider).
  */
 
+/** Text that goes inside the HTML of an email. */
+const esc = (s: string) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+
 /** Generic single email (used by imports, notifications, etc.). */
-export const sendMail = action({
+export const sendMail = internalAction({
   args: {
     to: v.string(),
     subject: v.string(),
@@ -34,7 +39,7 @@ export const sendMail = action({
 });
 
 /** Branded temporary-password email (temp password flows). */
-export const sendTempPassword = action({
+export const sendTempPassword = internalAction({
   args: {
     to: v.string(),
     name: v.optional(v.string()),
@@ -48,9 +53,9 @@ export const sendTempPassword = action({
       html: `
         <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto">
           <h2 style="color:#D4AF37">SHINE · by DEJOIY</h2>
-          <p>Hi ${name ?? "there"},</p>
+          <p>Hi ${esc(name ?? "there")},</p>
           <p>Your temporary SHINE sign-in password is:</p>
-          <p style="font-size:22px;font-weight:bold;letter-spacing:2px;background:#f5f5f0;padding:12px;border-radius:8px;text-align:center">${tempPassword}</p>
+          <p style="font-size:22px;font-weight:bold;letter-spacing:2px;background:#f5f5f0;padding:12px;border-radius:8px;text-align:center">${esc(tempPassword)}</p>
           <p>Sign in with your email and this password. For security you will be <b>required to set a new password</b> before you can use the app — the last 5 passwords can never be reused.</p>
           <p style="color:#888">If you did not expect this, contact your administrator.</p>
         </div>`,
@@ -59,7 +64,7 @@ export const sendTempPassword = action({
 });
 
 /** Branded ticket notification email (ticketing@dejoiy.com). */
-export const sendTicketEmail = action({
+export const sendTicketEmail = internalAction({
   args: {
     to: v.string(),
     subject: v.string(),
@@ -77,7 +82,7 @@ export const sendTicketEmail = action({
 });
 
 /** Branded 6-digit verification-code email (auth fallback flows). */
-export const sendVerificationCode = action({
+export const sendVerificationCode = internalAction({
   args: {
     to: v.string(),
     name: v.optional(v.string()),
@@ -91,9 +96,9 @@ export const sendVerificationCode = action({
       html: `
         <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto">
           <h2 style="color:#D4AF37">SHINE · by DEJOIY</h2>
-          <p>Hi ${name ?? "there"},</p>
+          <p>Hi ${esc(name ?? "there")},</p>
           <p>Use the verification code below to set your new SHINE password. It expires in 10 minutes.</p>
-          <p style="font-size:32px;font-weight:bold;letter-spacing:8px;background:#f5f5f0;padding:14px;border-radius:8px;text-align:center">${code}</p>
+          <p style="font-size:32px;font-weight:bold;letter-spacing:8px;background:#f5f5f0;padding:14px;border-radius:8px;text-align:center">${esc(code)}</p>
           <p style="color:#888">If you did not request this, you can safely ignore this email.</p>
         </div>`,
       text: `Your SHINE verification code is: ${code}. It expires in 10 minutes.`,
