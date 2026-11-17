@@ -12,19 +12,22 @@ import { beat, choiceValidator, setOwn } from "./presence";
 export const currentUser = query({
   args: {},
   handler: async (ctx) => {
-    const user = await getCurrentUser(ctx);
+    const user = await getCurrentUser(ctx, { guests: true });
     if (user === null) return null;
     return user;
   },
 });
 
 /** Internal helper: current user or null. */
-export const getCurrentUser = async (ctx: QueryCtx) => {
+export const getCurrentUser = async (ctx: QueryCtx, opts?: { guests?: boolean }) => {
   const userId = await getAuthUserId(ctx);
   if (userId === null) return null;
   const user = await ctx.db.get(userId);
   // switched off by an admin: treated as signed out everywhere, at once
-  return user?.chatOff ? null : user;
+  if (user?.chatOff) return null;
+  // a meeting guest (no account) only exists inside its meeting room: everywhere else they are signed out
+  if (user?.isAnonymous && !opts?.guests) return null;
+  return user;
 };
 
 /**

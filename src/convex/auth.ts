@@ -196,6 +196,22 @@ const dejoiyMail = ConvexCredentials({
   },
 });
 
+// ---- Meeting guests -------------------------------------------------------------
+// Someone with a meeting link types a name and an email and joins: no account, no
+// password. The pass is for that one meeting (see guests.ts and meetings.join).
+const meetingGuest = ConvexCredentials({
+  id: "meeting-guest",
+  authorize: async (credentials, ctx) => {
+    const text = (k: string) => (typeof credentials[k] === "string" ? (credentials[k] as string) : "");
+    const userId = await ctx.runMutation(internal.guests.createGuest, {
+      meeting: text("meeting"),
+      name: text("name"),
+      email: text("email"),
+    });
+    return { userId };
+  },
+});
+
 // ---- Dejoiy Mail email + password ------------------------------------------
 // The sign-in form on app.shine.dejoiy.com: the mailbox email and password are
 // checked by Dejoiy Mail against Zimbra (server to server, shared secret).
@@ -227,5 +243,5 @@ const dejoiyMailPassword = ConvexCredentials({
 });
 
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
-  providers: [emailOtp, google, github, microsoftEntraId, apple, adminPassword, dejoiyMail, dejoiyMailPassword],
+  providers: [emailOtp, google, github, microsoftEntraId, apple, adminPassword, dejoiyMail, dejoiyMailPassword, meetingGuest],
 });

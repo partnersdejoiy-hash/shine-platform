@@ -20,6 +20,7 @@ import { AppDesignSystem } from "@/pages/AppDesignSystem";
 import { AppSettings } from "@/pages/AppSettings";
 import { AppChangePassword } from "@/pages/AppChangePassword";
 import { MeetingRoom } from "@/components/meeting/MeetingRoom";
+import { MeetingGate } from "@/components/meeting/MeetingGate";
 import { MeetHome } from "@/pages/MeetHome";
 import { VlyToolbar } from "../vly-toolbar-readonly.tsx";
 import { convex } from "@/lib/convex";
@@ -293,9 +294,9 @@ createRoot(document.getElementById("root")!).render(
               <Route
                 path="/app/meetings/:id"
                 element={
-                  <RequireAuth>
+                  <MeetingGate>
                     <MeetingRoom />
-                  </RequireAuth>
+                  </MeetingGate>
                 }
               />
               {/* Standalone meeting site (meet.dejoiy.com) */}
@@ -310,18 +311,18 @@ createRoot(document.getElementById("root")!).render(
               <Route
                 path="/meet/:id"
                 element={
-                  <RequireAuth>
+                  <MeetingGate>
                     <MeetingRoom />
-                  </RequireAuth>
+                  </MeetingGate>
                 }
               />
               {/* Stable shareable link: /meet/<title-slug>/<room-code> */}
               <Route
                 path="/meet/:slug/:code"
                 element={
-                  <RequireAuth>
+                  <MeetingGate>
                     <MeetingRoom />
-                  </RequireAuth>
+                  </MeetingGate>
                 }
               />
               {/* meets.dejoiy.com aliases the standalone meet site */}
@@ -336,17 +337,17 @@ createRoot(document.getElementById("root")!).render(
               <Route
                 path="/meets/:id"
                 element={
-                  <RequireAuth>
+                  <MeetingGate>
                     <MeetingRoom />
-                  </RequireAuth>
+                  </MeetingGate>
                 }
               />
               <Route
                 path="/meets/:slug/:code"
                 element={
-                  <RequireAuth>
+                  <MeetingGate>
                     <MeetingRoom />
-                  </RequireAuth>
+                  </MeetingGate>
                 }
               />
               <Route path="*" element={<NotFound />} />

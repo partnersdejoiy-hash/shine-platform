@@ -352,12 +352,16 @@ export const detailByCode = query({
 export const join = mutation({
   args: { meetingId: v.id("meetings"), isMuted: v.optional(v.boolean()), isVideoOn: v.optional(v.boolean()) },
   handler: async (ctx, { meetingId, isMuted = false, isVideoOn = true }) => {
-    const me = await getCurrentUser(ctx);
+    const me = await getCurrentUser(ctx, { guests: true });
     if (!me) throw new ConvexError("Not authenticated");
     const meeting = await ctx.db.get(meetingId);
     if (!meeting) throw new ConvexError("Meeting not found");
     if (meeting.status === "ended" || meeting.status === "cancelled") {
       throw new ConvexError("This meeting has ended");
+    }
+    // a guest's pass works for the one meeting whose link they opened
+    if (me.isAnonymous && me.guestMeetingId !== meetingId) {
+      throw new ConvexError("Open this meeting's own link to join it as a guest.");
     }
     // Locked meetings reject new joiners (the host and admitted members pass).
     if (meeting.locked && meeting.hostId !== me._id) {
@@ -379,7 +383,7 @@ export const join = mutation({
       const isInvited =
         !!existing ||
         (meeting.inviteEmails ?? []).some(
-          (e) => e.toLowerCase() === (me.email ?? "").toLowerCase(),
+          (e) => e.toLowerCase() === (me.email ?? me.guestEmail ?? "").toLowerCase(),
         );
       if (!isInvited) {
         throw new ConvexError(
@@ -390,7 +394,9 @@ export const join = mutation({
     // Waiting-room (lobby admission): non-host joiners wait until the host
     // admits them — unless they are already admitted (invitees are active).
     let status: "active" | "waiting" = "active";
-    if (!isHost && meeting.lobbyEnabled && !(existing && existing.status === "active")) {
+    // A guest's email is not checked, so in a private meeting the host admits them by hand.
+    const guestNeedsHost = !!me.isAnonymous && meeting.openToEveryone === false;
+    if (!isHost && (meeting.lobbyEnabled || guestNeedsHost) && !(existing && existing.status === "active")) {
       status = "waiting";
     }
     if (existing) {
@@ -792,7 +798,7 @@ export const endBreakouts = mutation({
 export const leave = mutation({
   args: { meetingId: v.id("meetings") },
   handler: async (ctx, { meetingId }) => {
-    const me = await getCurrentUser(ctx);
+    const me = await getCurrentUser(ctx, { guests: true });
     if (!me) return;
     const participant = await ctx.db
       .query("meetingParticipants")
@@ -815,7 +821,7 @@ export const setParticipantState = mutation({
     hasRaisedHand: v.optional(v.boolean()),
   },
   handler: async (ctx, { meetingId, ...state }) => {
-    const me = await getCurrentUser(ctx);
+    const me = await getCurrentUser(ctx, { guests: true });
     if (!me) return;
     const participant = await ctx.db
       .query("meetingParticipants")

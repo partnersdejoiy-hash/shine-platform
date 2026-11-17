@@ -9,7 +9,7 @@ import { Navigate, useLocation } from "react-router";
  * app until they set their own password on /app/change-password.
  */
 export function RequireAuth({ children }: { children: ReactNode }) {
-  const { isLoading, isAuthenticated, user } = useAuth();
+  const { isLoading, isAuthenticated, user, signOut } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -27,6 +27,19 @@ export function RequireAuth({ children }: { children: ReactNode }) {
         to={`/auth?returnTo=${encodeURIComponent(returnTo)}`}
         replace
       />
+    );
+  }
+
+  // A meeting guest has no account: the app itself stays closed to them.
+  if (user?.isAnonymous) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-background px-4">
+        <div className="w-full max-w-sm space-y-3 rounded-2xl border bg-card p-6 text-center shadow-sm">
+          <h1 className="text-lg font-semibold">You joined as a guest</h1>
+          <p className="text-sm text-muted-foreground">Guests can only be in the meeting they were invited to. To use Shine, sign in with your own account.</p>
+          <button type="button" className="text-sm font-medium text-primary underline-offset-2 hover:underline" onClick={() => void signOut()}>Sign out</button>
+        </div>
+      </main>
     );
   }
 
