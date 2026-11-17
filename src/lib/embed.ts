@@ -23,5 +23,7 @@ export function tellMail(message: { type: string; [key: string]: unknown }) {
 
 /** Link that sends someone to Dejoiy Mail to sign in, then back to `returnTo` here. */
 export function dejoiyMailSignInUrl(returnTo: string): string {
-  return `${DEJOIY_MAIL_URL}/shine/sso?return=${encodeURIComponent(returnTo)}`;
+  // on the meeting site (meet.dejoiy.com) Dejoiy Mail sends the person back there, not to the app
+  const meet = typeof window !== "undefined" && /^meets?\.dejoiy\.com$/.test(window.location.hostname);
+  return `${DEJOIY_MAIL_URL}/shine/sso?return=${encodeURIComponent(returnTo)}${meet ? "&site=meet" : ""}`;
 }

@@ -52,33 +52,35 @@ const create = (ctx, args) => guests.createGuest._handler(ctx, args);
 
 test("a guest joins an open meeting by its link with a name and an email", async () => {
   const tables = { meetings: [meeting()] };
-  const id = await create(fakeCtx(tables), { meeting: "djm-abc-def", name: "  Asha  ", email: "Asha@Client.com " });
+  const id = await create(fakeCtx(tables), { meeting: "djm-abc-def", name: "  Asha  ", email: "Asha@Client.com ", phone: "+91 98765 43210" });
   const u = tables.users.find((r) => r._id === id);
   assert.equal(u.name, "Asha (Guest)");
   assert.equal(u.isAnonymous, true);
   assert.equal(u.guestEmail, "asha@client.com");
+  assert.equal(u.guestPhone, "+919876543210");
   assert.equal(u.guestMeetingId, "meetings:1");
   assert.equal(u.email, undefined, "the guest email never becomes a company address");
   // the meeting id works as well as the room code
-  await create(fakeCtx(tables), { meeting: "meetings:1", name: "Ravi", email: "ravi@client.com" });
+  await create(fakeCtx(tables), { meeting: "meetings:1", name: "Ravi", email: "ravi@client.com", phone: "+91 98765 43210" });
 });
 
 test("bad input, ended, locked and private meetings are refused", async () => {
   const tables = { meetings: [meeting(), meeting({ _id: "meetings:2", roomCode: "DJM-END-EDD", status: "ended" }), meeting({ _id: "meetings:3", roomCode: "DJM-LOC-KED", locked: true }),
     meeting({ _id: "meetings:4", roomCode: "DJM-PRI-VAT", openToEveryone: false, inviteEmails: ["Asha@client.com"] })] };
   const ctx = fakeCtx(tables);
-  await assert.rejects(create(ctx, { meeting: "djm-abc-def", name: " ", email: "a@b.co" }), /name/);
-  await assert.rejects(create(ctx, { meeting: "djm-abc-def", name: "A", email: "not-an-email" }), /email/);
-  await assert.rejects(create(ctx, { meeting: "nope", name: "A", email: "a@b.co" }), /ended or the link is wrong/);
-  await assert.rejects(create(ctx, { meeting: "djm-end-edd", name: "A", email: "a@b.co" }), /ended/);
-  await assert.rejects(create(ctx, { meeting: "djm-loc-ked", name: "A", email: "a@b.co" }), /locked/);
-  await assert.rejects(create(ctx, { meeting: "djm-pri-vat", name: "A", email: "x@client.com" }), /private/);
+  await assert.rejects(create(ctx, { meeting: "djm-abc-def", name: " ", email: "a@b.co", phone: "+91 98765 43210" }), /name/);
+  await assert.rejects(create(ctx, { meeting: "djm-abc-def", name: "A", email: "not-an-email", phone: "+91 98765 43210" }), /email/);
+  await assert.rejects(create(ctx, { meeting: "djm-abc-def", name: "A", email: "a@b.co", phone: "12ab" }), /phone/);
+  await assert.rejects(create(ctx, { meeting: "nope", name: "A", email: "a@b.co", phone: "+91 98765 43210" }), /ended or the link is wrong/);
+  await assert.rejects(create(ctx, { meeting: "djm-end-edd", name: "A", email: "a@b.co", phone: "+91 98765 43210" }), /ended/);
+  await assert.rejects(create(ctx, { meeting: "djm-loc-ked", name: "A", email: "a@b.co", phone: "+91 98765 43210" }), /locked/);
+  await assert.rejects(create(ctx, { meeting: "djm-pri-vat", name: "A", email: "x@client.com", phone: "+91 98765 43210" }), /private/);
   // an invited email gets in (the host still admits them from the lobby, see meetings.join)
-  assert.ok(await create(ctx, { meeting: "djm-pri-vat", name: "Asha", email: "asha@client.com" }));
+  assert.ok(await create(ctx, { meeting: "djm-pri-vat", name: "Asha", email: "asha@client.com", phone: "+91 98765 43210" }));
 });
 
 test("a guest is signed out everywhere except the meeting room", async () => {
-  const tables = { users: [{ _id: "users:7", name: "Asha (Guest)", isAnonymous: true, guestMeetingId: "meetings:1" }, { _id: "users:8", name: "Deepak", email: "deepak@dejoiy.com" }] };
+  const tables = { users: [{ _id: "users:7", name: "Asha (Guest)", isAnonymous: true, guestMeetingId: "meetings:1" }, { _id: "users:8", name: "Deepak", email: "deepak@dejoiy.com", phone: "+91 98765 43210" }] };
   assert.equal(await users.getCurrentUser(fakeCtx(tables, "users:7")), null);
   assert.equal((await users.getCurrentUser(fakeCtx(tables, "users:7"), { guests: true }))?._id, "users:7");
   assert.equal((await users.getCurrentUser(fakeCtx(tables, "users:8")))?._id, "users:8");

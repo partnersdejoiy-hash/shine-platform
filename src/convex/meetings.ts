@@ -442,6 +442,16 @@ export const join = mutation({
           role: "member",
           joinedAt: now,
         });
+        // a guest has no profile: their details go into the meeting chat, for the host to see then and later
+        if (me.isAnonymous) {
+          await ctx.db.insert("messages", {
+            conversationId: conv._id,
+            senderId: me._id,
+            kind: "system",
+            body: `${me.name ?? "A guest"} joined as a guest · ${me.guestEmail ?? ""}${me.guestPhone ? ` · ${me.guestPhone}` : ""}`,
+            createdAt: now,
+          });
+        }
       }
     }
 

@@ -52,7 +52,7 @@ export const pushMeeting = internalAction({
   handler: async (ctx, { meetingId, requesterId }): Promise<boolean> => {
     const m = await ctx.runQuery(internal.calendarLink.meetingForCalendar, { meetingId });
     if (!m || m.hostId !== requesterId || !m.hostEmail) return false;
-    const link = `${process.env.SITE_URL ?? "https://app.shine.dejoiy.com"}/meet/${m.slug ?? "meeting"}/${m.roomCode}`;
+    const link = `${(process.env.MEET_URL ?? "https://meet.dejoiy.com").replace(/\/+$/, "")}/meet/${m.slug ?? "meeting"}/${m.roomCode}`;
     const out = await mail("/api/shine/calendar", {
       op: "save",
       owner: m.hostEmail,

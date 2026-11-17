@@ -23,6 +23,8 @@ const vars = {
   ...keys,
   SHINE_FEED_TOKEN: readFileSync(FEED, "utf8").trim(),
   SITE_URL: process.env.SHINE_APP_URL,
+  // meeting links (mail, calendar, invites) point at the meeting site
+  MEET_URL: process.env.SHINE_MEET_URL || "https://meet.dejoiy.com",
   DEJOIY_MAIL_SSO_SECRET: process.env.SHINE_SSO_SECRET,
   DEJOIY_MAIL_URL: "https://mail.dejoiy.com",
 };

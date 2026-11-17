@@ -119,6 +119,7 @@ const schema = defineSchema(
       // meeting guests (isAnonymous): joined one meeting from its link with a name and email, no account.
       // The email is kept apart from `email` so it never counts as a company address.
       guestEmail: v.optional(v.string()),
+      guestPhone: v.optional(v.string()),
       guestMeetingId: v.optional(v.id("meetings")),
       // per-event notification sound ids ("off" | builtin name | "custom:<n>")
       soundPrefs: v.optional(v.record(v.string(), v.string())),

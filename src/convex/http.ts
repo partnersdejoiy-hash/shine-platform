@@ -47,7 +47,8 @@ http.route({
         endTime: Number.isFinite(end) && end > start ? end : start + 3600_000,
         inviteEmails: guests,
       });
-      const site = process.env.SITE_URL ?? "https://app.shine.dejoiy.com";
+      // meeting links live on the meeting site (meet.dejoiy.com), not the app
+      const site = (process.env.MEET_URL ?? "https://meet.dejoiy.com").replace(/\/+$/, "");
       return json(200, { url: `${site}/meet/${res.slug}/${res.roomCode}`, roomCode: res.roomCode });
     } catch (e) {
       return json(400, { error: e instanceof Error ? e.message.replace(/^.*Uncaught Error:\s*/s, "").split("\n")[0] : "Could not create the meeting" });

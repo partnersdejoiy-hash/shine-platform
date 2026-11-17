@@ -207,6 +207,7 @@ const meetingGuest = ConvexCredentials({
       meeting: text("meeting"),
       name: text("name"),
       email: text("email"),
+      phone: text("phone"),
     });
     return { userId };
   },
