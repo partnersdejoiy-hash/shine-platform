@@ -87,6 +87,7 @@ const schema = defineSchema(
       coverImage: v.optional(v.string()),
       department: v.optional(v.string()),
       designation: v.optional(v.string()),
+      jobRole: v.optional(v.string()), // the company role set in Dejoiy Mail Admin (e.g. "Operations Manager"), shown on the ID card
       company: v.optional(v.string()),
       location: v.optional(v.string()),
       timezone: v.optional(v.string()),

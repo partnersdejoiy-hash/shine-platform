@@ -720,6 +720,8 @@ export const adminBreakdown = query({
 // Every edit is audit-logged with previous → new value.
 const EDITABLE_USER_FIELDS = [
   "name",
+  "employeeId",
+  "jobRole",
   "department",
   "designation",
   "company",

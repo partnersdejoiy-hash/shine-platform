@@ -33,6 +33,9 @@ import {
   X,
 } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
+import { IdCard, type IdCardPerson } from "@/components/IdCard";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { IdCard as IdCardIcon } from "lucide-react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { errorMessage } from "@/lib/errors";
@@ -78,6 +81,7 @@ export function AppContacts() {
   const [q, setQ] = useState("");
   const [selMode, setSelMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [cardOf, setCardOf] = useState<IdCardPerson | null>(null);
   const [groupName, setGroupName] = useState("");
 
   const searching = q.trim().length > 0;
@@ -295,6 +299,9 @@ export function AppContacts() {
                                 <UserPlus className="size-4 text-primary" />
                               </Button>
                             )}
+                            <Button variant="ghost" size="icon-sm" onClick={() => setCardOf(u)} title="ID card" aria-label={`ID card of ${u.name ?? u.email ?? ""}`}>
+                              <IdCardIcon className="size-4" />
+                            </Button>
                             <Button variant="ghost" size="icon-sm" onClick={() => chat(u._id)} title="Message">
                               <MessageSquare className="size-4" />
                             </Button>
@@ -416,6 +423,12 @@ export function AppContacts() {
           </TabsContent>
         </Tabs>
       </div>
+      <Dialog open={!!cardOf} onOpenChange={(open) => !open && setCardOf(null)}>
+        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-sm">
+          <DialogTitle className="sr-only">ID card</DialogTitle>
+          {cardOf && <IdCard person={cardOf} />}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

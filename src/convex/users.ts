@@ -229,6 +229,8 @@ export async function inOrg(ctx: QueryCtx, me: { _id: Id<"users">; email?: strin
   return rows.some((r) => r.orgId === orgId);
 }
 
+const CARD_FIELDS = ["employeeId", "designation", "department", "company"];
+
 /** Update the user's profile. Only provided fields are patched. */
 export const updateProfile = mutation({
   args: {
@@ -250,8 +252,11 @@ export const updateProfile = mutation({
   handler: async (ctx, patch) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) throw new ConvexError("Not authenticated");
+    const me = await ctx.db.get(userId);
+    // employee ID, position, department and company are on the ID card: the company's admins set them
+    const admin = !!me && (isSuperAdmin(me) || me.role === "dejoiy_admin" || me.role === "admin");
     const clean = Object.fromEntries(
-      Object.entries(patch).filter(([, val]) => val !== undefined),
+      Object.entries(patch).filter(([key, val]) => val !== undefined && (admin || !CARD_FIELDS.includes(key))),
     );
     if (Object.keys(clean).length > 0) {
       await ctx.db.patch(userId, clean);

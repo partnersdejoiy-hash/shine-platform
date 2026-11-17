@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { UserAvatar } from "@/components/UserAvatar";
 import { useAuth } from "@/hooks/use-auth";
+import { IdCard } from "@/components/IdCard";
 import { timeAgo } from "@/lib/format";
 import { prepareAvatarImage, squareAvatarDataUrl, uploadBlob, uploadFile } from "@/lib/upload";
 import { SOUND_CHOICES, SOUND_EVENTS, playEventSound, previewSound } from "@/lib/sound";
@@ -97,6 +98,8 @@ const SHORTCUTS: { keys: string[]; label: string }[] = [
 
 export function AppSettings() {
   const { user, isLoading } = useAuth();
+  // ID card details (employee ID, position, department, company) are the company admins' to set
+  const canSetCard = user?.role === "super_admin" || user?.role === "dejoiy_admin" || user?.role === "admin";
   const updateProfile = useMutation(api.users.updateProfile);
   const setAccentColor = useMutation(api.users.setAccentColor);
   const setNotificationPrefs = useMutation(api.users.setNotificationPrefs);
@@ -487,6 +490,17 @@ export function AppSettings() {
 
           {/* ---- Profile ---- */}
           <TabsContent value="profile" className="mt-4 space-y-4">
+            {user && (
+              <Card className="border-border/70 shadow-none">
+                <CardHeader>
+                  <CardTitle className="text-sm font-semibold">Your ID card</CardTitle>
+                  <CardDescription>
+                    Your company's admins set your role, position, employee ID and department. Your photo shows here when you upload one.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent><IdCard person={user} /></CardContent>
+              </Card>
+            )}
             <Card className="border-border/70 shadow-none">
               <CardHeader>
                 <CardTitle className="text-sm font-semibold">Profile</CardTitle>
@@ -581,6 +595,7 @@ export function AppSettings() {
                   <Label htmlFor="designation">Designation</Label>
                   <Input
                     id="designation"
+                    disabled={!canSetCard}
                     value={form.designation}
                     onChange={(e) => setForm({ ...form, designation: e.target.value })}
                     placeholder="e.g. Staff Engineer"
@@ -590,6 +605,7 @@ export function AppSettings() {
                   <Label htmlFor="department">Department</Label>
                   <Input
                     id="department"
+                    disabled={!canSetCard}
                     value={form.department}
                     onChange={(e) => setForm({ ...form, department: e.target.value })}
                     placeholder="e.g. Platform"
@@ -599,6 +615,7 @@ export function AppSettings() {
                   <Label htmlFor="company">Company</Label>
                   <Input
                     id="company"
+                    disabled={!canSetCard}
                     value={form.company}
                     onChange={(e) => setForm({ ...form, company: e.target.value })}
                     placeholder="e.g. DEJOIY"
@@ -608,10 +625,12 @@ export function AppSettings() {
                   <Label htmlFor="employeeId">Employee ID</Label>
                   <Input
                     id="employeeId"
+                    disabled={!canSetCard}
                     value={form.employeeId}
                     onChange={(e) => setForm({ ...form, employeeId: e.target.value })}
                     placeholder="e.g. DJ-0042"
                   />
+                  {!canSetCard && <p className="text-[11px] text-muted-foreground">Set by your company's admin, with position, department and company.</p>}
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="location">Location</Label>
