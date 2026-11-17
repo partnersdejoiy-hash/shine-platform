@@ -3,7 +3,7 @@ import { internalMutation } from "./_generated/server";
 import { normalizeRoomCode } from "./meetings";
 
 /**
- * Meeting guests: someone opens a Shine meeting link, types a name and an email, and joins.
+ * Meeting guests: someone opens a Shine meeting link, types a name, an email and a phone number, and joins.
  * No account and no password: this makes a guest pass (an anonymous user) for that one
  * meeting. Signed in as a guest, getCurrentUser treats them as signed out everywhere except
  * the meeting room, and meetings.join only lets them into this meeting.
@@ -12,12 +12,14 @@ const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,253}\.[a-z]{2,}$/i;
 const MAX_GUESTS_PER_MEETING = 500;
 
 export const createGuest = internalMutation({
-  args: { meeting: v.string(), name: v.string(), email: v.string() },
+  args: { meeting: v.string(), name: v.string(), email: v.string(), phone: v.string() },
   handler: async (ctx, args) => {
     const name = [...args.name].filter((c) => c >= " " && c !== "\u007f").join("").trim().slice(0, 60);
     const email = args.email.trim().toLowerCase();
     if (!name) throw new ConvexError("Type your name.");
     if (!EMAIL.test(email) || email.length > 254) throw new ConvexError("Type a valid email address.");
+    const phone = args.phone.replace(/[\s().-]/g, "");
+    if (!/^\+?\d{7,15}$/.test(phone)) throw new ConvexError("Type a valid phone number.");
 
     // the link carries either the meeting's id or its room code
     const id = ctx.db.normalizeId("meetings", args.meeting);
@@ -38,6 +40,7 @@ export const createGuest = internalMutation({
       name: `${name} (Guest)`,
       isAnonymous: true,
       guestEmail: email,
+      guestPhone: phone,
       guestMeetingId: meeting._id,
       isActive: true,
     });

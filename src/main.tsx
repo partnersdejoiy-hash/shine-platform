@@ -217,8 +217,24 @@ const IS_MEET_HOST =
     window.location.hostname === "meets.dejoiy.com" ||
     (window.location.hostname === "localhost" && new URLSearchParams(window.location.search).get("meet") === "1"));
 
+// Meetings live on meet.dejoiy.com: on the app's own host a meeting page opens there instead
+// (not inside Dejoiy Mail's docked panel, which stays put).
+function toMeetSite(path: string, replace: boolean) {
+  if (typeof window === "undefined" || window.location.hostname !== "app.shine.dejoiy.com" || window.parent !== window) return;
+  const room = path.match(/^\/app\/meetings\/([^/]+)\/?$/);
+  if (!/^\/meets?(\/|$)/.test(path) && !room) return;
+  // sso=1: the meeting site signs this person in through Dejoiy Mail straight away (they were signed in here)
+  const q = new URLSearchParams(window.location.search); q.set("sso", "1");
+  const url = `https://meet.dejoiy.com${room ? `/meet/${room[1]}` : path.replace(/^\/meets/, "/meet")}?${q}${window.location.hash}`;
+  if (replace) window.location.replace(url);
+  else window.location.assign(url);
+}
+if (typeof window !== "undefined") toMeetSite(window.location.pathname, true);
+
 function RouteSyncer() {
   const location = useLocation();
+  // a meeting opened from inside the app goes to meet.dejoiy.com too
+  useEffect(() => { toMeetSite(location.pathname, false); }, [location.pathname]);
   useEffect(() => {
     window.parent.postMessage(
       { type: "iframe-route-change", path: location.pathname },
@@ -302,11 +318,7 @@ createRoot(document.getElementById("root")!).render(
               {/* Standalone meeting site (meet.dejoiy.com) */}
               <Route
                 path="/meet"
-                element={
-                  <RequireAuth>
-                    <MeetHome />
-                  </RequireAuth>
-                }
+                element={<MeetHome />}
               />
               <Route
                 path="/meet/:id"

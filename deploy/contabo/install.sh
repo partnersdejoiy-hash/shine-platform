@@ -8,6 +8,7 @@ set -euo pipefail
 APP_HOST=${APP_HOST:-app.shine.dejoiy.com}
 API_HOST=${API_HOST:-convex.shine.dejoiy.com}
 SITE_HOST=${SITE_HOST:-convex-site.shine.dejoiy.com}
+MEET_HOST=${MEET_HOST:-meet.dejoiy.com}
 DIR=${DIR:-/opt/shine}
 DMAIL_ENV=${DMAIL_ENV:-/etc/dmail/adapter.env}
 HERE="$DIR/deploy/contabo"
@@ -16,7 +17,7 @@ chmod 700 /etc/shine
 
 echo "== DNS"
 SERVER_IP=$(curl -fsS4 --max-time 5 https://api.ipify.org || hostname -I | awk '{print $1}')
-for h in "$APP_HOST" "$API_HOST" "$SITE_HOST"; do
+for h in "$APP_HOST" "$API_HOST" "$SITE_HOST" "$MEET_HOST"; do
   ip=$(getent ahostsv4 "$h" | awk 'NR==1{print $1}' || true)
   if [ "$ip" != "$SERVER_IP" ]; then
     echo "Stop: $h points to '${ip:-nothing}', this server is $SERVER_IP."
@@ -73,13 +74,13 @@ echo "== HTTPS certificate"
 CONF=/etc/nginx/sites-available/shine
 if [ ! -f /etc/letsencrypt/live/shine/fullchain.pem ]; then
   # port 80 only until the certificate exists
-  sed -n '/^map /p;/^server {/,/^}/{p;/^}/q}' "$HERE/nginx-shine.conf" | sed "s/__APP__/$APP_HOST/;s/__API__/$API_HOST/;s/__SITE__/$SITE_HOST/" > "$CONF"
+  sed -n '/^map /p;/^server {/,/^}/{p;/^}/q}' "$HERE/nginx-shine.conf" | sed "s/__APP__/$APP_HOST/;s/__API__/$API_HOST/;s/__SITE__/$SITE_HOST/;s/__MEET__/$MEET_HOST/" > "$CONF"
   ln -sf "$CONF" /etc/nginx/sites-enabled/shine
   nginx -t && systemctl reload nginx
-  certbot certonly --webroot -w /var/www/acme --cert-name shine -d "$APP_HOST" -d "$API_HOST" -d "$SITE_HOST" \
+  certbot certonly --webroot -w /var/www/acme --cert-name shine -d "$APP_HOST" -d "$API_HOST" -d "$SITE_HOST" -d "$MEET_HOST" \
     --non-interactive --agree-tos --register-unsafely-without-email
 fi
-sed "s/__APP__/$APP_HOST/g;s/__API__/$API_HOST/g;s/__SITE__/$SITE_HOST/g" "$HERE/nginx-shine.conf" > "$CONF"
+sed "s/__APP__/$APP_HOST/g;s/__API__/$API_HOST/g;s/__SITE__/$SITE_HOST/g;s/__MEET__/$MEET_HOST/g" "$HERE/nginx-shine.conf" > "$CONF"
 ln -sf "$CONF" /etc/nginx/sites-enabled/shine
 nginx -t && systemctl reload nginx
 
