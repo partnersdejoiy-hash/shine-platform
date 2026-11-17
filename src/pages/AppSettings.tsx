@@ -12,7 +12,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { UserAvatar } from "@/components/UserAvatar";
 import { useAuth } from "@/hooks/use-auth";
-import { IdCard } from "@/components/IdCard";
 import { timeAgo } from "@/lib/format";
 import { prepareAvatarImage, squareAvatarDataUrl, uploadBlob, uploadFile } from "@/lib/upload";
 import { SOUND_CHOICES, SOUND_EVENTS, playEventSound, previewSound } from "@/lib/sound";
@@ -490,17 +489,6 @@ export function AppSettings() {
 
           {/* ---- Profile ---- */}
           <TabsContent value="profile" className="mt-4 space-y-4">
-            {user && (
-              <Card className="border-border/70 shadow-none">
-                <CardHeader>
-                  <CardTitle className="text-sm font-semibold">Your ID card</CardTitle>
-                  <CardDescription>
-                    Your company's admins set your role, position, employee ID and department. Your photo shows here when you upload one.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent><IdCard person={user} /></CardContent>
-              </Card>
-            )}
             <Card className="border-border/70 shadow-none">
               <CardHeader>
                 <CardTitle className="text-sm font-semibold">Profile</CardTitle>
