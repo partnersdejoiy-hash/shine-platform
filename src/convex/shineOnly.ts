@@ -1,3 +1,4 @@
+import { shineEmail } from "./lib/emailLayout";
 import { v, ConvexError } from "convex/values";
 import bcrypt from "bcryptjs";
 import { getAuthUserId } from "@convex-dev/auth/server";
@@ -64,7 +65,15 @@ export const sendCode = internalAction({
       to: email,
       subject: `${code} is your Shine sign-up code`,
       text: `Hi ${name},\n\nYour Shine sign-up code is ${code}. It works for 30 minutes.\n\nIf you didn't sign up for Shine, ignore this mail.`,
-      html: `<div style="font-family:Arial,sans-serif;font-size:16px;color:#121212"><p>Hi ${escapeHtml(name)},</p><p>Your Shine sign-up code:</p><p style="font-size:34px;font-weight:800;letter-spacing:8px;background:#d4ff3a;display:inline-block;padding:10px 18px;border-radius:14px">${code}</p><p>It works for 30 minutes. If you didn't sign up for Shine, ignore this mail.</p></div>`,
+      html: shineEmail({
+        preheader: `${code} is your Shine sign-up code. It works for 30 minutes.`,
+        tag: "Sign-up",
+        title: "Welcome to",
+        highlight: "Shine",
+        body: `<p style="margin:0">Hi ${escapeHtml(name)}, here's your sign-up code. It works for 30 minutes.</p>`,
+        code,
+        note: "Didn't sign up for Shine? Ignore this mail.",
+      }),
     });
     if (!out.ok) console.error("Shine sign-up code not sent:", out.error);
   },
