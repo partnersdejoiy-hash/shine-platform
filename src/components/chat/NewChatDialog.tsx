@@ -211,7 +211,7 @@ export function NewChatDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-2xl font-extrabold tracking-[-0.03em]">Start a chat</DialogTitle>
           <DialogDescription>Pick what kind, then who.</DialogDescription>
