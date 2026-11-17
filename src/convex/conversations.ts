@@ -86,8 +86,9 @@ export const list = query({
 });
 
 /**
- * Sum of unread messages across all conversations for the sidebar badge.
- * Uses the same unread logic as `list` but only returns a single count.
+ * Sum of unread messages for the badge (Shine's sidebar and Dejoiy Mail's chat button). Counts only
+ * the chats `list` shows: not meeting chats (they live in the meeting room), not archived ones, and
+ * not messages from before you deleted a chat, so the badge never points at a chat you can't see.
  */
 export const totalUnread = query({
   args: {},
@@ -101,20 +102,18 @@ export const totalUnread = query({
     let total = 0;
     for (const membership of memberships) {
       if (membership.isArchived) continue;
-      const lastReadAt = membership.lastReadAt ?? 0;
+      const conversation = await ctx.db.get(membership.conversationId);
+      if (!conversation || conversation.isMeeting) continue;
+      const lastReadAt = Math.max(membership.lastReadAt ?? 0, membership.clearedAt ?? 0);
       const lastMsg = await ctx.db
         .query("messages")
-        .withIndex("by_conversation", (q) =>
-          q.eq("conversationId", membership.conversationId),
-        )
+        .withIndex("by_conversation", (q) => q.eq("conversationId", membership.conversationId))
         .order("desc")
         .first();
       if (lastMsg && lastMsg.createdAt > lastReadAt && lastMsg.senderId !== userId) {
         const count = await ctx.db
           .query("messages")
-          .withIndex("by_conversation", (q) =>
-            q.eq("conversationId", membership.conversationId),
-          )
+          .withIndex("by_conversation", (q) => q.eq("conversationId", membership.conversationId))
           .filter((q) =>
             q.and(
               q.gt(q.field("createdAt"), lastReadAt),
