@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { RefreshCcw } from "lucide-react";
 
 /**
- * Proactive health check that probes the Convex backend before any child
+ * Health check that probes the Convex backend once, before any child
  * component calls useQuery(). If the backend is unavailable (paused, rate-limited,
  * or down), this renders a clean offline page DIRECTLY — no error boundary needed,
  * no React crash, no Freebuff platform error boundary intercepting.
@@ -15,51 +15,52 @@ export function ConvexHealthCheck({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const convexUrl = import.meta.env.VITE_CONVEX_URL as string;
 
-    async function probe() {
+    /** true: reachable; false: the deployment is switched off; null: the network failed. */
+    async function probe(): Promise<boolean | null> {
       try {
-        // Hit the Convex health endpoint with a minimal query
         const res = await fetch(`${convexUrl}/api/query`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            path: "health:echo",
-            args: {},
-          }),
+          body: JSON.stringify({ path: "health:echo", args: {} }),
           signal: AbortSignal.timeout(10000),
         });
-
         const data = await res.json().catch(() => ({}));
         const isDisabled =
           typeof data?.errorMessage === "string" &&
           (data.errorMessage.includes("disabled") ||
             data.errorMessage.includes("usage limit") ||
             data.errorMessage.includes("function calls limit"));
-
-        if (!cancelled) {
-          setStatus(isDisabled ? "offline" : "online");
-        }
+        return !isDisabled;
       } catch {
-        // Network error, CORS, DNS failure, etc.
-        if (!cancelled) setStatus("offline");
+        return null; // network error, timeout, DNS
       }
     }
 
-    probe();
-
-    // Re-probe every 60 seconds if offline (in case limit is raised)
-    const interval = setInterval(() => {
-      if (status === "offline" || status === "checking") {
-        probe();
+    // This check only gates the first start. Once Shine is up it stops: the Convex client
+    // reconnects by itself, so a short network blip later must not replace the whole app.
+    // A failed first check is retried quickly (2s, 4s, 8s) before the offline page shows,
+    // and the offline page keeps retrying every 5s.
+    async function check(attempt: number) {
+      const ok = await probe();
+      if (cancelled) return;
+      if (ok) return setStatus("online");
+      if (ok === null && attempt < 3) {
+        timer = setTimeout(() => check(attempt + 1), 2000 * 2 ** attempt);
+        return;
       }
-    }, 60000);
+      setStatus("offline");
+      timer = setTimeout(() => check(3), 5000);
+    }
 
+    check(0);
     return () => {
       cancelled = true;
-      clearInterval(interval);
+      if (timer) clearTimeout(timer);
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   // Still checking — show a lightweight loading state
   if (status === "checking") {
