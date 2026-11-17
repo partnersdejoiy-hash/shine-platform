@@ -1,5 +1,5 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { mutation, query, QueryCtx } from "./_generated/server";
+import { internalQuery, mutation, query, QueryCtx } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { presenceStatusValidator, availabilityValidator } from "./schema";
@@ -207,6 +207,15 @@ export const presenceAll = query({
     const rows = await ctx.db.query("presence").collect();
     const users = await Promise.all(rows.map((r) => ctx.db.get(r.userId)));
     return rows.filter((_, i) => { const u = users[i]; return !!u && (u._id === me._id || sameCompany(me, u)); });
+  },
+});
+
+/** For actions: a real account (not an anonymous meeting guest) that an admin hasn't switched off. */
+export const hasAccount = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    const u = await ctx.db.get(userId);
+    return !!u && !u.isAnonymous && !u.chatOff;
   },
 });
 

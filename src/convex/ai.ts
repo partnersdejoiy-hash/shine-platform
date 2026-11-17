@@ -1,5 +1,6 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { action, type ActionCtx } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { ConvexError } from "convex/values";
 import { v } from "convex/values";
 import { askJoi } from "./joi";
@@ -40,7 +41,9 @@ async function llm(messages: { role: "system" | "user" | "assistant"; content: s
 /** Whether an LLM is configured (env var present on the deployment). */
 /** The AI helpers run on paid models, so only signed-in people may use them. */
 async function signedIn(ctx: ActionCtx) {
-  if ((await getAuthUserId(ctx)) === null) throw new ConvexError("Sign in to use AI.");
+  const userId = await getAuthUserId(ctx);
+  // meeting guests (anonymous, no account) are signed in only to their meeting room
+  if (userId === null || !(await ctx.runQuery(internal.users.hasAccount, { userId }))) throw new ConvexError("Sign in to use AI.");
 }
 
 export const status = action({
