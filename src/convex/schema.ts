@@ -302,6 +302,12 @@ const schema = defineSchema(
       tries: v.number(),
     }).index("by_user", ["userId"]),
 
+    // signed-out password-reset requests, kept 15 minutes to rate-limit each email address
+    resetRequests: defineTable({
+      email: v.string(),
+      at: v.number(),
+    }).index("by_email_at", ["email", "at"]),
+
     // ---- Messages -----------------------------------------------------------
     messages: defineTable({
       conversationId: v.id("conversations"),

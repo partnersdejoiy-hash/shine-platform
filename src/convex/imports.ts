@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import { mutation, query } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
-import { api } from "./_generated/api";
+import { internal } from "./_generated/api";
 import { Role } from "./schema";
 import { generateTempPassword, PASSWORD_MIN_LENGTH } from "./passwords";
 import { ensureEmployeeId, getCurrentUser, isSuperAdmin, logAudit } from "./users";
@@ -203,7 +203,7 @@ export const importUsers = mutation({
             if (email) {
               // Queue the branded email via the action runner (mutations can't
               // fetch in Convex 1.42+).
-              ctx.scheduler.runAfter(0, api.emailActions.sendTempPassword, {
+              ctx.scheduler.runAfter(0, internal.emailActions.sendTempPassword, {
                 to: email,
                 name,
                 tempPassword: temp,

@@ -60,8 +60,14 @@ export const sendInviteEmails = action({
   handler: async (ctx, args): Promise<InviteResult> => {
     // Connected to Dejoiy Mail: the meeting goes on the host's mail calendar and
     // the invites go out from there. Falls back to the email service below if that fails.
+    // Only the signed-in host of this meeting may send its invites, so nobody can use Shine's address to mail strangers.
     const userId = await getAuthUserId(ctx);
-    if (userId && process.env.DEJOIY_MAIL_URL) {
+    if (!userId) return { sent: 0, error: "Sign in to send invites.", reason: null };
+    if ((await ctx.runQuery(internal.meetings.hostIdOf, { meetingId: args.meetingId })) !== userId) {
+      return { sent: 0, error: "Only the meeting's host can send its invites.", reason: null };
+    }
+    if (args.invitees.length > 200) return { sent: 0, error: "Too many invitees in one go.", reason: null };
+    if (process.env.DEJOIY_MAIL_URL) {
       try {
         if (await ctx.runAction(internal.calendarLink.pushMeeting, { meetingId: args.meetingId, requesterId: userId })) {
           return { sent: args.invitees.length, error: null, reason: "Added to your Dejoiy Mail calendar" };
@@ -82,7 +88,9 @@ export const sendInviteEmails = action({
         .filter(Boolean);
       // Production invites always point at the standalone meet.dejoiy.com site.
       // In dev/preview the client passes its own origin.
-      const base = (args.siteUrl || "https://meet.dejoiy.com").replace(/\/$/, "");
+      // Join links only ever point at Dejoiy's own sites (or a local dev server), never an address the caller chose.
+      const own = /^https:\/\/([a-z0-9-]+\.)*dejoiy\.com\/?$|^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/?$/i;
+      const base = (args.siteUrl && own.test(args.siteUrl) ? args.siteUrl : "https://meet.dejoiy.com").replace(/\/$/, "");
       const joinUrl = `${base}/meet/${args.slug || "meeting"}/${args.roomCode}`;
       const when = formatWhen(args.startTime);
       const duration =

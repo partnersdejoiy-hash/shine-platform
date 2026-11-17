@@ -1,5 +1,5 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { mutation, query, internalMutation, MutationCtx, QueryCtx } from "./_generated/server";
+import { mutation, query, internalMutation, internalQuery, MutationCtx, QueryCtx } from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { v, type ObjectType, ConvexError } from "convex/values";
@@ -323,6 +323,12 @@ async function loadDetail(ctx: QueryCtx, meetingId: Id<"meetings">) {
     conversationId: conv?._id ?? null,
   };
 }
+
+/** Who hosts a meeting (for actions that must check the caller is the host). */
+export const hostIdOf = internalQuery({
+  args: { meetingId: v.id("meetings") },
+  handler: async (ctx, { meetingId }) => (await ctx.db.get(meetingId))?.hostId ?? null,
+});
 
 export const detail = query({
   args: { meetingId: v.id("meetings") },

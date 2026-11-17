@@ -1,4 +1,6 @@
-import { action } from "./_generated/server";
+import { getAuthUserId } from "@convex-dev/auth/server";
+import { action, type ActionCtx } from "./_generated/server";
+import { ConvexError } from "convex/values";
 import { v } from "convex/values";
 import { askJoi } from "./joi";
 
@@ -36,6 +38,11 @@ async function llm(messages: { role: "system" | "user" | "assistant"; content: s
 }
 
 /** Whether an LLM is configured (env var present on the deployment). */
+/** The AI helpers run on paid models, so only signed-in people may use them. */
+async function signedIn(ctx: ActionCtx) {
+  if ((await getAuthUserId(ctx)) === null) throw new ConvexError("Sign in to use AI.");
+}
+
 export const status = action({
   args: {},
   handler: async () => ({
@@ -48,7 +55,8 @@ export const status = action({
 /** Summarize a conversation. Uses the LLM when a key is configured, otherwise a local heuristic. */
 export const summarizeChat = action({
   args: { messages: v.array(v.string()) },
-  handler: async (_, { messages }) => {
+  handler: async (ctx, { messages }) => {
+    await signedIn(ctx);
     if (messages.length === 0) {
       return { summary: "No messages to summarize yet.", source: "local" as const };
     }
@@ -105,7 +113,8 @@ export const summarizeChat = action({
 /** Extract action items & tasks from a transcript. Local + LLM hybrid. */
 export const extractActionItems = action({
   args: { messages: v.array(v.string()) },
-  handler: async (_, { messages }) => {
+  handler: async (ctx, { messages }) => {
+    await signedIn(ctx);
     const transcript = messages.slice(-200).join("\n");
     if (HAS_AI()) {
       const out = await llm([
@@ -146,7 +155,8 @@ export const extractActionItems = action({
 /** Generate a reply draft. Requires an LLM key. */
 export const generateReply = action({
   args: { context: v.string() },
-  handler: async (_, { context }) => {
+  handler: async (ctx, { context }) => {
+    await signedIn(ctx);
     if (!HAS_AI()) return { reply: null, reason: "Joi will answer here as soon as her server is connected." };
     const reply = await llm([
       {
@@ -163,7 +173,8 @@ export const generateReply = action({
 /** Translate text. Requires an LLM key. */
 export const translate = action({
   args: { text: v.string(), target: v.string() },
-  handler: async (_, { text, target }) => {
+  handler: async (ctx, { text, target }) => {
+    await signedIn(ctx);
     if (!HAS_AI()) return { translated: null, reason: "Joi will translate here as soon as her server is connected." };
     const translated = await llm([
       {
@@ -179,7 +190,8 @@ export const translate = action({
 /** Grammar correction. Requires an LLM key. */
 export const fixGrammar = action({
   args: { text: v.string() },
-  handler: async (_, { text }) => {
+  handler: async (ctx, { text }) => {
+    await signedIn(ctx);
     if (!HAS_AI()) return { corrected: null, reason: "Joi will fix grammar here as soon as her server is connected." };
     const corrected = await llm([
       {

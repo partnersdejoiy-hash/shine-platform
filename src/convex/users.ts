@@ -1,6 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { mutation, query, QueryCtx } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
+import type { Id } from "./_generated/dataModel";
 import { presenceStatusValidator, availabilityValidator } from "./schema";
 import { beat, choiceValidator, setOwn } from "./presence";
 
@@ -189,17 +190,32 @@ export async function ensureEmployeeId(
 export const getUser = query({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
-    return await ctx.db.get(userId);
+    // signed in, and only people of your own company (as in the directory)
+    const me = await getCurrentUser(ctx);
+    if (!me) return null;
+    const u = await ctx.db.get(userId);
+    return u && (u._id === me._id || sameCompany(me, u)) ? u : null;
   },
 });
 
-/** All presence rows (for the whole directory). */
+/** Presence of the people you can see in the directory (signed in only). */
 export const presenceAll = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query("presence").collect();
+    const me = await getCurrentUser(ctx);
+    if (!me) return [];
+    const rows = await ctx.db.query("presence").collect();
+    const users = await Promise.all(rows.map((r) => ctx.db.get(r.userId)));
+    return rows.filter((_, i) => { const u = users[i]; return !!u && (u._id === me._id || sameCompany(me, u)); });
   },
 });
+
+/** True when this person belongs to the organisation, or is on the Dejoiy team. */
+export async function inOrg(ctx: QueryCtx, me: { _id: Id<"users">; email?: string | null; role?: string | null }, orgId: Id<"organizations">) {
+  if (isSuperAdmin(me) || me.role === "dejoiy_admin") return true;
+  const rows = await ctx.db.query("organizationMembers").withIndex("by_user", (q) => q.eq("userId", me._id)).collect();
+  return rows.some((r) => r.orgId === orgId);
+}
 
 /** Update the user's profile. Only provided fields are patched. */
 export const updateProfile = mutation({

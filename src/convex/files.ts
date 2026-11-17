@@ -7,6 +7,8 @@ import { getCurrentUser, safeStorageUrl } from "./users";
 export const generateUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
+    // signed-in people only, so strangers can't fill Shine's storage
+    if (!(await getCurrentUser(ctx))) throw new ConvexError("Not authenticated");
     return await ctx.storage.generateUploadUrl();
   },
 });

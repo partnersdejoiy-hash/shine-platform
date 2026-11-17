@@ -840,6 +840,14 @@ export const setTyping = mutation({
 export const typingIn = query({
   args: { conversationId: v.id("conversations") },
   handler: async (ctx, { conversationId }) => {
+    // only members of the conversation see who is typing in it
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return [];
+    const membership = await ctx.db
+      .query("conversationMembers")
+      .withIndex("by_user_conv", (q) => q.eq("userId", userId).eq("conversationId", conversationId))
+      .unique();
+    if (!membership) return [];
     const now = Date.now();
     const rows = await ctx.db
       .query("typing")

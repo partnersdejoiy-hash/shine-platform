@@ -3,7 +3,7 @@ import { clearAuthCode } from "./passwords";
 import { MAIL_MANAGED_ROLES } from "./lib/adminRoles";
 import { v, ConvexError } from "convex/values";
 import { Id } from "./_generated/dataModel";
-import { api } from "./_generated/api";
+import { internal } from "./_generated/api";
 import { ROLE_RANK } from "./admin";
 import { generateTempPassword } from "./passwords";
 import bcrypt from "bcryptjs";
@@ -81,7 +81,7 @@ function queueTicketEmail(
   html: string,
   text: string,
 ) {
-  ctx.scheduler.runAfter(0, api.emailActions.sendTicketEmail, { to, subject, html, text });
+  ctx.scheduler.runAfter(0, internal.emailActions.sendTicketEmail, { to, subject, html, text });
 }
 
 function esc(s: string): string {
@@ -94,7 +94,7 @@ function esc(s: string): string {
 
 /** Branded ticket email body. */
 function ticketEmailBody(ticketNumber: string, title: string, lines: string[]): { html: string; text: string } {
-  const body = lines.map((l) => `<p style="margin:6px 0;color:#e8e8e8;font-size:14px">${l}</p>`).join("");
+  const body = lines.map((l) => `<p style="margin:6px 0;color:#e8e8e8;font-size:14px">${esc(l)}</p>`).join("");
   const html = `<!doctype html><html><body style="margin:0;background:#0B0B0B;font-family:Arial,sans-serif">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0B0B0B">
       <tr><td align="center" style="padding:32px 16px">
@@ -838,7 +838,7 @@ export const sendTempPasswordForTicket = mutation({
     await clearAuthCode(ctx, requester._id); // a new temporary password retires any emailed code
 
     // Queue the temp-password email (action runner — mutations can't fetch).
-    ctx.scheduler.runAfter(0, api.emailActions.sendTempPassword, {
+    ctx.scheduler.runAfter(0, internal.emailActions.sendTempPassword, {
       to: requester.email,
       name: requester.name,
       tempPassword,
