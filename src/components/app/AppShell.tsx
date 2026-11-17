@@ -20,6 +20,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useAuth } from "@/hooks/use-auth";
 import { usePresenceHeartbeat } from "@/hooks/use-presence-heartbeat";
 import { StatusSheet } from "@/components/app/StatusSheet";
+import { IdCard } from "@/components/IdCard";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { eventForNotificationKind, playEventSound } from "@/lib/sound";
 import { cn } from "@/lib/utils";
 import { presenceLabel } from "@/lib/presence";
@@ -28,6 +30,7 @@ import { JOI_AVATAR, openJoi } from "@/lib/joi";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
 import { PanelLeftClose, PanelLeftOpen,
+  IdCard as IdCardIcon,
   Building2,
   CalendarDays,
   FileStack,
@@ -92,6 +95,7 @@ export function AppShell() {
   };
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
+  const [cardOpen, setCardOpen] = useState(false);
   const bootstrapSuperAdmin = useMutation(api.users.bootstrapSuperAdmin);
   const bootstrapDejoiyMembership = useMutation(api.users.bootstrapDejoiyMembership);
   const autoJoinDomains = useMutation(api.orgs.autoJoinByEmailDomain);
@@ -293,6 +297,9 @@ export function AppShell() {
                 <span className="text-xs text-muted-foreground">{presenceLabel(myPresence)} · change status and presence</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setCardOpen(true)} className="cursor-pointer">
+                <IdCardIcon className="mr-2 size-4" /> My ID card
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => navigate("/app/settings")} className="cursor-pointer">
                 <Settings className="mr-2 size-4" /> Settings
               </DropdownMenuItem>
@@ -450,7 +457,16 @@ export function AppShell() {
         isAdmin={isAdmin}
         onNavigate={navigate}
         onSignOut={handleSignOut}
+        onIdCard={() => setCardOpen(true)}
       />
+      {/* My ID card: from your picture (profile menu on computers, profile sheet on phones) */}
+      <Dialog open={cardOpen} onOpenChange={setCardOpen}>
+        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-sm">
+          <DialogTitle className="sr-only">My ID card</DialogTitle>
+          {user && <IdCard person={user} />}
+          <p className="text-center text-xs text-muted-foreground">Your company's admins set your role, position, employee ID and department.</p>
+        </DialogContent>
+      </Dialog>
 
       {/* GLOBAL OVERLAYS */}
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />

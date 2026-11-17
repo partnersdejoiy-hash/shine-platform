@@ -323,6 +323,7 @@ function UsersTab({ currentUserRole }: { currentUserRole?: string }) {
               <SortHeader field="role" label="Role" width="140px" />
               <SortHeader field="department" label="Department" width="120px" />
               <SortHeader field="designation" label="Designation" width="120px" />
+              <SortHeader field="employeeId" label="Employee ID" width="110px" />
               <SortHeader field="isActive" label="Active" width="70px" />
               <SortHeader field="company" label="Company" width="120px" />
               <SortHeader field="location" label="Location" width="110px" />
@@ -386,6 +387,14 @@ function UsersTab({ currentUserRole }: { currentUserRole?: string }) {
                     <InlineEditCell value={user.designation} onSave={(v) => handleFieldUpdate(user._id, "designation", v)} />
                   ) : (
                     <span className="text-xs">{user.designation ?? "—"}</span>
+                  )}
+                </td>
+                {/* Employee ID (on the ID card) */}
+                <td className="px-3 py-2">
+                  {canEdit ? (
+                    <InlineEditCell value={user.employeeId} onSave={(v) => handleFieldUpdate(user._id, "employeeId", v)} />
+                  ) : (
+                    <span className="font-mono text-xs">{user.employeeId ?? "—"}</span>
                   )}
                 </td>
                 {/* Active */}

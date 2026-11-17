@@ -6,7 +6,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { usePresenceActions } from "@/hooks/use-presence-heartbeat";
 import { PRESENCE_CHOICES, STATUS_PRESETS, presenceLabel, type PresenceChoice, type PresenceLike } from "@/lib/presence";
 import { cn } from "@/lib/utils";
-import { Building2, Check, ChevronRight, LogOut, Settings, ShieldCheck, X } from "lucide-react";
+import { Building2, Check, ChevronRight, IdCard, LogOut, Settings, ShieldCheck, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { errorMessage } from "@/lib/errors";
@@ -19,13 +19,14 @@ interface Props {
   isAdmin: boolean;
   onNavigate: (to: string) => void;
   onSignOut: () => void;
+  onIdCard: () => void;
 }
 
 /**
  * Your profile sheet (tap your picture): your written status, like WhatsApp's,
  * and how you show up, like Gmail's. Both show in Shine and in Dejoiy Mail.
  */
-export function StatusSheet({ open, onOpenChange, user, presence, isAdmin, onNavigate, onSignOut }: Props) {
+export function StatusSheet({ open, onOpenChange, user, presence, isAdmin, onNavigate, onSignOut, onIdCard }: Props) {
   const mobile = useIsMobile();
   const { setChoice, setStatusText } = usePresenceActions();
   const [text, setText] = useState(user?.customStatus ?? "");
@@ -163,6 +164,17 @@ export function StatusSheet({ open, onOpenChange, user, presence, isAdmin, onNav
         </section>
 
         <nav className="border-t border-border/70 px-2 py-2" aria-label="Account">
+          <button
+            onClick={() => {
+              onOpenChange(false);
+              onIdCard();
+            }}
+            className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-[15px] hover:bg-accent"
+          >
+            <IdCard className="size-5 text-muted-foreground" />
+            <span className="flex-1 text-left">My ID card</span>
+            <ChevronRight className="size-4 text-muted-foreground" />
+          </button>
           {[
             { to: "/app/settings", icon: Settings, label: "Settings" },
             { to: "/app/organizations", icon: Building2, label: "Organizations" },

@@ -85,6 +85,8 @@ const person = v.object({
   department: v.string(),
   title: v.string(),
   photo: v.string(),
+  position: v.string(),
+  employeeId: v.string(),
 });
 
 export const applyDirectory = internalMutation({
@@ -109,21 +111,26 @@ export const applyDirectory = internalMutation({
           name: p.name || email.split("@")[0],
           company: email.split("@")[1],
           department: p.department || undefined,
-          designation: p.title || undefined,
+          designation: p.position || undefined,
+          jobRole: p.title || undefined,
+          employeeId: p.employeeId || undefined,
           image: p.photo || undefined,
           isActive: p.active,
           source: "dejoiy-mail",
           role: roleFromMail(isSuperAdminEmail(email), p.admin, undefined) as Role,
         });
-        await ensureEmployeeId(ctx, userId);
+        if (!p.employeeId) await ensureEmployeeId(ctx, userId);
         created++;
         continue;
       }
       await applyMail(ctx, user, c);
       const patch: Partial<Doc<"users">> = { source: "dejoiy-mail" };
       if (p.name && p.name !== user.name) patch.name = p.name;
-      if (!user.department && p.department) patch.department = p.department;
-      if (!user.designation && p.title) patch.designation = p.title;
+      // the ID card's details are set by the company's admins in Dejoiy Mail Admin: their values win
+      if (p.department && p.department !== user.department) patch.department = p.department;
+      if (p.position && p.position !== user.designation) patch.designation = p.position;
+      if (p.title !== (user.jobRole ?? "")) patch.jobRole = p.title || undefined;
+      if (p.employeeId && p.employeeId !== user.employeeId) patch.employeeId = p.employeeId;
       if (user.isActive !== p.active) patch.isActive = p.active;
       await ctx.db.patch(user._id, patch);
     }
@@ -156,6 +163,8 @@ export const syncDirectory = internalAction({
       department: String(p.department ?? ""),
       title: String(p.title ?? ""),
       photo: typeof p.photo === "string" && p.photo.startsWith("https://") ? p.photo : "",
+      position: String(p.position ?? "").slice(0, 64),
+      employeeId: String(p.employeeId ?? "").slice(0, 32),
     })).filter((p) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email));
     // an empty answer would switch everyone off; treat it as a failed read instead
     if (clean.length === 0) throw new ConvexError("Dejoiy Mail directory came back empty");

@@ -97,6 +97,8 @@ const SHORTCUTS: { keys: string[]; label: string }[] = [
 
 export function AppSettings() {
   const { user, isLoading } = useAuth();
+  // ID card details (employee ID, position, department, company) are the company admins' to set
+  const canSetCard = user?.role === "super_admin" || user?.role === "dejoiy_admin" || user?.role === "admin";
   const updateProfile = useMutation(api.users.updateProfile);
   const setAccentColor = useMutation(api.users.setAccentColor);
   const setNotificationPrefs = useMutation(api.users.setNotificationPrefs);
@@ -581,6 +583,7 @@ export function AppSettings() {
                   <Label htmlFor="designation">Designation</Label>
                   <Input
                     id="designation"
+                    disabled={!canSetCard}
                     value={form.designation}
                     onChange={(e) => setForm({ ...form, designation: e.target.value })}
                     placeholder="e.g. Staff Engineer"
@@ -590,6 +593,7 @@ export function AppSettings() {
                   <Label htmlFor="department">Department</Label>
                   <Input
                     id="department"
+                    disabled={!canSetCard}
                     value={form.department}
                     onChange={(e) => setForm({ ...form, department: e.target.value })}
                     placeholder="e.g. Platform"
@@ -599,6 +603,7 @@ export function AppSettings() {
                   <Label htmlFor="company">Company</Label>
                   <Input
                     id="company"
+                    disabled={!canSetCard}
                     value={form.company}
                     onChange={(e) => setForm({ ...form, company: e.target.value })}
                     placeholder="e.g. DEJOIY"
@@ -608,10 +613,12 @@ export function AppSettings() {
                   <Label htmlFor="employeeId">Employee ID</Label>
                   <Input
                     id="employeeId"
+                    disabled={!canSetCard}
                     value={form.employeeId}
                     onChange={(e) => setForm({ ...form, employeeId: e.target.value })}
                     placeholder="e.g. DJ-0042"
                   />
+                  {!canSetCard && <p className="text-[11px] text-muted-foreground">Set by your company's admin, with position, department and company.</p>}
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="location">Location</Label>
