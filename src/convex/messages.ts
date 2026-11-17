@@ -230,7 +230,7 @@ type SendArgs = {
 };
 
 async function handleSend(ctx: MutationCtx, args: SendArgs) {
-    const me = await getCurrentUser(ctx);
+    const me = await getCurrentUser(ctx, { guests: true });
     if (!me) throw new ConvexError("Not authenticated");
     const conversation = await ctx.db.get(args.conversationId);
     if (!conversation) throw new ConvexError("Conversation not found");
@@ -401,7 +401,7 @@ export const send = mutation({
 export const sendSystem = mutation({
   args: { conversationId: v.id("conversations"), body: v.string() },
   handler: async (ctx, { conversationId, body }) => {
-    const me = await getCurrentUser(ctx);
+    const me = await getCurrentUser(ctx, { guests: true });
     if (!me) throw new ConvexError("Not authenticated");
     const id = await ctx.db.insert("messages", {
       conversationId,
@@ -554,7 +554,7 @@ export const forward = mutation({
 export const votePoll = mutation({
   args: { messageId: v.id("messages"), optionId: v.string() },
   handler: async (ctx, { messageId, optionId }) => {
-    const me = await getCurrentUser(ctx);
+    const me = await getCurrentUser(ctx, { guests: true });
     if (!me) throw new ConvexError("Not authenticated");
     const msg = await ctx.db.get(messageId);
     if (!msg || !msg.poll) throw new ConvexError("Poll not found");

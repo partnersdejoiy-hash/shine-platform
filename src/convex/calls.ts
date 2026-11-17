@@ -239,7 +239,7 @@ export const sendMeetingSignal = mutation({
     payload: v.string(),
   },
   handler: async (ctx, { meetingId, toId, kind, payload }) => {
-    const me = await getCurrentUser(ctx);
+    const me = await getCurrentUser(ctx, { guests: true });
     if (!me) throw new ConvexError("Not authenticated");
     await ctx.db.insert("meetingSignals", {
       meetingId,
@@ -262,7 +262,7 @@ export const sendMeetingSignal = mutation({
 export const meetingSignalsFor = query({
   args: { meetingId: v.id("meetings") },
   handler: async (ctx, { meetingId }) => {
-    const me = await getCurrentUser(ctx);
+    const me = await getCurrentUser(ctx, { guests: true });
     if (!me) return [];
     const rows = await ctx.db
       .query("meetingSignals")

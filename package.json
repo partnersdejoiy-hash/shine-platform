@@ -10,7 +10,8 @@
     "format": "prettier --write .",
     "preview": "vite preview",
     "test:joi": "node --test tests/joiGrant.test.mjs",
-    "test:android": "node --test tests/assetlinks.test.mjs"
+    "test:android": "node --test tests/assetlinks.test.mjs",
+    "test:guests": "node --test tests/meetingGuests.test.mjs"
   },
   "dependencies": {
     "@convex-dev/auth": "^0.0.90",

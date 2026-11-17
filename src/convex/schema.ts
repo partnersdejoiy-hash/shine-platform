@@ -116,6 +116,10 @@ const schema = defineSchema(
       // new password without knowing the temporary one.
       tempAuthCode: v.optional(v.string()),
       tempAuthCodeExpiresAt: v.optional(v.number()),
+      // meeting guests (isAnonymous): joined one meeting from its link with a name and email, no account.
+      // The email is kept apart from `email` so it never counts as a company address.
+      guestEmail: v.optional(v.string()),
+      guestMeetingId: v.optional(v.id("meetings")),
       // per-event notification sound ids ("off" | builtin name | "custom:<n>")
       soundPrefs: v.optional(v.record(v.string(), v.string())),
       customSoundUrl: v.optional(v.string()),
@@ -134,7 +138,8 @@ const schema = defineSchema(
           desktop: v.boolean(),
         }),
       ),
-    }).index("email", ["email"]), // do not remove or modify
+    }).index("email", ["email"]) // do not remove or modify
+      .index("by_guest_meeting", ["guestMeetingId"]),
 
     // per company (email domain): can its employees reach supervisors at other companies on Shine / Dejoiy Mail?
     reachPolicies: defineTable({
