@@ -1,6 +1,7 @@
 "use node";
 
 import { internalAction } from "./_generated/server";
+import { esc, shineEmail } from "./lib/emailLayout";
 import { v } from "convex/values";
 import { sendResend, SHINE_EMAIL_FROM } from "./emailProvider";
 
@@ -14,10 +15,6 @@ import { sendResend, SHINE_EMAIL_FROM } from "./emailProvider";
  *
  * Actions return { ok, id?, error? } and never throw (see emailProvider).
  */
-
-/** Text that goes inside the HTML of an email. */
-const esc = (s: string) =>
-  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 
 /** Generic single email (used by imports, notifications, etc.). */
 export const sendMail = internalAction({
@@ -50,15 +47,15 @@ export const sendTempPassword = internalAction({
       to,
       from: SHINE_EMAIL_FROM.auth,
       subject: `Your temporary SHINE password (${name ?? ""})`,
-      html: `
-        <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto">
-          <h2 style="color:#D4AF37">SHINE · by DEJOIY</h2>
-          <p>Hi ${esc(name ?? "there")},</p>
-          <p>Your temporary SHINE sign-in password is:</p>
-          <p style="font-size:22px;font-weight:bold;letter-spacing:2px;background:#f5f5f0;padding:12px;border-radius:8px;text-align:center">${esc(tempPassword)}</p>
-          <p>Sign in with your email and this password. For security you will be <b>required to set a new password</b> before you can use the app — the last 5 passwords can never be reused.</p>
-          <p style="color:#888">If you did not expect this, contact your administrator.</p>
-        </div>`,
+      html: shineEmail({
+        preheader: "Your temporary Shine password is inside. You set a new one when you sign in.",
+        tag: "Sign-in",
+        title: "Your temporary",
+        highlight: "password",
+        body: `<p style="margin:0">Hi ${esc(name ?? "there")}, sign in to Shine with your email and this password. Shine then asks you to set a new password of your own; your last 5 passwords can't be used again.</p>`,
+        code: tempPassword,
+        note: "Didn't expect this? Tell your administrator.",
+      }),
       text: `Hi ${name ?? "there"}, your temporary SHINE password is: ${tempPassword}. You must change it on first login.`,
     }),
 });
@@ -93,14 +90,15 @@ export const sendVerificationCode = internalAction({
       to,
       from: SHINE_EMAIL_FROM.auth,
       subject: "Your SHINE verification code",
-      html: `
-        <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto">
-          <h2 style="color:#D4AF37">SHINE · by DEJOIY</h2>
-          <p>Hi ${esc(name ?? "there")},</p>
-          <p>Use the verification code below to set your new SHINE password. It expires in 10 minutes.</p>
-          <p style="font-size:32px;font-weight:bold;letter-spacing:8px;background:#f5f5f0;padding:14px;border-radius:8px;text-align:center">${esc(code)}</p>
-          <p style="color:#888">If you did not request this, you can safely ignore this email.</p>
-        </div>`,
+      html: shineEmail({
+        preheader: "Your Shine code. It works for 10 minutes.",
+        tag: "Verification code",
+        title: "Here's your",
+        highlight: "code",
+        body: `<p style="margin:0">Hi ${esc(name ?? "there")}, use this code to set your new Shine password. It works for 10 minutes.</p>`,
+        code,
+        note: "Didn't ask for this? You can ignore this mail; your password stays the same.",
+      }),
       text: `Your SHINE verification code is: ${code}. It expires in 10 minutes.`,
     }),
 });

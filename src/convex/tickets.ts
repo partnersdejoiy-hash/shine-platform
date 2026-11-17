@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { clearAuthCode } from "./passwords";
 import { MAIL_MANAGED_ROLES } from "./lib/adminRoles";
+import { shineEmail } from "./lib/emailLayout";
 import { v, ConvexError } from "convex/values";
 import { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
@@ -94,28 +95,13 @@ function esc(s: string): string {
 
 /** Branded ticket email body. */
 function ticketEmailBody(ticketNumber: string, title: string, lines: string[]): { html: string; text: string } {
-  const body = lines.map((l) => `<p style="margin:6px 0;color:#e8e8e8;font-size:14px">${esc(l)}</p>`).join("");
-  const html = `<!doctype html><html><body style="margin:0;background:#0B0B0B;font-family:Arial,sans-serif">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0B0B0B">
-      <tr><td align="center" style="padding:32px 16px">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#141414;border:1px solid rgba(212,175,55,0.35);border-radius:18px;overflow:hidden">
-          <tr><td style="padding:26px 30px 6px">
-            <div style="font-size:20px;font-weight:700;color:#D4AF37">SHINE</div>
-            <div style="font-size:11px;color:#8A8F98;margin-top:2px">Enterprise Ticketing · Powered by DEJOIY</div>
-          </td></tr>
-          <tr><td style="padding:10px 30px 4px">
-            <span style="display:inline-block;background:rgba(212,175,55,0.15);border:1px solid rgba(212,175,55,0.4);color:#D4AF37;font-size:12px;font-weight:700;padding:3px 10px;border-radius:6px">${ticketNumber}</span>
-            <span style="color:#ffffff;font-size:16px;font-weight:600;margin-left:10px">${esc(title)}</span>
-          </td></tr>
-          <tr><td style="padding:14px 30px 22px">${body}</td></tr>
-          <tr><td style="padding:12px 30px;background:#0F0F0F;border-top:1px solid rgba(255,255,255,0.06)">
-            <div style="font-size:11px;color:#8A8F98">Track this ticket in SHINE → App → Access requests.</div>
-            <div style="font-size:11px;color:#8A8F98;margin-top:4px">Powered by SHINE · Developed by DEJOIY India Private Limited</div>
-          </td></tr>
-        </table>
-      </td></tr>
-    </table>
-  </body></html>`;
+  const html = shineEmail({
+    preheader: `[${ticketNumber}] ${title}`,
+    tag: ticketNumber,
+    title,
+    body: lines.map((l) => `<p style="margin:6px 0">${esc(l)}</p>`).join(""),
+    note: "Track this ticket in SHINE &rarr; App &rarr; Access requests.",
+  });
   const text = `[${ticketNumber}] ${title}\n\n${lines.join("\n")}\n\nTrack it in SHINE → App → Access requests.`;
   return { html, text };
 }
